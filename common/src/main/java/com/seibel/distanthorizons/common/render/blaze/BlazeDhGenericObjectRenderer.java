@@ -615,5 +615,23 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 	
 	
 	
+	//================//
+	// base overrides //
+	//================//
+	//region
+	
+	@Override
+	public void close()
+	{
+		if (this.vertUniformBuffer != null)
+		{
+			this.vertUniformBuffer.close();
+		}
+	}
+	
+	//endregion
+	
+	
+	
 }
 #endif
