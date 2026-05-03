@@ -32,6 +32,7 @@ import com.seibel.distanthorizons.core.util.LodUtil;
 import com.seibel.distanthorizons.core.util.ThreadUtil;
 import com.seibel.distanthorizons.core.util.objects.Pair;
 import com.seibel.distanthorizons.core.util.objects.pooling.PhantomLoggingHelper;
+import com.seibel.distanthorizons.coreapi.ModInfo;
 import com.seibel.distanthorizons.coreapi.util.StringUtil;
 import org.lwjgl.opengl.GL32;
 import org.lwjgl.opengl.GL44;
@@ -57,17 +58,11 @@ public class GLBuffer implements AutoCloseable
 	private static final MinecraftGLWrapper GLMC = MinecraftGLWrapper.INSTANCE;
 	
 	
+	// TODO move to a shared location that can be handled by both GL and Blaze3D buffers
 	/** if enabled the number of GC'ed buffers will be logged */
-	private static final boolean LOG_PHANTOM_RECOVERY = false;
-	/** 
-	 * If enabled the GC'ed buffers allocation/upload stacks will be logged. 
-	 * Note: due to how the buffers are often run on the render thread,
-	 * these stacks will likely only be of limited use.
-	 * For more robust debugging it would likely be best to somehow track
-	 * the stacks of where these calls are happening before they're queued
-	 * for the render thread.
-	 */
-	private static final boolean LOG_PHANTOM_ALLOCATION_STACKS = false;
+	private static final boolean LOG_PHANTOM_RECOVERY = ModInfo.IS_DEV_BUILD;
+	/** If enabled buffers allocation/upload stacks will be logged when GC'ed. */
+	private static final boolean LOG_PHANTOM_ALLOCATION_STACKS = false; // disabled by default due to the increased GC load
 	
 	public static final double BUFFER_EXPANSION_MULTIPLIER = 1.3;
 	public static final double BUFFER_SHRINK_TRIGGER = BUFFER_EXPANSION_MULTIPLIER * BUFFER_EXPANSION_MULTIPLIER;
@@ -522,9 +517,26 @@ public class GLBuffer implements AutoCloseable
 	{
 		if (LOG_PHANTOM_ALLOCATION_STACKS)
 		{
-			StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
-			StackTraceElement[] trimmedElements = Arrays.copyOfRange(stackTraceElements, 4, stackTraceElements.length);
-			String stack = StringUtil.join("\n", trimmedElements).intern();
+			String stack;
+			
+			RenderThreadTaskHandler.QueuedRunnable parentQueuedRunnable;
+			// if this is running on the render thread, try getting the render task's stack trace instead
+			// since it's a lot more helpful than wherever the render thread tasks themselves are being run from
+			if (RenderThreadTaskHandler.INSTANCE.isCurrentThread()
+				&& (parentQueuedRunnable = RenderThreadTaskHandler.INSTANCE.getCurrentlyRunningTask()) != null
+				&& parentQueuedRunnable.stackTrace != null)
+			{
+				// trim off the getStacktrace() and queueRunningOnRenderThread() methods
+				StackTraceElement[] trimmedElements = Arrays.copyOfRange(parentQueuedRunnable.stackTrace, 2, parentQueuedRunnable.stackTrace.length);
+				stack = StringUtil.join("\n", trimmedElements).intern();
+			}
+			else
+			{
+				// not running on the render thread, use the normal stack trace
+				StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+				stack = StringUtil.join("\n", stackTraceElements).intern();
+			}
+			
 			BUFFER_ID_TO_ALLOCATION_STRING.put(this.id, stack);
 		}
 	}
