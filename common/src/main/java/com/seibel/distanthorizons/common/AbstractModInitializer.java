@@ -1,5 +1,6 @@
 package com.seibel.distanthorizons.common;
 
+import com.mojang.brigadier.CommandDispatcher;
 import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiAfterDhInitEvent;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeDhInitEvent;
@@ -7,8 +8,8 @@ import com.seibel.distanthorizons.common.commands.CommandInitializer;
 import com.seibel.distanthorizons.common.wrappers.DependencySetup;
 import com.seibel.distanthorizons.common.wrappers.gui.DhDebugScreenEntry;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftServerWrapper;
+import com.seibel.distanthorizons.core.Initializer;
 import com.seibel.distanthorizons.core.api.internal.ClientApi;
-import com.seibel.distanthorizons.core.api.internal.SharedApi;
 import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.config.ConfigHandler;
 import com.seibel.distanthorizons.core.config.eventHandlers.presets.ThreadPresetConfigEventHandler;
@@ -20,7 +21,8 @@ import com.seibel.distanthorizons.core.jar.updater.SelfUpdater;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.render.renderer.AbstractDebugWireframeRenderer;
 import com.seibel.distanthorizons.core.render.renderer.StubDebugWireframeRenderer;
-import com.seibel.distanthorizons.core.util.NativeDialogUtil;
+import com.seibel.distanthorizons.common.wrappers.gui.NativeDialogUtil;
+import com.seibel.distanthorizons.core.util.ThreadUtil;
 import com.seibel.distanthorizons.core.wrapperInterfaces.IVersionConstants;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IIrisAccessor;
@@ -28,14 +30,12 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IModAccesso
 import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IModChecker;
 import com.seibel.distanthorizons.coreapi.DependencyInjection.ApiEventInjector;
 import com.seibel.distanthorizons.coreapi.ModInfo;
-#if MC_VER > MC_1_12_2
-import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
-#endif
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.dedicated.DedicatedServer;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -62,9 +62,7 @@ public abstract class AbstractModInitializer
 	protected abstract IEventProxy createServerProxy(boolean isDedicated);
 	protected abstract void initializeModCompat();
 	
-	#if MC_VER > MC_1_12_2
 	protected abstract void subscribeRegisterCommandsEvent(Consumer<CommandDispatcher<CommandSourceStack>> eventHandler);
-	#endif
 	
 	protected abstract void subscribeClientStartedEvent(Runnable eventHandler);
 	protected abstract void subscribeServerStartingEvent(Consumer<MinecraftServer> eventHandler);
@@ -97,7 +95,8 @@ public abstract class AbstractModInitializer
 		
 		// Client uses config for auto-updater, so it's initialized here instead of post-init stage
 		this.initConfig();
-		logModIncompatibilityWarnings(); // needs to be called after config loading
+		logIncompatibilityWarnings(); // needs to be called after config loading
+		Initializer.postConfigInit();
 		
 		LOGGER.info(ModInfo.READABLE_NAME + " client Initialized.");
 		
@@ -131,25 +130,22 @@ public abstract class AbstractModInitializer
 		this.initializeModCompat();
 		
 		LOGGER.info(ModInfo.READABLE_NAME + " server Initialized, adding event subscribers...");
-		#if MC_VER > MC_1_12_2
 		this.commandInitializer = new CommandInitializer();
 		this.subscribeRegisterCommandsEvent(dispatcher -> { this.commandInitializer.initCommands(dispatcher); });
-		#endif
 		
 		this.subscribeServerStartingEvent(server -> 
 		{
 			MinecraftServerWrapper.INSTANCE.dedicatedServer = (DedicatedServer)server;
 			
 			this.initConfig();
+			Initializer.postConfigInit();
 			this.postInit();
 			this.postServerInit();
-			#if MC_VER > MC_1_12_2
 			this.commandInitializer.onServerReady();
-			#endif
 			
 			this.checkForUpdates();
 			
-			LOGGER.info(ModInfo.READABLE_NAME + " server Initialized at " + server. #if MC_VER <= MC_1_12_2 getDataDirectory() #else getServerDirectory() #endif);
+			LOGGER.info(ModInfo.READABLE_NAME + " server Initialized at " + server.getServerDirectory());
 		});
 	}
 	
@@ -165,7 +161,7 @@ public abstract class AbstractModInitializer
 	private void startup()
 	{
 		DependencySetup.createSharedBindings();
-		SharedApi.init();
+		Initializer.preConfigInit();
 		this.createInitialSharedBindings();
 	}
 	
@@ -233,18 +229,43 @@ public abstract class AbstractModInitializer
 		ApiEventInjector.INSTANCE.fireAllEvents(DhApiAfterDhInitEvent.class, null);
 	}
 	
-	private void postClientInit() { DependencySetup.setRenderingApiBindings(); }
-	private void postServerInit()
+	private void postClientInit() 
 	{
-		SingletonInjector.INSTANCE.bind(AbstractDebugWireframeRenderer.class, new StubDebugWireframeRenderer());
+		CompletableFuture<Void> future = new CompletableFuture<>();
+		
+		// This method may be called from either the render thread,
+		// or some other random setup thread depending on the mod loader.
+		// In order to avoid confusion/inconsistent problems, we're always going 
+		// to run setup on our own thread.
+		Thread dhSetupThread = new Thread(() -> 
+		{
+			try
+			{
+				DependencySetup.setRenderingApiBindings();
+			}
+			catch (Exception e)
+			{
+				future.completeExceptionally(e);
+			}
+			finally
+			{
+				future.complete(null);
+			}
+		});
+		dhSetupThread.setName(ThreadUtil.THREAD_NAME_PREFIX + "PostClientInit Thread");
+		dhSetupThread.start();
+		
+		future.join();
 	}
+	private void postServerInit() { SingletonInjector.INSTANCE.bind(AbstractDebugWireframeRenderer.class, new StubDebugWireframeRenderer()); }
+	
 	//endregion
 	
 	
 	
-	//==================================//
-	// mod partial compatibility checks //
-	//==================================//
+	//======================//
+	// compatibility checks //
+	//======================//
 	//region
 	
 	/** 
@@ -253,7 +274,7 @@ public abstract class AbstractModInitializer
 	 * This method will log (and display to chat if enabled)
 	 * these warnings and potential fixes.
 	 */
-	private static void logModIncompatibilityWarnings()
+	private static void logIncompatibilityWarnings()
 	{
 		boolean showChatWarnings = Config.Common.Logging.Warning.showModCompatibilityWarningsOnStartup.get();
 		IModChecker modChecker = SingletonInjector.INSTANCE.get(IModChecker.class);
@@ -354,10 +375,10 @@ public abstract class AbstractModInitializer
 				renderApi = versionConstants.getDefaultRenderingApi();
 			}
 			
-			// Iris only supports nataive OpenGL
+			// Iris only supports native OpenGL
 			if (renderApi != EDhApiRenderApi.OPEN_GL)
 			{
-				String irisUnsupportedMessage = "Iris doesn't support DH when using the ["+EDhApiRenderApi.BLAZE_3D+"] rendering API, please change it to ["+EDhApiRenderApi.OPEN_GL+"] in DH's config file.";
+				String irisUnsupportedMessage = "Iris doesn't support DH when using the ["+EDhApiRenderApi.BLAZE_3D+"] rendering API, this will need to be fixed on Iris end. As a temporary fix please change the rendering API to ["+EDhApiRenderApi.OPEN_GL+"] in the DH config file.";
 				LOGGER.fatal(irisUnsupportedMessage);
 				NativeDialogUtil.showDialog(ModInfo.READABLE_NAME, irisUnsupportedMessage, "ok", "error");
 				

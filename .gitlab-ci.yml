@@ -1,6 +1,6 @@
 # use Eclipse's JDK
 # The ci should always use a unix(-like) OS to work
-image: eclipse-temurin:21
+image: eclipse-temurin:25
 
 # all stages need to be defined here
 stages:
@@ -35,6 +35,7 @@ build:
   parallel:
     matrix:
       - MC_VER: [
+      "26.1.2",
       "1.21.11", "1.21.10", "1.21.9", "1.21.8", "1.21.6", "1.21.5", "1.21.4", "1.21.3", "1.21.1", 
       "1.20.6", "1.20.4", "1.20.2", "1.20.1", 
       "1.19.4", "1.19.2",
@@ -46,8 +47,7 @@ build:
     # this both runs the unit tests and assembles the code
     - ./gradlew clean -PmcVer="${MC_VER}" -PinfoGitCommit="${CI_COMMIT_SHA}" -PinfoGitBranch="${CI_COMMIT_BRANCH}" -PinfoBuildSource="GitLab CI (${CI_PIPELINE_ID})" --gradle-user-home cache/;
     - ./gradlew build -PmcVer="${MC_VER}" -PinfoGitCommit="${CI_COMMIT_SHA}" -PinfoGitBranch="${CI_COMMIT_BRANCH}" -PinfoBuildSource="GitLab CI (${CI_PIPELINE_ID})" --gradle-user-home cache/;
-    - ./gradlew mergeJars -PmcVer="${MC_VER}" -PinfoGitCommit="${CI_COMMIT_SHA}" -PinfoGitBranch="${CI_COMMIT_BRANCH}" -PinfoBuildSource="GitLab CI (${CI_PIPELINE_ID})" --gradle-user-home cache/;
-    - cp ./fabric/build/libs/* ./forge/build/libs/* ./neoforge/build/libs/* ./build/merged/* . || true
+    - cp ./fabric/build/libs/* ./forge/build/libs/* ./neoforge/build/libs/* ./build/forgix/* . || true
   artifacts:
     name: "NightlyBuild_${MC_VER}-${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_TIMESTAMP}"
     paths:

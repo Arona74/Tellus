@@ -30,18 +30,15 @@ import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.PolygonMode;
 import com.mojang.blaze3d.platform.SourceFactor;
-import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.BlazeDhMetaRenderer;
 import com.seibel.distanthorizons.common.render.blaze.apply.BlazeDhApplyRenderer;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
@@ -53,7 +50,6 @@ import com.seibel.distanthorizons.core.util.RenderUtil;
 import com.seibel.distanthorizons.core.util.math.Mat4f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhSsaoRenderer;
-import net.minecraft.resources.Identifier;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -83,7 +79,9 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 	
 	private GpuBuffer vboGpuBuffer;
 	
-	public BlazeTextureWrapper ssaoColorTextureWrapper = BlazeTextureWrapper.createColor("DhSsaoTexture");
+	private final BlazeTextureWrapper ssaoColorTextureWrapper = BlazeTextureWrapper.createColor("dh_ssao_color_texture");
+	/** We don't want to actually write any depth data, but blaze3D complains if we don't bind a depth texture. */
+	private final BlazeTextureWrapper ssaoDepthTextureWrapper = BlazeTextureWrapper.createDepth("dh_ssao_depth_texture");
 	
 	
 	
@@ -110,24 +108,25 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 			/*uniforms*/ new String[] { "applyFragUniformBlock" }
 		);
 		
-		RenderPipeline.Builder pipelineBuilder = RenderPipeline.builder();
+		RenderPipelineBuilderWrapper pipelineBuilder = new RenderPipelineBuilderWrapper();
 		{
-			pipelineBuilder.withCull(false);
+			pipelineBuilder.withFaceCulling(false);
 			pipelineBuilder.withDepthWrite(false);
-			pipelineBuilder.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST);
+			pipelineBuilder.withDepthTest(RenderPipelineBuilderWrapper.EDhDepthTest.NONE);
 			pipelineBuilder.withColorWrite(true);
 			pipelineBuilder.withoutBlend();
-			pipelineBuilder.withPolygonMode(PolygonMode.FILL);
-			pipelineBuilder.withLocation(Identifier.parse("distanthorizons:ssao_render"));
+			pipelineBuilder.withPolygonMode(RenderPipelineBuilderWrapper.EDhPolygonMode.FILL);
+			pipelineBuilder.withName("ssao_render");
 			
-			pipelineBuilder.withVertexShader(Identifier.fromNamespaceAndPath("distanthorizons", "ssao/blaze/vert"));
-			pipelineBuilder.withFragmentShader(Identifier.fromNamespaceAndPath("distanthorizons", "ssao/blaze/frag"));
+			pipelineBuilder.withVertexShader("ssao/blaze/vert");
+			pipelineBuilder.withFragmentShader("ssao/blaze/frag");
 			
 			pipelineBuilder.withSampler("uDhDepthTexture");
 			
-			pipelineBuilder.withUniform("fragUniformBlock", UniformType.UNIFORM_BUFFER);
+			pipelineBuilder.withUniformBuffer("fragUniformBlock");
 			
-			pipelineBuilder.withVertexFormat(BlazePostProcessUtil.createVertexFormat(), VertexFormat.Mode.TRIANGLE_FAN);
+			pipelineBuilder.withVertexFormat(BlazePostProcessUtil.createVertexFormat());
+			pipelineBuilder.withVertexMode(RenderPipelineBuilderWrapper.EDhVertexMode.TRIANGLE_FAN);
 		}
 		this.pipeline = pipelineBuilder.build();
 		
@@ -160,6 +159,7 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 		
 		// textures
 		this.ssaoColorTextureWrapper.tryCreateOrResize();
+		this.ssaoDepthTextureWrapper.tryCreateOrResize();
 		
 		// frag uniforms
 		{
@@ -259,7 +259,7 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 			this::getRenderPassName,
 			this.ssaoColorTextureWrapper.textureView,
 			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			/*depthTexture*/ null,
+			this.ssaoDepthTextureWrapper.textureView,
 			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
 		{
 			renderPass.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.textureView, BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.textureSampler);

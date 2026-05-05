@@ -9,9 +9,13 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.seibel.distanthorizons.core.logging.DhLogger;
+import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 
 public class BlazeUniformUtil
 {
+	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
+	
 	private static final GpuDevice GPU_DEVICE = RenderSystem.getDevice();
 	private static final CommandEncoder COMMAND_ENCODER = GPU_DEVICE.createCommandEncoder();
 	
@@ -22,7 +26,11 @@ public class BlazeUniformUtil
 		if (vboGpuBuffer == null
 			|| vboGpuBuffer.size() < size)
 		{
-			// GpuBuffer.USAGE_UNIFORM = 128
+			if (vboGpuBuffer != null)
+			{
+				vboGpuBuffer.close();
+			}
+			
 			int usage = GpuBuffer.USAGE_COPY_DST 
 				| GpuBuffer.USAGE_VERTEX
 				| GpuBuffer.USAGE_UNIFORM;

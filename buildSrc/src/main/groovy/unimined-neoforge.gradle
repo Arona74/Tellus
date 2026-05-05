@@ -1,0 +1,16 @@
+plugins {
+    id 'dh-loader'
+}
+
+def awFile = project(":common").file("src/main/resources/${gradle.ext.accessWidenerVersion}.distanthorizons.accesswidener")
+
+unimined.minecraft {
+    neoForged {
+        loader gradle.ext.neoforge_version
+        useToolchains = false
+        accessTransformer aw2at(awFile)
+    }
+}
+
+runClient.javaLauncher = null
+runServer.javaLauncher = null

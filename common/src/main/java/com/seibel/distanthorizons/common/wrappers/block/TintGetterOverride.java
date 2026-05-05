@@ -63,8 +63,10 @@ public class TintGetterOverride extends AbstractDhTintGetter
 	// methods //
 	//=========//
 	
+	#if MC_VER <= MC_1_21_11
 	@Override
 	public float getShade(Direction direction, boolean bl) { return this.parent.getShade(direction, bl); }
+	#endif
 	
 	@Override
 	public LevelLightEngine getLightEngine() { return this.parent.getLightEngine(); }
@@ -175,6 +177,13 @@ public class TintGetterOverride extends AbstractDhTintGetter
 	
 	@Override
 	public int getSectionYFromSectionIndex(int i) { return this.parent.getSectionYFromSectionIndex(i); }
+	#endif
+	
+	
+	#if MC_VER <= MC_1_21_11
+	#else
+	@Override
+	public CardinalLighting cardinalLighting() { return CardinalLighting.DEFAULT; }
     #endif
 	
 	

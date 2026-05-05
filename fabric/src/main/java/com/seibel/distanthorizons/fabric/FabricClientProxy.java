@@ -66,6 +66,13 @@ import java.util.concurrent.AbstractExecutorService;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 #endif
 
+#if MC_VER <= MC_1_21_11
+#else
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelTerrainRenderContext;
+#endif
+
 import com.mojang.blaze3d.platform.InputConstants;
 
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -91,6 +98,7 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 	private static final MinecraftClientWrapper MC = MinecraftClientWrapper.INSTANCE;
 	private static final AbstractPluginPacketSender PACKET_SENDER = (AbstractPluginPacketSender) SingletonInjector.INSTANCE.get(IPluginPacketSender.class);
 	
+	@Deprecated // just use the static reference
 	private static final ClientApi clientApi = ClientApi.INSTANCE;
 	
 	HashSet<Integer> previouslyPressKeyCodes = new HashSet<>();
@@ -108,17 +116,10 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 		
 		
 		
-		//========================//
-		// register mod accessors //
-		//========================//
-		
-		SodiumAccessor sodiumAccessor = (SodiumAccessor) ModAccessorInjector.INSTANCE.get(ISodiumAccessor.class);
-		
-		
-		
 		//==============//
 		// chunk events //
 		//==============//
+		//region
 		
 		// ClientChunkLoadEvent
 		ClientChunkEvents.CHUNK_LOAD.register((level, chunk) ->
@@ -214,12 +215,14 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 			return InteractionResult.PASS;
 		});
 		
+		//endregion
+		
 		
 		
 		//==============//
 		// render event //
 		//==============//
-
+		//region
 		
 		#if MC_VER < MC_1_21_9
 		WorldRenderEvents.AFTER_SETUP.register((renderContext) ->
@@ -298,6 +301,27 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 		});
 		#endif
 		
+		#if MC_VER <= MC_1_21_11
+		#else
+		LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register((LevelRenderContext levelRenderContext) ->
+		{
+			ClientApi.INSTANCE.renderFadeTransparent();
+		});
+		
+		LevelRenderEvents.AFTER_OPAQUE_TERRAIN.register((LevelTerrainRenderContext levelTerrainRenderContext) ->
+		{
+			ClientApi.INSTANCE.renderFadeOpaque();
+		});
+		#endif
+		
+		//endregion
+		
+		
+		
+		//=================//
+		// keyboard events //
+		//=================//
+		//region
 		
 		// Debug keyboard event
 		// FIXME: Use better hooks so it doesn't trigger key press events in text boxes
@@ -309,13 +333,25 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 			}
 		});
 		
+		//endregion
+		
 		
 		
 		//==================//
 		// networking event //
 		//==================//
+		//region
 		
-		#if MC_VER >= MC_1_20_6
+		#if MC_VER < MC_1_20_6
+		ClientPlayNetworking.registerGlobalReceiver(AbstractPluginPacketSender.WRAPPER_PACKET_RESOURCE, (client, handler, buffer, packetSender) ->
+		{
+			AbstractNetworkMessage message = PACKET_SENDER.decodeMessage(buffer);
+			if (message != null)
+			{
+				ClientApi.INSTANCE.pluginMessageReceived(message);
+			}
+		});
+		#elif MC_VER <= MC_1_21_11
 		PayloadTypeRegistry.playS2C().register(CommonPacketPayload.TYPE, new CommonPacketPayload.Codec());
 		ClientPlayNetworking.registerGlobalReceiver(CommonPacketPayload.TYPE, (payload, context) ->
 		{
@@ -326,15 +362,21 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 			ClientApi.INSTANCE.pluginMessageReceived(payload.message());
 		});
 		#else
-		ClientPlayNetworking.registerGlobalReceiver(AbstractPluginPacketSender.WRAPPER_PACKET_RESOURCE, (client, handler, buffer, packetSender) ->
+		PayloadTypeRegistry.clientboundPlay().register(CommonPacketPayload.TYPE, new CommonPacketPayload.Codec());
+		ClientPlayNetworking.registerGlobalReceiver(CommonPacketPayload.TYPE, (payload, context) ->
 		{
-			AbstractNetworkMessage message = PACKET_SENDER.decodeMessage(buffer);
-			if (message != null)
+			if (payload.message() == null)
 			{
-				ClientApi.INSTANCE.pluginMessageReceived(message);
+				return;
 			}
+			ClientApi.INSTANCE.pluginMessageReceived(payload.message());
 		});
 		#endif
+		
+		//endregion
+		
+		
+		
 	}
 	
 	public void onKeyInput()

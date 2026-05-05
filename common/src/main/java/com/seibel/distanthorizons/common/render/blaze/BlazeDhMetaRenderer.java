@@ -6,13 +6,16 @@ public class BlazeDhMetaRenderer {}
 #else
 
 import com.mojang.blaze3d.textures.GpuTexture;
+import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiAfterColorDepthTextureCreatedEvent;
+import com.seibel.distanthorizons.api.methods.events.sharedParameterObjects.DhApiTextureCreatedParam;
 import com.seibel.distanthorizons.common.render.blaze.apply.BlazeDhApplyRenderer;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.render.RenderParams;
-import com.seibel.distanthorizons.core.util.ColorUtil;
+import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhMetaRenderer;
+import com.seibel.distanthorizons.coreapi.DependencyInjection.ApiEventInjector;
 import net.minecraft.client.Minecraft;
 
 import java.awt.*;
@@ -57,9 +60,24 @@ public class BlazeDhMetaRenderer implements IDhMetaRenderer
 	@Override
 	public void runRenderPassSetup(RenderParams renderParams)
 	{
-		// textures
-		this.dhDepthTextureWrapper.tryCreateOrResize();
-		this.dhColorTextureWrapper.tryCreateOrResize();
+		int oldWidth = this.dhDepthTextureWrapper.getWidth();
+		int oldHeight = this.dhDepthTextureWrapper.getHeight();
+		
+		boolean texturesChanged = false;
+		texturesChanged = this.dhDepthTextureWrapper.tryCreateOrResize() | texturesChanged;
+		texturesChanged = this.dhColorTextureWrapper.tryCreateOrResize() | texturesChanged;
+		
+		if (texturesChanged)
+		{
+			int newTextureWidth = MC_RENDER.getTargetFramebufferViewportWidth();
+			int newTextureHeight = MC_RENDER.getTargetFramebufferViewportHeight();
+			
+			DhApiTextureCreatedParam textureCreatedParam = new DhApiTextureCreatedParam(
+				oldWidth, oldHeight,
+				newTextureWidth, newTextureHeight
+			);
+			ApiEventInjector.INSTANCE.fireAllEvents(DhApiAfterColorDepthTextureCreatedEvent.class, textureCreatedParam);
+		}
 	}
 	
 	@Override

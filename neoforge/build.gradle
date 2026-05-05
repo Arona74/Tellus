@@ -1,102 +1,41 @@
 plugins {
-    // Note: This is only needed for multi-loader projects
-    // The main architectury loom version is set at the start of the root build.gradle
-    id "architectury-plugin" version "3.4-SNAPSHOT"
-}
-
-sourceCompatibility = targetCompatibility = JavaVersion.VERSION_17
-
-architectury {
-    platformSetupLoomIde()
-    neoForge()
-}
-
-loom {
-    silentMojangMappingsLicense() // Shut the licencing warning
-    accessWidenerPath = project(":common").file("src/main/resources/${accessWidenerVersion}.distanthorizons.accesswidener")
-
-    neoForge {
-        // Access wideners are defined in the `remapJar.atAccessWideners`
-
-        // Mixins are defined in the `mods.toml`
-    }
-    mixin {
-        // Mixins are defined in the `mods.toml`
-    }
-    
-    // "runs" isn't required, but when we do need it then it can be useful
-    runs {
-        client {
-            client()
-            setConfigName("NeoForge Client")
-            ideConfigGenerated(false) // When true a run configuration file will be generated for IDE's. By default only set to true for the root project.
-            runDir("../run/client")
-            vmArgs("-Dio.netty.leakDetection.level=advanced") // https://netty.io/wiki/reference-counted-objects.html#leak-detection-levels
-            // "--renderDebugLabels" is a Mojang command to show render names in RenderDoc
-            programArgs("--username", "Dev", "--renderDebugLabels")
-        }
-        server {
-            server()
-            setConfigName("NeoForge Server")
-            ideConfigGenerated(false)
-            runDir("../run/server")
-            vmArgs("-Dio.netty.leakDetection.level=advanced")
-        }
-    }
+    id 'unimined-neoforge'
 }
 
 
+// ==================== Mod Dependency Helper ====================
 
 def addMod(path, enabled) {
     if (enabled == "2")
-        dependencies { implementation(path) }
+        dependencies { modImplementation(path) }
     else if (enabled == "1")
-        dependencies { modCompileOnly(path) }
+        dependencies { compileOnly(path) }
 }
-dependencies {
-    minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
-    mappings loom.layered() 
-    {
-        // Mojmap mappings
-        officialMojangMappings()
-        // Parchment mappings (it adds parameter mappings & javadoc)
-        parchment("org.parchmentmc.data:parchment-${rootProject.parchment_version}@zip")
-    }
-    
-    
-    // Neoforge
-    neoForge "net.neoforged:neoforge:${rootProject.neoforge_version}"
 
+
+// ==================== Dependencies ====================
+
+dependencies {
     // Iris
     addMod("maven.modrinth:iris:${rootProject.neo_iris_version}", rootProject.neo_enable_iris)
-
 }
 
 
+// ==================== Tasks ====================
 
 task deleteResources(type: Delete) {
     delete file("build/resources/main")
 }
 
-tasks.register('copyAllResources') {
-    dependsOn(copyCoreResources)
-    dependsOn(copyCommonLoaderResources)
-}
-
 processResources {
-    dependsOn(tasks.named('copyAllResources'))
+    dependsOn(copyCoreResources)
+    // dependsOn(copyCommonLoaderResources)
 }
 
 tasks.named('runClient') {
-    dependsOn(tasks.named('copyAllResources'))
+    dependsOn(copyCoreResources)
+    // dependsOn(copyCommonLoaderResources)
     finalizedBy(deleteResources)
-}
-
-remapJar {
-    inputFile = shadowJar.archiveFile
-    dependsOn shadowJar
-
-    atAccessWideners.add("distanthorizons.accesswidener")
 }
 
 sourcesJar {

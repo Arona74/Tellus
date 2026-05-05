@@ -26,7 +26,7 @@ import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.RenderType;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4f;
-#else
+#elif MC_VER <= MC_1_21_11
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftRenderWrapper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
@@ -35,6 +35,26 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LevelRenderer;
 
+import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
+import org.joml.Vector4f;
+	
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
+
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+#else
+import com.mojang.blaze3d.textures.GpuSampler;
+import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftRenderWrapper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayerGroup;
+import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
+import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.LevelRenderer;
+
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector4f;
@@ -76,6 +96,12 @@ public class MixinLevelRenderer
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
 	
 	
+	
+	//===========//
+	// Pre MC 26 //
+	//===========//
+	//region
+	#if MC_VER <= MC_1_21_11
 	
 	#if MC_VER < MC_1_21_6
 	@Inject(at = @At("HEAD"), method = "renderSectionLayer")
@@ -165,6 +191,42 @@ public class MixinLevelRenderer
 	}
 	
 	#endif
+	#endif
+	//endregion
+	
+	
+	
+	//============//
+	// post MC 26 //
+	//============//
+	//region
+	
+	#if MC_VER <= MC_1_21_11
+	#else
+	
+	@Inject(at = @At("HEAD"), method = "prepareChunkRenders")
+	private void prepareChunkRenders(final Matrix4fc modelViewMatrix, CallbackInfoReturnable<ChunkSectionsToRender> callback)
+	{
+		ClientApi.RENDER_STATE.clientLevelWrapper = ClientLevelWrapper.getWrapperIfDifferent(ClientApi.RENDER_STATE.clientLevelWrapper, this.level);
+	}
+	
+	@Inject(at = @At("HEAD"), method = "renderLevel")
+	public void renderLevel(
+		final GraphicsResourceAllocator resourceAllocator, final DeltaTracker deltaTracker,
+		final boolean renderBlockOutline, final CameraRenderState camera,
+		final Matrix4fc modelViewMatrix, final GpuBufferSlice terrainFog,
+		final Vector4f fogColor, final boolean shouldRenderSky,
+		final ChunkSectionsToRender chunkSectionsToRender,
+		CallbackInfo callback)
+	{
+		ClientApi.RENDER_STATE.mcModelViewMatrix = McObjectConverter.Convert(modelViewMatrix);
+		
+		ClientApi.RENDER_STATE.partialTickTime = MinecraftRenderWrapper.INSTANCE.getPartialTickTime();
+		
+	}
+	
+	#endif
+	//endregion
 	
 	
 	

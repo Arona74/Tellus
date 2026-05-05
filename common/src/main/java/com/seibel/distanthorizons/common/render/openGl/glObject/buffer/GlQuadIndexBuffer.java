@@ -21,6 +21,7 @@ package com.seibel.distanthorizons.common.render.openGl.glObject.buffer;
 
 import com.seibel.distanthorizons.api.enums.config.EDhApiGpuUploadMethod;
 import com.seibel.distanthorizons.common.render.openGl.glObject.enums.GLEnums;
+import com.seibel.distanthorizons.core.dataObjects.render.bufferBuilding.IndexBufferBuilder;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import org.lwjgl.opengl.GL32;
@@ -42,7 +43,7 @@ public class GlQuadIndexBuffer extends GLIndexBuffer
 	
 	public GlQuadIndexBuffer() { super(false); }
 	
-	public void reserve(int quadCount)
+	public void upload(ByteBuffer buffer, int quadCount)
 	{
 		if (quadCount < 0)
 		{
@@ -60,30 +61,10 @@ public class GlQuadIndexBuffer extends GLIndexBuffer
 		{
 			return;
 		}
-		int vertexCount = quadCount * 4; // 4 vertices per quad
 		
-		if (vertexCount < 255)
-		{
-			// Reserve 1 for the reset index
-			this.type = GL32.GL_UNSIGNED_BYTE;
-		}
-		else if (vertexCount < 65535)
-		{
-			// Reserve 1 for the reset index
-			this.type = GL32.GL_UNSIGNED_SHORT;
-		}
-		else
-		{
-			this.type = GL32.GL_UNSIGNED_INT;
-		}
-		
-		ByteBuffer buffer = MemoryUtil.memAlloc(this.indicesCount * GLEnums.getTypeSize(this.type));
-		buildBuffer(quadCount, buffer, this.type);
-		this.bind();
+		this.glType = GL32.GL_UNSIGNED_INT;
 		super.uploadBuffer(buffer, EDhApiGpuUploadMethod.DATA,
-			this.indicesCount * GLEnums.getTypeSize(this.type), GL32.GL_STATIC_DRAW);
-		
-		MemoryUtil.memFree(buffer);
+			this.indicesCount * GLEnums.getTypeSize(this.glType), GL32.GL_STATIC_DRAW);
 	}
 	
 	//endregion
@@ -95,95 +76,7 @@ public class GlQuadIndexBuffer extends GLIndexBuffer
 	//=========//
 	//region
 	
-	public int getCapacity() { return super.getSize() / GLEnums.getTypeSize(this.getType()); }
-	
-	//endregion
-	
-	
-	
-	//==========//
-	// building //
-	//==========//
-	//region
-	
-	public static void buildBuffer(int quadCount, ByteBuffer buffer, int type)
-	{
-		switch (type)
-		{
-			case GL32.GL_UNSIGNED_BYTE:
-				buildBufferByte(quadCount, buffer);
-				break;
-			case GL32.GL_UNSIGNED_SHORT:
-				buildBufferShort(quadCount, buffer);
-				break;
-			case GL32.GL_UNSIGNED_INT:
-				buildBufferInt(quadCount, buffer);
-				break;
-			default:
-				throw new IllegalStateException("Unknown buffer type: [" + type + "].");
-		}
-	}
-	
-	private static void buildBufferByte(int quadCount, ByteBuffer buffer)
-	{
-		for (int i = 0; i < quadCount; i++)
-		{
-			int vIndex = i * 4;
-			// First triangle
-			buffer.put((byte) (vIndex));
-			buffer.put((byte) (vIndex + 1));
-			buffer.put((byte) (vIndex + 2));
-			// Second triangle
-			buffer.put((byte) (vIndex + 2));
-			buffer.put((byte) (vIndex + 3));
-			buffer.put((byte) (vIndex));
-		}
-		if (buffer.hasRemaining())
-		{
-			throw new IllegalStateException("QuadElementBuffer is not full somehow after building");
-		}
-		buffer.rewind();
-	}
-	private static void buildBufferShort(int quadCount, ByteBuffer buffer)
-	{
-		for (int i = 0; i < quadCount; i++)
-		{
-			int vIndex = i * 4;
-			// First triangle
-			buffer.putShort((short) (vIndex));
-			buffer.putShort((short) (vIndex + 1));
-			buffer.putShort((short) (vIndex + 2));
-			// Second triangle
-			buffer.putShort((short) (vIndex + 2));
-			buffer.putShort((short) (vIndex + 3));
-			buffer.putShort((short) (vIndex));
-		}
-		if (buffer.hasRemaining())
-		{
-			throw new IllegalStateException("QuadElementBuffer is not full somehow after building");
-		}
-		buffer.rewind();
-	}
-	private static void buildBufferInt(int quadCount, ByteBuffer buffer)
-	{
-		for (int i = 0; i < quadCount; i++)
-		{
-			int vIndex = i * 4;
-			// First triangle
-			buffer.putInt(vIndex);
-			buffer.putInt(vIndex + 1);
-			buffer.putInt(vIndex + 2);
-			// Second triangle
-			buffer.putInt(vIndex + 2);
-			buffer.putInt(vIndex + 3);
-			buffer.putInt(vIndex);
-		}
-		if (buffer.hasRemaining())
-		{
-			throw new IllegalStateException("QuadElementBuffer is not full somehow after building");
-		}
-		buffer.rewind();
-	}
+	public int getCapacity() { return super.getSize() / GLEnums.getTypeSize(this.getGlType()); }
 	
 	//endregion
 	

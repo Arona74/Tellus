@@ -9,7 +9,6 @@ import com.seibel.distanthorizons.core.logging.DhLogger;
 #else
 import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.textures.GpuTexture;
-import net.neoforged.neoforge.client.blaze3d.validation.ValidationGpuTexture;
 #endif
 
 import java.lang.invoke.MethodHandles;

@@ -30,7 +30,6 @@ import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.platform.PolygonMode;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.CommandEncoder;
@@ -49,6 +48,7 @@ import com.seibel.distanthorizons.api.objects.render.DhApiRenderableBox;
 import com.seibel.distanthorizons.api.objects.render.DhApiRenderableBoxGroupShading;
 import com.seibel.distanthorizons.common.render.blaze.objects.BlazeGenericObjectVertexContainer;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
@@ -57,6 +57,7 @@ import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.logging.f3.F3Screen;
 import com.seibel.distanthorizons.core.render.RenderParams;
+import com.seibel.distanthorizons.core.render.RenderThreadTaskHandler;
 import com.seibel.distanthorizons.core.render.renderer.GenericRenderObjectFactory;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.objects.IDhGenericObjectVertexBufferContainer;
 import com.seibel.distanthorizons.core.render.renderer.RenderableBoxGroup;
@@ -108,8 +109,6 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 	// rendering setup
 	private boolean init = false;
 	
-	private VertexFormat vertexFormat;
-	
 	private RenderPipeline pipeline;
 	
 	private GpuBuffer vertUniformBuffer;
@@ -131,12 +130,6 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 		}
 		this.init = true;
 		
-		this.vertexFormat = VertexFormat.builder()
-			.add("vPosition", BlazeDhVertexFormatUtil.FLOAT_XYZ_POS)
-			.add("aColor", BlazeDhVertexFormatUtil.RGBA_UBYTE_COLOR)
-			.add("aMaterial", BlazeDhVertexFormatUtil.IRIS_MATERIAL)
-			.build();
-		
 		this.createPipelines();
 		
 		if (RENDER_DEBUG_OBJECTS)
@@ -146,26 +139,36 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 	}
 	private void createPipelines()
 	{
-		RenderPipeline.Builder pipelineBuilder = RenderPipeline.builder();
+		RenderPipelineBuilderWrapper pipelineBuilder = new RenderPipelineBuilderWrapper();
 		{
-			pipelineBuilder.withCull(true);
+			pipelineBuilder.withFaceCulling(true);
 			pipelineBuilder.withDepthWrite(true);
-			pipelineBuilder.withDepthTestFunction(DepthTestFunction.LESS_DEPTH_TEST);
-			pipelineBuilder.withBlend(BlendFunction.TRANSLUCENT);
+			pipelineBuilder.withDepthTest(RenderPipelineBuilderWrapper.EDhDepthTest.LESS);
+			pipelineBuilder.withBlend(BlendFunction.TRANSLUCENT); // TRANSLUCENT = new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA, SourceFactor.ONE, DestFactor.ONE_MINUS_SRC_ALPHA);
 			pipelineBuilder.withColorWrite(true);
-			pipelineBuilder.withPolygonMode(PolygonMode.FILL);
-			pipelineBuilder.withLocation(Identifier.parse("distanthorizons:generic"));
+			pipelineBuilder.withPolygonMode(RenderPipelineBuilderWrapper.EDhPolygonMode.FILL);
+			pipelineBuilder.withName("generic_objects");
 			
-			pipelineBuilder.withVertexShader(Identifier.fromNamespaceAndPath("distanthorizons", "generic/blaze/vert"));
-			pipelineBuilder.withFragmentShader(Identifier.fromNamespaceAndPath("distanthorizons", "generic/blaze/frag"));
+			pipelineBuilder.withVertexShader("generic/blaze/vert");
+			pipelineBuilder.withFragmentShader("generic/blaze/frag");
 			
 			pipelineBuilder.withSampler("uLightMap");
 			
-			pipelineBuilder.withUniform("vertUniformBlock", UniformType.UNIFORM_BUFFER);
+			pipelineBuilder.withUniformBuffer("vertUniformBlock");
 			
-			pipelineBuilder.withVertexFormat(this.vertexFormat, VertexFormat.Mode.TRIANGLES);
-			this.pipeline = pipelineBuilder.build();
+			VertexFormat vertexFormat = VertexFormat.builder()
+				.add("vPosition", BlazeDhVertexFormatUtil.FLOAT_XYZ_POS)
+				.add("aColor", BlazeDhVertexFormatUtil.RGBA_UBYTE_COLOR)
+				.add("aMaterial", BlazeDhVertexFormatUtil.IRIS_MATERIAL)
+				
+				.add("paddingOne", BlazeDhVertexFormatUtil.BYTE_PAD)
+				.add("paddingTwo", BlazeDhVertexFormatUtil.BYTE_PAD)
+				.add("paddingThree", BlazeDhVertexFormatUtil.BYTE_PAD)
+				.build();
+			pipelineBuilder.withVertexFormat(vertexFormat);
+			pipelineBuilder.withVertexMode(RenderPipelineBuilderWrapper.EDhVertexMode.TRIANGLES);
 		}
+		this.pipeline = pipelineBuilder.build();
 	}
 	private void addGenericDebugObjects()
 	{
@@ -328,194 +331,194 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 	@Override
 	public void render(RenderParams renderEventParam, IProfilerWrapper profiler, boolean renderingWithSsao)
 	{
-		//==============//
-		// render setup //
-		//==============//
-		//#region
 		
-		profiler.push("setup");
-		
-		this.init();
-		
-		ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericRenderSetupEvent.class, renderEventParam);
-		
-		Vec3d camPos = MC_RENDER.getCameraExactPosition();
-		
-		//#endregion
-		
-		if (BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper.isEmpty()
-			|| BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.isEmpty())
+		try (IProfilerWrapper.IProfileBlock generic_profile = profiler.push("setup"))
 		{
-			return;
-		}
-		
-		
-		
-		//===========//
-		// rendering //
-		//===========//
-		//#region
-		
-		Collection<RenderableBoxGroup> boxList = this.boxGroupById.values();
-		for (RenderableBoxGroup boxGroup : boxList)
-		{
-			// validation //
 			
-			// shouldn't happen, but just in case
-			if (boxGroup == null)
+			
+			//==============//
+			// render setup //
+			//==============//
+			//#region
+			
+			this.init();
+			
+			ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericRenderSetupEvent.class, renderEventParam);
+			
+			Vec3d camPos = MC_RENDER.getCameraExactPosition();
+			
+			//#endregion
+			
+			if (BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper.isEmpty()
+				|| BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.isEmpty())
 			{
-				continue;
+				return;
 			}
 			
-			// skip boxes that shouldn't render this pass
-			if (boxGroup.ssaoEnabled != renderingWithSsao)
-			{
-				continue;
-			}
 			
-			profiler.popPush("render prep");
-			boxGroup.preRender(renderEventParam); // called even if the group is inactive, so the group can be activate if desired
 			
-			// ignore inactive groups
-			if (!boxGroup.active)
-			{
-				continue;
-			}
+			//===========//
+			// rendering //
+			//===========//
+			//#region
 			
-			// allow API users to cancel this object's rendering
-			boolean cancelRendering = ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericObjectRenderEvent.class, new DhApiBeforeGenericObjectRenderEvent.EventParam(renderEventParam, boxGroup));
-			if (cancelRendering)
+			Collection<RenderableBoxGroup> boxList = this.boxGroupById.values();
+			for (RenderableBoxGroup boxGroup : boxList)
 			{
-				continue;
-			}
-			
-			// update instanced data if needed
-			{
-				boxGroup.tryUpdateInstancedDataAsync();
+				// validation //
 				
-				// skip groups that haven't been uploaded yet
-				if (boxGroup.vertexBufferContainer.getState() != IDhGenericObjectVertexBufferContainer.EState.RENDER)
+				// shouldn't happen, but just in case
+				if (boxGroup == null)
 				{
 					continue;
 				}
+				
+				// skip boxes that shouldn't render this pass
+				if (boxGroup.ssaoEnabled != renderingWithSsao)
+				{
+					continue;
+				}
+				
+				profiler.popPush("render prep");
+				boxGroup.preRender(renderEventParam); // called even if the group is inactive, so the group can be activate if desired
+				
+				// ignore inactive groups
+				if (!boxGroup.active)
+				{
+					continue;
+				}
+				
+				// allow API users to cancel this object's rendering
+				boolean cancelRendering = ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericObjectRenderEvent.class, new DhApiBeforeGenericObjectRenderEvent.EventParam(renderEventParam, boxGroup));
+				if (cancelRendering)
+				{
+					continue;
+				}
+				
+				// update instanced data if needed
+				{
+					boxGroup.tryUpdateInstancedDataAsync();
+					
+					// skip groups that haven't been uploaded yet
+					if (boxGroup.vertexBufferContainer.getState() != IDhGenericObjectVertexBufferContainer.EState.RENDER)
+					{
+						continue;
+					}
+				}
+				
+				
+				DhApiRenderableBoxGroupShading shading = boxGroup.shading;
+				if (shading == null)
+				{
+					shading = DEFAULT_SHADING;
+				}
+				
+				// uniforms
+				{
+					int uniformBufferSize = new Std140SizeCalculator()
+						.putIVec3() // uOffsetChunk
+						.putVec3() // uOffsetSubChunk
+						.putIVec3() // uCameraPosChunk
+						.putVec3() // uCameraPosSubChunk
+						
+						.putVec3() // aTranslateChunk
+						.putVec3() // aTranslateSubChunk
+						
+						.putMat4f() // uProjectionMvm
+						.putInt() // uSkyLight
+						.putInt() // uBlockLight
+						
+						.putFloat() // uNorthShading
+						.putFloat() // uSouthShading
+						.putFloat() // uEastShading
+						.putFloat() // uWestShading
+						.putFloat() // uTopShading
+						.putFloat() // uBottomShading
+						.get();
+					
+					
+					// create data //
+					
+					Mat4f projectionMvmMatrix = new Mat4f(renderEventParam.dhProjectionMatrix);
+					projectionMvmMatrix.multiply(renderEventParam.dhModelViewMatrix);
+					
+					
+					// upload data //
+					
+					ByteBuffer buffer = ByteBuffer.allocateDirect(uniformBufferSize);
+					buffer.order(ByteOrder.nativeOrder());
+					buffer = Std140Builder.intoBuffer(buffer)
+						.putIVec3(
+							LodUtil.getChunkPosFromDouble(boxGroup.getOriginBlockPos().x),
+							LodUtil.getChunkPosFromDouble(boxGroup.getOriginBlockPos().y),
+							LodUtil.getChunkPosFromDouble(boxGroup.getOriginBlockPos().z)
+						) // uOffsetChunk
+						.putVec3(
+							LodUtil.getSubChunkPosFromDouble(boxGroup.getOriginBlockPos().x),
+							LodUtil.getSubChunkPosFromDouble(boxGroup.getOriginBlockPos().y),
+							LodUtil.getSubChunkPosFromDouble(boxGroup.getOriginBlockPos().z)
+						) // uOffsetSubChunk
+						.putIVec3(
+							LodUtil.getChunkPosFromDouble(camPos.x),
+							LodUtil.getChunkPosFromDouble(camPos.y),
+							LodUtil.getChunkPosFromDouble(camPos.z)
+						) // uCameraPosChunk
+						.putVec3(
+							LodUtil.getSubChunkPosFromDouble(camPos.x),
+							LodUtil.getSubChunkPosFromDouble(camPos.y),
+							LodUtil.getSubChunkPosFromDouble(camPos.z)
+						) // uCameraPosSubChunk
+						
+						.putMat4f(projectionMvmMatrix.createJomlMatrix()) // uProjectionMvm
+						.putInt(boxGroup.getSkyLight()) // uSkyLight
+						.putInt(boxGroup.getBlockLight()) // uBlockLight
+						
+						.putFloat(shading.north)
+						.putFloat(shading.south)
+						.putFloat(shading.east)
+						.putFloat(shading.west)
+						.putFloat(shading.top)
+						.putFloat(shading.bottom)
+						
+						.get()
+					;
+					
+					this.vertUniformBuffer = BlazeUniformUtil.createBuffer("vertUniformBlock", uniformBufferSize, this.vertUniformBuffer);
+					GpuBufferSlice bufferSlice = new GpuBufferSlice(this.vertUniformBuffer, 0, uniformBufferSize);
+					
+					COMMAND_ENCODER.writeToBuffer(bufferSlice, buffer);
+				}
+				
+				
+				
+				
+				// render //
+				
+				profiler.popPush("rendering");
+				try (IProfilerWrapper.IProfileBlock namespace_profile = profiler.push(boxGroup.getResourceLocationNamespace());
+					IProfilerWrapper.IProfileBlock location_profile = profiler.push(boxGroup.getResourceLocationPath()))
+				{
+					this.renderBoxGroupInstanced(renderEventParam, boxGroup, profiler);
+				}
+				
+				boxGroup.postRender(renderEventParam);
 			}
 			
-			
-			DhApiRenderableBoxGroupShading shading = boxGroup.shading;
-			if (shading == null)
-			{
-				shading = DEFAULT_SHADING;
-			}
-			
-			// uniforms
-			{
-				int uniformBufferSize = new Std140SizeCalculator()
-					.putIVec3() // uOffsetChunk
-					.putVec3() // uOffsetSubChunk
-					.putIVec3() // uCameraPosChunk
-					.putVec3() // uCameraPosSubChunk
-					
-					.putVec3() // aTranslateChunk
-					.putVec3() // aTranslateSubChunk
-					
-					.putMat4f() // uProjectionMvm
-					.putInt() // uSkyLight
-					.putInt() // uBlockLight
-					
-					.putFloat() // uNorthShading
-					.putFloat() // uSouthShading
-					.putFloat() // uEastShading
-					.putFloat() // uWestShading
-					.putFloat() // uTopShading
-					.putFloat() // uBottomShading
-					.get();
-				
-				
-				// create data //
-				
-				Mat4f projectionMvmMatrix = new Mat4f(renderEventParam.dhProjectionMatrix);
-				projectionMvmMatrix.multiply(renderEventParam.dhModelViewMatrix);
-				
-				
-				// upload data //
-				
-				ByteBuffer buffer = ByteBuffer.allocateDirect(uniformBufferSize);
-				buffer.order(ByteOrder.nativeOrder());
-				buffer = Std140Builder.intoBuffer(buffer)
-					.putIVec3(
-						LodUtil.getChunkPosFromDouble(boxGroup.getOriginBlockPos().x),
-						LodUtil.getChunkPosFromDouble(boxGroup.getOriginBlockPos().y),
-						LodUtil.getChunkPosFromDouble(boxGroup.getOriginBlockPos().z)
-					) // uOffsetChunk
-					.putVec3(
-						LodUtil.getSubChunkPosFromDouble(boxGroup.getOriginBlockPos().x),
-						LodUtil.getSubChunkPosFromDouble(boxGroup.getOriginBlockPos().y),
-						LodUtil.getSubChunkPosFromDouble(boxGroup.getOriginBlockPos().z)
-					) // uOffsetSubChunk
-					.putIVec3(
-						LodUtil.getChunkPosFromDouble(camPos.x),
-						LodUtil.getChunkPosFromDouble(camPos.y),
-						LodUtil.getChunkPosFromDouble(camPos.z)
-					) // uCameraPosChunk
-					.putVec3(
-						LodUtil.getSubChunkPosFromDouble(camPos.x),
-						LodUtil.getSubChunkPosFromDouble(camPos.y),
-						LodUtil.getSubChunkPosFromDouble(camPos.z)
-					) // uCameraPosSubChunk
-					
-					.putMat4f(projectionMvmMatrix.createJomlMatrix()) // uProjectionMvm
-					.putInt(boxGroup.getSkyLight()) // uSkyLight
-					.putInt(boxGroup.getBlockLight()) // uBlockLight
-					
-					.putFloat(shading.north)
-					.putFloat(shading.south)
-					.putFloat(shading.east)
-					.putFloat(shading.west)
-					.putFloat(shading.top)
-					.putFloat(shading.bottom)
-					
-					.get()
-				;
-				
-				this.vertUniformBuffer = BlazeUniformUtil.createBuffer("vertUniformBlock", uniformBufferSize, this.vertUniformBuffer);
-				GpuBufferSlice bufferSlice = new GpuBufferSlice(this.vertUniformBuffer, 0, uniformBufferSize);
-				
-				COMMAND_ENCODER.writeToBuffer(bufferSlice, buffer);
-			}
+			//#endregion
 			
 			
 			
+			//==========//
+			// clean up //
+			//==========//
+			//region
 			
-			// render //
+			profiler.popPush("cleanup");
 			
-			profiler.popPush("rendering");
-			profiler.push(boxGroup.getResourceLocationNamespace());
-			profiler.push(boxGroup.getResourceLocationPath());
+			ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericRenderCleanupEvent.class, renderEventParam);
 			
-			this.renderBoxGroupInstanced(renderEventParam, boxGroup, profiler);
-			
-			profiler.pop(); // resource path
-			profiler.pop(); // resource namespace
-			
-			boxGroup.postRender(renderEventParam);
+			//endregion
 		}
-		
-		//#endregion
-		
-		
-		
-		//==========//
-		// clean up //
-		//==========//
-		//region
-		
-		profiler.popPush("cleanup");
-		
-		ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericRenderCleanupEvent.class, renderEventParam);
-		
-		profiler.pop();
-		
-		//endregion
 	}
 	private String getRenderPassName() { return "distantHorizons:McGenericObjectRenderer"; }
 	
@@ -543,8 +546,6 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 			
 			// update instance data //
 			
-			profiler.push("vertex setup");
-			
 			BlazeGenericObjectVertexContainer container = (BlazeGenericObjectVertexContainer) boxGroup.vertexBufferContainer;
 			
 			LightMapWrapper lightMapWrapper = (LightMapWrapper) renderEventParam.lightmap;
@@ -554,7 +555,6 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 			
 			
 			// Bind instance data //
-			profiler.popPush("binding");
 			
 			
 			renderPass.setUniform("vertUniformBlock", this.vertUniformBuffer);
@@ -566,7 +566,6 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 			renderPass.setVertexBuffer(0, container.vboGpuBuffer);
 			
 			// Draw instanced
-			profiler.popPush("render");
 			if (container.uploadedBoxCount > 0)
 			{
 				renderPass.drawIndexed(
@@ -577,7 +576,6 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 				
 			}
 		}
-		profiler.pop();
 	}
 	
 	//endregion
@@ -612,6 +610,28 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 		
 		return "Generic Obj #: " + F3Screen.NUMBER_FORMAT.format(activeGroupCount) + "/" + F3Screen.NUMBER_FORMAT.format(totalGroupCount) + ", " +
 				"Cube #: " + F3Screen.NUMBER_FORMAT.format(activeBoxCount) + "/" + F3Screen.NUMBER_FORMAT.format(totalBoxCount);
+	}
+	
+	//endregion
+	
+	
+	
+	//================//
+	// base overrides //
+	//================//
+	//region
+	
+	@Override
+	public void close()
+	{
+		// close is called outside the render thread and buffer closing must be done on the render thread
+		RenderThreadTaskHandler.INSTANCE.queueRunningOnRenderThread("Generic Obj Cleanup", () ->
+		{
+			if (this.vertUniformBuffer != null)
+			{
+				this.vertUniformBuffer.close();
+			}
+		});
 	}
 	
 	//endregion

@@ -29,7 +29,6 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.platform.PolygonMode;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.CommandEncoder;
@@ -41,6 +40,7 @@ import com.seibel.distanthorizons.common.render.blaze.BlazeDhMetaRenderer;
 import com.seibel.distanthorizons.common.render.blaze.apply.BlazeDhCopyRenderer;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
 import com.seibel.distanthorizons.core.config.Config;
@@ -82,7 +82,10 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 	
 	private GpuBuffer vboGpuBuffer;
 	
-	public final BlazeTextureWrapper fadeColorTextureWrapper = BlazeTextureWrapper.createColor("DhVanillaFadeTexture");
+	public final BlazeTextureWrapper fadeColorTextureWrapper = BlazeTextureWrapper.createColor("DhVanillaFadeColorTexture");
+	/** We don't want to actually write any depth data, but blaze3D complains if we don't bind a depth texture. */
+	private final BlazeTextureWrapper fadeDepthTextureWrapper = BlazeTextureWrapper.createDepth("DhVanillaFadeDepthTexture");
+	
 	
 	public final BlazeTextureViewWrapper mcDepthTextureWrapper = new BlazeTextureViewWrapper();
 	public final BlazeTextureViewWrapper mcColorTextureWrapper = new BlazeTextureViewWrapper();
@@ -106,18 +109,18 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 		
 		
 		
-		RenderPipeline.Builder pipelineBuilder = RenderPipeline.builder();
+		RenderPipelineBuilderWrapper pipelineBuilder = new RenderPipelineBuilderWrapper();
 		{
-			pipelineBuilder.withCull(false);
+			pipelineBuilder.withFaceCulling(false);
 			pipelineBuilder.withDepthWrite(false);
-			pipelineBuilder.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST);
+			pipelineBuilder.withDepthTest(RenderPipelineBuilderWrapper.EDhDepthTest.NONE);
 			pipelineBuilder.withColorWrite(true);
 			pipelineBuilder.withoutBlend();
-			pipelineBuilder.withPolygonMode(PolygonMode.FILL);
-			pipelineBuilder.withLocation(Identifier.parse("distanthorizons:mc_vanilla_fade_render"));
+			pipelineBuilder.withPolygonMode(RenderPipelineBuilderWrapper.EDhPolygonMode.FILL);
+			pipelineBuilder.withName("vanilla_fade");
 			
-			pipelineBuilder.withVertexShader(Identifier.fromNamespaceAndPath("distanthorizons", "fade/blaze/vert"));
-			pipelineBuilder.withFragmentShader(Identifier.fromNamespaceAndPath("distanthorizons", "fade/blaze/vanilla_fade"));
+			pipelineBuilder.withVertexShader("fade/blaze/vert");
+			pipelineBuilder.withFragmentShader("fade/blaze/vanilla_fade");
 			
 			pipelineBuilder.withSampler("uMcDepthTexture");
 			pipelineBuilder.withSampler("uCombinedMcDhColorTexture");
@@ -125,9 +128,10 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 			pipelineBuilder.withSampler("uDhDepthTexture");
 			pipelineBuilder.withSampler("uDhColorTexture");
 			
-			pipelineBuilder.withUniform("fragUniformBlock", UniformType.UNIFORM_BUFFER);
+			pipelineBuilder.withUniformBuffer("fragUniformBlock");
 			
-			pipelineBuilder.withVertexFormat(BlazePostProcessUtil.createVertexFormat(), VertexFormat.Mode.TRIANGLE_FAN);
+			pipelineBuilder.withVertexFormat(BlazePostProcessUtil.createVertexFormat());
+			pipelineBuilder.withVertexMode(RenderPipelineBuilderWrapper.EDhVertexMode.TRIANGLE_FAN);
 		}
 		this.pipeline = pipelineBuilder.build();
 		
@@ -158,6 +162,7 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 		
 		// textures
 		this.fadeColorTextureWrapper.tryCreateOrResize();
+		this.fadeDepthTextureWrapper.tryCreateOrResize();
 		
 		this.mcDepthTextureWrapper.tryWrap(Minecraft.getInstance().getMainRenderTarget().getDepthTexture());
 		this.mcColorTextureWrapper.tryWrap(Minecraft.getInstance().getMainRenderTarget().getColorTexture());
@@ -235,7 +240,7 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 			this::getRenderPassName,
 			this.fadeColorTextureWrapper.textureView,
 			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			/*depthTexture*/ null, 
+			this.fadeDepthTextureWrapper.textureView, 
 			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
 		{
 			renderPass.bindTexture("uMcDepthTexture", this.mcDepthTextureWrapper.textureView, this.mcDepthTextureWrapper.textureSampler);

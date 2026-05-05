@@ -135,14 +135,9 @@ public class GlVanillaFadeRenderer implements IDhVanillaFadeRenderer
 		
 		
 		IProfilerWrapper profiler = MC_CLIENT.getProfiler();
-		profiler.pop(); // get out of "terrain"
-		profiler.push("DH-Vanilla Fade");
-		
-		
-		try(GLState mcState = new GLState())
+		try (IProfilerWrapper.IProfileBlock fade_profile = profiler.push("DH-Vanilla Fade");
+			GLState mcState = new GLState())
 		{
-			profiler.push("Vanilla Fade Generate");
-			
 			this.init();
 			
 			// resize the framebuffer if necessary
@@ -165,19 +160,15 @@ public class GlVanillaFadeRenderer implements IDhVanillaFadeRenderer
 			// otherwise we can directly render to their texture
 			if (MC_RENDER.mcRendersToFrameBuffer())
 			{
-				profiler.popPush("Vanilla Fade Apply");
-				
 				GlDhFarFadeApplyShader.INSTANCE.fadeTexture = this.fadeTexture;
 				GlDhFarFadeApplyShader.INSTANCE.readFramebuffer = GlDhVanillaFadeShader.INSTANCE.frameBuffer;
 				GlDhFarFadeApplyShader.INSTANCE.drawFramebuffer = MC_RENDER.getTargetFramebuffer();
 				GlDhFarFadeApplyShader.INSTANCE.render(renderParams);
 			}
-			
-			profiler.pop(); 
 		}
 		catch (Exception e)
 		{
-			LOGGER.error("Unexpected error during fade render, error: ["+e.getMessage()+"].", e);
+			LOGGER.error("Unexpected error during fade render, error: [" + e.getMessage() + "].", e);
 		}
 	}
 	

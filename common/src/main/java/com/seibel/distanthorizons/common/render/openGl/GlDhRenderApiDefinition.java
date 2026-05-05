@@ -2,13 +2,13 @@ package com.seibel.distanthorizons.common.render.openGl;
 
 import com.seibel.distanthorizons.common.render.openGl.generic.GlGenericObjectRenderer;
 import com.seibel.distanthorizons.common.render.openGl.generic.GlGenericObjectVertexContainer;
-import com.seibel.distanthorizons.common.render.openGl.glObject.GLState;
 import com.seibel.distanthorizons.common.render.openGl.glObject.GlDummyUniformData;
 import com.seibel.distanthorizons.common.render.openGl.glObject.buffer.GLVertexBuffer;
 import com.seibel.distanthorizons.common.render.openGl.postProcessing.fade.GlDhFarFadeRenderer;
 import com.seibel.distanthorizons.common.render.openGl.postProcessing.fade.GlVanillaFadeRenderer;
 import com.seibel.distanthorizons.common.render.openGl.postProcessing.fog.GlDhFogRenderer;
 import com.seibel.distanthorizons.common.render.openGl.postProcessing.ssao.GlDhSSAORenderer;
+import com.seibel.distanthorizons.common.render.openGl.terrain.GlDhTerrainShaderProgram;
 import com.seibel.distanthorizons.common.render.openGl.test.GlTestTriangleRenderer;
 import com.seibel.distanthorizons.core.render.renderer.AbstractDebugWireframeRenderer;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
@@ -36,7 +36,7 @@ public class GlDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 	//region
 	
 	@Override public IDhMetaRenderer getMetaRenderer() { return GlDhMetaRenderer.INSTANCE; }
-	@Override public IDhTerrainRenderer getTerrainRenderer() { return GlDhTerrainShaderProgram.INSTANCE; }
+	@Override public IDhTerrainRenderer getTerrainRenderer() { return GlDhTerrainRenderer.INSTANCE; }
 	@Override public IDhSsaoRenderer getSsaoRenderer() { return GlDhSSAORenderer.INSTANCE; }
 	@Override public IDhFogRenderer getFogRenderer() { return GlDhFogRenderer.INSTANCE; }
 	@Override public IDhFarFadeRenderer getFarFadeRenderer() { return GlDhFarFadeRenderer.INSTANCE; }
@@ -44,15 +44,6 @@ public class GlDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 	
 	@Override public IDhVanillaFadeRenderer getVanillaFadeRenderer() { return GlVanillaFadeRenderer.INSTANCE; }
 	@Override public IDhTestTriangleRenderer getTestTriangleRenderer() { return GlTestTriangleRenderer.INSTANCE; }
-	
-	@Override 
-	public void bindRenderers()
-	{
-		try (GLState state = new GLState())
-		{
-			super.bindRenderers();
-		}
-	}
 	
 	//endregion
 	
@@ -63,7 +54,7 @@ public class GlDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 	//===========//
 	//region
 	
-	@Override public IDhGenericRenderer createGenericRenderer() { return GlGenericObjectRenderer.INSTANCE; }
+	@Override public IDhGenericRenderer createGenericRenderer() { return new GlGenericObjectRenderer(); }
 	
 	@Override public IVertexBufferWrapper createVboWrapper(String name) { return new GLVertexBuffer(); }
 	@Override public ILodContainerUniformBufferWrapper createLodContainerUniformWrapper() { return new GlDummyUniformData(); }

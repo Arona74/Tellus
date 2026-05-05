@@ -159,16 +159,19 @@ public class WrapperFactory implements IWrapperFactory
 	public IBlockStateWrapper deserializeBlockStateWrapper(String str, ILevelWrapper levelWrapper) throws IOException { return BlockStateWrapper.deserialize(str, levelWrapper); }
 	@Override
 	public IBlockStateWrapper getAirBlockStateWrapper() { return BlockStateWrapper.AIR; }
-	
+	@Override 
+	public IBlockStateWrapper getWaterBlockStateWrapper(ILevelWrapper levelWrapper) { return BlockStateWrapper.getWaterBlockStateWrapper(levelWrapper); }
 	@Override
 	public ObjectOpenHashSet<IBlockStateWrapper> getRendererIgnoredBlocks(ILevelWrapper levelWrapper) { return BlockStateWrapper.getRendererIgnoredBlocks(levelWrapper); }
 	@Override
 	public ObjectOpenHashSet<IBlockStateWrapper> getRendererIgnoredCaveBlocks(ILevelWrapper levelWrapper) { return BlockStateWrapper.getRendererIgnoredCaveBlocks(levelWrapper); }
+	@Override
+	public ObjectOpenHashSet<IBlockStateWrapper> getWaterSubsurfaceReplacementBlocks(ILevelWrapper levelWrapper) { return BlockStateWrapper.getWaterSubsurfaceReplacementBlocks(levelWrapper); }
+	@Override
+	public ObjectOpenHashSet<IBlockStateWrapper> getWaterSurfaceReplacementBlocks(ILevelWrapper levelWrapper) { return BlockStateWrapper.getWaterSurfaceReplacementBlocks(levelWrapper); }
 	
 	@Override
-	public void resetRendererIgnoredCaveBlocks() { BlockStateWrapper.clearRendererIgnoredCaveBlocks(); }
-	@Override
-	public void resetRendererIgnoredBlocksSet() { BlockStateWrapper.clearRendererIgnoredBlocks(); }
+	public void resetCachedIgnoredBlocksSets() { BlockStateWrapper.clearCachedIgnoreBlocks(); }
 	
 	
 	/**

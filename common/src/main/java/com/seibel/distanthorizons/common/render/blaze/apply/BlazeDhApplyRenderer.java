@@ -27,9 +27,6 @@ public class BlazeDhApplyRenderer {}
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
-import com.mojang.blaze3d.platform.PolygonMode;
-import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderPass;
@@ -37,12 +34,13 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.*;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.coreapi.ModInfo;
-import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
@@ -81,6 +79,10 @@ public class BlazeDhApplyRenderer
 	private final BlazeTextureViewWrapper sourceDepthTextureViewWrapper = new BlazeTextureViewWrapper();
 	
 	private final BlazeTextureViewWrapper destinationColorTextureViewWrapper = new BlazeTextureViewWrapper();
+	/** We don't want to actually write any depth data, but blaze3D complains if we don't bind a depth texture. */
+	private final BlazeTextureWrapper dummyDepthTextureWrapper = BlazeTextureWrapper.createDepth("apply_dummy_depth");
+	
+	
 	
 	/** 
 	 * Can be set for special application shaders that need 
@@ -134,8 +136,12 @@ public class BlazeDhApplyRenderer
 		GpuTexture sourceDepthTexture,
 		GpuTexture destinationColorTexture)
 	{
-		this.createPipeline();
-		this.vboGpuBuffer = BlazePostProcessUtil.createAndUploadScreenVertexData(this.name);
+		// one-time setup
+		if (this.pipeline == null)
+		{
+			this.createPipeline();
+			this.vboGpuBuffer = BlazePostProcessUtil.createAndUploadScreenVertexData(this.name);
+		}
 		
 		this.sourceColorTextureViewWrapper.tryWrap(sourceColorTexture);
 		this.sourceDepthTextureViewWrapper.tryWrap(sourceDepthTexture);
@@ -145,20 +151,11 @@ public class BlazeDhApplyRenderer
 	}
 	private void createPipeline()
 	{
-		if (this.pipeline != null)
+		RenderPipelineBuilderWrapper pipelineBuilder = new RenderPipelineBuilderWrapper();
 		{
-			return;
-		}
-		
-		VertexFormat vertexFormat = VertexFormat.builder()
-			.add("vPosition", BlazeDhVertexFormatUtil.SCREEN_POS)
-			.build();
-		
-		RenderPipeline.Builder pipelineBuilder = RenderPipeline.builder();
-		{
-			pipelineBuilder.withCull(false);
+			pipelineBuilder.withFaceCulling(false);
 			pipelineBuilder.withDepthWrite(false);
-			pipelineBuilder.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST);
+			pipelineBuilder.withDepthTest(RenderPipelineBuilderWrapper.EDhDepthTest.NONE);
 			pipelineBuilder.withColorWrite(true);
 			
 			if (this.blendFunction != null)
@@ -170,23 +167,26 @@ public class BlazeDhApplyRenderer
 				pipelineBuilder.withoutBlend();
 			}
 			
-			pipelineBuilder.withPolygonMode(PolygonMode.FILL);
-			pipelineBuilder.withLocation(Identifier.parse(this.identifierName)); // TODO will complain if capital letters are included
+			pipelineBuilder.withPolygonMode(RenderPipelineBuilderWrapper.EDhPolygonMode.FILL);
+			pipelineBuilder.withName(this.name);
 			
-			// TODO manually validate paths to confirm they exist and end with ".fsh" or ".vsh", MC silently fails if the files are missing/improperly named
-			pipelineBuilder.withVertexShader(Identifier.fromNamespaceAndPath("distanthorizons", this.vertexShaderPath));
-			pipelineBuilder.withFragmentShader(Identifier.fromNamespaceAndPath("distanthorizons", this.fragmentShaderPath));
+			pipelineBuilder.withVertexShader(this.vertexShaderPath);
+			pipelineBuilder.withFragmentShader(this.fragmentShaderPath);
 			
 			for (int i = 0; i < this.uniformNames.length; i++)
 			{
 				String uniformName = this.uniformNames[i];
-				pipelineBuilder.withUniform(uniformName, UniformType.UNIFORM_BUFFER);
+				pipelineBuilder.withUniformBuffer(uniformName);
 			}
 			
 			pipelineBuilder.withSampler("uSourceColorTexture");
 			pipelineBuilder.withSampler("uSourceDepthTexture");
 			
-			pipelineBuilder.withVertexFormat(vertexFormat, VertexFormat.Mode.TRIANGLE_FAN);
+			VertexFormat vertexFormat = VertexFormat.builder()
+				.add("vPosition", BlazeDhVertexFormatUtil.SCREEN_POS)
+				.build();
+			pipelineBuilder.withVertexFormat(vertexFormat);
+			pipelineBuilder.withVertexMode(RenderPipelineBuilderWrapper.EDhVertexMode.TRIANGLE_FAN);
 		}
 		this.pipeline = pipelineBuilder.build();
 	}
@@ -223,11 +223,13 @@ public class BlazeDhApplyRenderer
 	{
 		this.tryInit(sourceColorTexture, sourceDepthTexture, destinationColorTexture);
 		
+		this.dummyDepthTextureWrapper.tryCreateOrResize();
+		
 		try (RenderPass renderPass = COMMAND_ENCODER.createRenderPass(
 			this::getIdentifierName,
 			this.destinationColorTextureViewWrapper.textureView,
 			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			/*depthTexture*/ null,
+			this.dummyDepthTextureWrapper.textureView,
 			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
 		{
 			renderPass.bindTexture("uSourceColorTexture", this.sourceColorTextureViewWrapper.textureView, this.sourceColorTextureViewWrapper.textureSampler);

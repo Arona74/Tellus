@@ -130,7 +130,12 @@ public class ChunkWrapper implements IChunkWrapper
 	{
 		this.chunk = chunk;
 		this.wrappedLevel = wrappedLevel;
+		
+		#if MC_VER <= MC_1_21_11
 		this.chunkPos = new DhChunkPos(chunk.getPos().x, chunk.getPos().z);
+		#else
+		this.chunkPos = new DhChunkPos(chunk.getPos().x(), chunk.getPos().z());
+		#endif
 	}
 	
 	@Override

@@ -30,21 +30,18 @@ import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.PolygonMode;
 import com.mojang.blaze3d.platform.SourceFactor;
-import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.api.enums.rendering.EDhApiFogColorMode;
 import com.seibel.distanthorizons.api.enums.rendering.EDhApiHeightFogDirection;
 import com.seibel.distanthorizons.api.enums.rendering.EDhApiHeightFogMixMode;
 import com.seibel.distanthorizons.common.render.blaze.BlazeDhMetaRenderer;
 import com.seibel.distanthorizons.common.render.blaze.apply.BlazeDhApplyRenderer;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
@@ -58,7 +55,6 @@ import com.seibel.distanthorizons.core.util.math.Mat4f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhFogRenderer;
-import net.minecraft.resources.Identifier;
 
 import java.awt.*;
 import java.nio.ByteBuffer;
@@ -91,7 +87,9 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 	
 	private GpuBuffer vboGpuBuffer;
 	
-	public BlazeTextureWrapper fogColorTextureWrapper = BlazeTextureWrapper.createColor("DhFogColorTexture");
+	private final BlazeTextureWrapper fogColorTextureWrapper = BlazeTextureWrapper.createColor("dh_fog_color_texture");
+	/** We don't want to actually write any depth data, but blaze3D complains if we don't bind a depth texture. */
+	private final BlazeTextureWrapper fogDepthTextureWrapper = BlazeTextureWrapper.createDepth("dh_fog_depth_texture");
 	
 	
 	
@@ -119,24 +117,25 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 			"apply/blaze/vert", "apply/blaze/frag"
 		);
 		
-		RenderPipeline.Builder pipelineBuilder = RenderPipeline.builder();
+		RenderPipelineBuilderWrapper pipelineBuilder = new RenderPipelineBuilderWrapper();
 		{
-			pipelineBuilder.withCull(false);
+			pipelineBuilder.withFaceCulling(false);
 			pipelineBuilder.withDepthWrite(false);
-			pipelineBuilder.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST);
+			pipelineBuilder.withDepthTest(RenderPipelineBuilderWrapper.EDhDepthTest.NONE);
 			pipelineBuilder.withColorWrite(true);
 			pipelineBuilder.withoutBlend();
-			pipelineBuilder.withPolygonMode(PolygonMode.FILL);
-			pipelineBuilder.withLocation(Identifier.parse("distanthorizons:fog_render"));
+			pipelineBuilder.withPolygonMode(RenderPipelineBuilderWrapper.EDhPolygonMode.FILL);
+			pipelineBuilder.withName("fog_render");
 			
-			pipelineBuilder.withVertexShader(Identifier.fromNamespaceAndPath("distanthorizons", "fog/blaze/vert"));
-			pipelineBuilder.withFragmentShader(Identifier.fromNamespaceAndPath("distanthorizons", "fog/blaze/frag"));
+			pipelineBuilder.withVertexShader("fog/blaze/vert");
+			pipelineBuilder.withFragmentShader("fog/blaze/frag");
 			
 			pipelineBuilder.withSampler("uDhDepthTexture");
 			
-			pipelineBuilder.withUniform("fragUniformBlock", UniformType.UNIFORM_BUFFER);
+			pipelineBuilder.withUniformBuffer("fragUniformBlock");
 			
-			pipelineBuilder.withVertexFormat(BlazePostProcessUtil.createVertexFormat(), VertexFormat.Mode.TRIANGLE_FAN);
+			pipelineBuilder.withVertexFormat(BlazePostProcessUtil.createVertexFormat());
+			pipelineBuilder.withVertexMode(RenderPipelineBuilderWrapper.EDhVertexMode.TRIANGLE_FAN);
 		}
 		this.pipeline = pipelineBuilder.build();
 		
@@ -168,7 +167,7 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 		
 		
 		this.fogColorTextureWrapper.tryCreateOrResize();
-		
+		this.fogDepthTextureWrapper.tryCreateOrResize();
 		
 		{
 			int uniformBufferSize = new Std140SizeCalculator()
@@ -339,7 +338,7 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 			this::getRenderPassName,
 			this.fogColorTextureWrapper.textureView, 
 			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			/*depthTexture*/ null, 
+			this.fogDepthTextureWrapper.textureView, 
 			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
 		{
 			renderPass.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.textureView, BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.textureSampler);

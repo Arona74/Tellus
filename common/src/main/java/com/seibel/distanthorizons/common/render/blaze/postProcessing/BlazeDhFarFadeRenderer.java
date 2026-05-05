@@ -29,18 +29,15 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
-import com.mojang.blaze3d.platform.PolygonMode;
-import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.BlazeDhMetaRenderer;
 import com.seibel.distanthorizons.common.render.blaze.apply.BlazeDhCopyRenderer;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
 import com.seibel.distanthorizons.core.logging.DhLogger;
@@ -50,7 +47,6 @@ import com.seibel.distanthorizons.core.util.RenderUtil;
 import com.seibel.distanthorizons.core.util.math.Mat4f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhFarFadeRenderer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.Identifier;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -76,8 +72,11 @@ public class BlazeDhFarFadeRenderer implements IDhFarFadeRenderer
 	
 	private GpuBuffer vboGpuBuffer;
 	
-	public final BlazeTextureWrapper dhFadeColorTextureWrapper = BlazeTextureWrapper.createColor("DhFadeColorTexture");
-	public final BlazeTextureViewWrapper mcColorTextureViewWrapper = new BlazeTextureViewWrapper();
+	private final BlazeTextureWrapper dhFadeColorTextureWrapper = BlazeTextureWrapper.createColor("dh_far_fade_color_texture");
+	/** We don't want to actually write any depth data, but blaze3D complains if we don't bind a depth texture. */
+	private final BlazeTextureWrapper dhFadeDepthTextureWrapper = BlazeTextureWrapper.createDepth("dh_far_fade_depth_texture");
+	
+	private final BlazeTextureViewWrapper mcColorTextureViewWrapper = new BlazeTextureViewWrapper();
 	
 	
 	
@@ -98,27 +97,28 @@ public class BlazeDhFarFadeRenderer implements IDhFarFadeRenderer
 		
 		
 		
-		RenderPipeline.Builder pipelineBuilder = RenderPipeline.builder();
+		RenderPipelineBuilderWrapper pipelineBuilder = new RenderPipelineBuilderWrapper();
 		{
-			pipelineBuilder.withCull(false);
+			pipelineBuilder.withFaceCulling(false);
 			pipelineBuilder.withDepthWrite(false);
-			pipelineBuilder.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST);
+			pipelineBuilder.withDepthTest(RenderPipelineBuilderWrapper.EDhDepthTest.NONE);
 			pipelineBuilder.withColorWrite(true);
 			pipelineBuilder.withoutBlend();
-			pipelineBuilder.withPolygonMode(PolygonMode.FILL);
-			pipelineBuilder.withLocation(Identifier.parse("distanthorizons:far_fade"));
+			pipelineBuilder.withPolygonMode(RenderPipelineBuilderWrapper.EDhPolygonMode.FILL);
+			pipelineBuilder.withName("far_fade");
 			
-			pipelineBuilder.withVertexShader(Identifier.fromNamespaceAndPath("distanthorizons", "fade/blaze/vert"));
-			pipelineBuilder.withFragmentShader(Identifier.fromNamespaceAndPath("distanthorizons", "fade/blaze/dh_fade"));
+			pipelineBuilder.withVertexShader("fade/blaze/vert");
+			pipelineBuilder.withFragmentShader("fade/blaze/dh_fade");
 			
 			pipelineBuilder.withSampler("uMcColorTexture");
 			
 			pipelineBuilder.withSampler("uDhDepthTexture");
 			pipelineBuilder.withSampler("uDhColorTexture");
 			
-			pipelineBuilder.withUniform("fragUniformBlock", UniformType.UNIFORM_BUFFER);
+			pipelineBuilder.withUniformBuffer("fragUniformBlock");
 			
-			pipelineBuilder.withVertexFormat(BlazePostProcessUtil.createVertexFormat(), VertexFormat.Mode.TRIANGLE_FAN);
+			pipelineBuilder.withVertexFormat(BlazePostProcessUtil.createVertexFormat());
+			pipelineBuilder.withVertexMode(RenderPipelineBuilderWrapper.EDhVertexMode.TRIANGLE_FAN);
 		}
 		this.pipeline = pipelineBuilder.build();
 		
@@ -152,6 +152,8 @@ public class BlazeDhFarFadeRenderer implements IDhFarFadeRenderer
 		// textures
 		this.dhFadeColorTextureWrapper.tryCreateOrResize();
 		this.mcColorTextureViewWrapper.tryWrap(Minecraft.getInstance().getMainRenderTarget().getColorTexture());
+		
+		this.dhFadeDepthTextureWrapper.tryCreateOrResize();
 		
 		{
 			int uniformBufferSize = new Std140SizeCalculator()
@@ -206,7 +208,7 @@ public class BlazeDhFarFadeRenderer implements IDhFarFadeRenderer
 			this::getRenderPassName,
 			this.dhFadeColorTextureWrapper.textureView, 
 			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			/*depthTexture*/ null, 
+			this.dhFadeDepthTextureWrapper.textureView, 
 			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
 		{
 			// MC texture

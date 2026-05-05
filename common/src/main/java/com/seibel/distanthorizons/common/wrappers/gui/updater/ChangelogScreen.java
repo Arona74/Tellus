@@ -23,8 +23,10 @@ import net.minecraft.client.gui.narration.NarratableEntry;
 #if MC_VER < MC_1_20_1
 import net.minecraft.client.gui.GuiComponent;
 import com.mojang.blaze3d.vertex.PoseStack;
-#else
+#elif MC_VER <= MC_1_21_11
 import net.minecraft.client.gui.GuiGraphics;
+#else
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 #endif
 
 
@@ -168,8 +170,10 @@ public class ChangelogScreen extends DhScreen
 	@Override
     #if MC_VER < MC_1_20_1
 	public void render(PoseStack matrices, int mouseX, int mouseY, float delta)
-    #else
+    #elif MC_VER <= MC_1_21_11
 	public void render(GuiGraphics matrices, int mouseX, int mouseY, float delta)
+    #else
+	public void extractRenderState(GuiGraphicsExtractor matrices, int mouseX, int mouseY, float delta)
     #endif
 	{
 		#if MC_VER < MC_1_20_2
@@ -206,8 +210,14 @@ public class ChangelogScreen extends DhScreen
 		
 		
 		// render order matters, otherwise on 1.20.6+ the blurred background will render on top of the text
+		#if MC_VER <= MC_1_21_11
 		super.render(matrices, mouseX, mouseY, delta); // Render the buttons
 		this.changelogArea.render(matrices, mouseX, mouseY, delta); // Render the changelog
+		#else
+		super.extractRenderState(matrices, mouseX, mouseY, delta); // Render the buttons
+		this.changelogArea.extractRenderState(matrices, mouseX, mouseY, delta); // Render the changelog
+	    #endif
+		
 		this.DhDrawCenteredString(matrices, this.font, this.title, this.width / 2, 15, 0xFFFFFF); // Render title
 	}
 	
@@ -264,10 +274,14 @@ public class ChangelogScreen extends DhScreen
 		@Override
 		public void render(GuiGraphics matrices, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta)
 		{ matrices.drawString(textRenderer, this.text, 12, y + 5, 0xFFFFFF); }
-		#else
+		#elif MC_VER <= MC_1_21_11
 		@Override 
 		public void renderContent(GuiGraphics matrices, int y, int x, boolean hovered, float tickDelta)
 		{ matrices.drawString(textRenderer, this.text, 12, y + 5, 0xFFFFFF); }
+		#else
+		@Override 
+		public void extractContent(GuiGraphicsExtractor matrices, int y, int x, boolean hovered, float tickDelta)
+		{ matrices.text(textRenderer, this.text, 12, y + 5, 0xFFFFFF); }
         #endif
 		
 		@Override

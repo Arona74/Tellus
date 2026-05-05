@@ -24,7 +24,6 @@ import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
-import net.minecraft.client.renderer.LightTexture;
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -43,8 +42,19 @@ import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
 #endif
+#if MC_VER <= MC_1_21_11
+import net.minecraft.client.renderer.LightTexture;
+#else
+import net.minecraft.client.renderer.state.LightmapRenderState;
+import net.minecraft.client.renderer.Lightmap;
+#endif
 
+
+#if MC_VER <= MC_1_21_11
 @Mixin(LightTexture.class)
+#else
+@Mixin(Lightmap.class)
+#endif
 public class MixinLightTexture
 {
 	 
@@ -67,8 +77,13 @@ public class MixinLightTexture
 	
 	
 	
+	#if MC_VER <= MC_1_21_11
 	@Inject(method = "updateLightTexture(F)V", at = @At("RETURN"))
 	public void updateLightTexture(float partialTicks, CallbackInfo ci)
+	#else
+	@Inject(method = "render(Lnet/minecraft/client/renderer/state/LightmapRenderState;)V",  at = @At("RETURN"))
+	public void render(LightmapRenderState renderState, CallbackInfo ci)
+	#endif
 	{
 		IMinecraftClientWrapper mc = SingletonInjector.INSTANCE.get(IMinecraftClientWrapper.class);
 		if (mc == null)

@@ -26,20 +26,17 @@ public class BlazeDhCopyRenderer {}
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
-import com.mojang.blaze3d.platform.PolygonMode;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.*;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
-import net.minecraft.resources.Identifier;
 
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
@@ -63,6 +60,8 @@ public class BlazeDhCopyRenderer
 	
 	private GpuBuffer vboGpuBuffer;
 	
+	private BlazeTextureWrapper dummyDepthTextureWrapper;
+	
 	
 	
 	//=============//
@@ -81,23 +80,25 @@ public class BlazeDhCopyRenderer
 		this.init = true;
 		
 		
+		this.dummyDepthTextureWrapper = BlazeTextureWrapper.createDepth("dh_copy_depth_texture");
 		
-		RenderPipeline.Builder pipelineBuilder = RenderPipeline.builder();
+		RenderPipelineBuilderWrapper pipelineBuilder = new RenderPipelineBuilderWrapper();
 		{
-			pipelineBuilder.withCull(false);
+			pipelineBuilder.withFaceCulling(false);
 			pipelineBuilder.withDepthWrite(false);
-			pipelineBuilder.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST);
+			pipelineBuilder.withDepthTest(RenderPipelineBuilderWrapper.EDhDepthTest.NONE);
 			pipelineBuilder.withColorWrite(true);
 			pipelineBuilder.withoutBlend();
-			pipelineBuilder.withPolygonMode(PolygonMode.FILL);
-			pipelineBuilder.withLocation(Identifier.parse("distanthorizons:copy_render"));
+			pipelineBuilder.withPolygonMode(RenderPipelineBuilderWrapper.EDhPolygonMode.FILL);
+			pipelineBuilder.withName("copy");
 			
-			pipelineBuilder.withVertexShader(Identifier.fromNamespaceAndPath("distanthorizons", "copy/blaze/vert"));
-			pipelineBuilder.withFragmentShader(Identifier.fromNamespaceAndPath("distanthorizons", "copy/blaze/frag"));
+			pipelineBuilder.withVertexShader("copy/blaze/vert");
+			pipelineBuilder.withFragmentShader("copy/blaze/frag");
 			
 			pipelineBuilder.withSampler("uCopyTexture");
 			
-			pipelineBuilder.withVertexFormat(BlazePostProcessUtil.createVertexFormat(), VertexFormat.Mode.TRIANGLE_FAN);
+			pipelineBuilder.withVertexFormat(BlazePostProcessUtil.createVertexFormat());
+			pipelineBuilder.withVertexMode(RenderPipelineBuilderWrapper.EDhVertexMode.TRIANGLE_FAN);
 		}
 		this.pipeline = pipelineBuilder.build();
 		
@@ -139,11 +140,13 @@ public class BlazeDhCopyRenderer
 	{
 		this.tryInit();
 		
+		this.dummyDepthTextureWrapper.tryCreateOrResize();
+		
 		try (RenderPass renderPass = COMMAND_ENCODER.createRenderPass(
 			this::getRenderPassName,
 			destinationTextureView,
 			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			/*depthTexture*/ null,
+			this.dummyDepthTextureWrapper.textureView,
 			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
 		{
 			renderPass.bindTexture("uCopyTexture", sourceTextureView, sourceTextureSampler);

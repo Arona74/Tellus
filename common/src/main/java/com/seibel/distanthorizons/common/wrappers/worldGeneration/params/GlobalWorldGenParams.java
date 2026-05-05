@@ -133,8 +133,12 @@ public final class GlobalWorldGenParams
 		this.worldOptions = worldData.worldGenOptions();
 		this.biomes = registry.registryOrThrow(Registries.BIOME);
 		this.worldSeed = worldOptions.seed();
-		#else
+		#elif MC_VER <= MC_1_21_11
 		this.worldOptions = worldData.worldGenOptions();
+		this.biomes = this.registry.lookupOrThrow(Registries.BIOME);
+		this.worldSeed = this.worldOptions.seed();
+		#else
+		this.worldOptions = server.getWorldGenSettings().options();
 		this.biomes = this.registry.lookupOrThrow(Registries.BIOME);
 		this.worldSeed = this.worldOptions.seed();
 		#endif

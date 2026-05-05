@@ -29,7 +29,6 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.platform.PolygonMode;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.CommandEncoder;
@@ -39,6 +38,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
@@ -139,26 +139,27 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 	}
 	private void createPipelines()
 	{
-		VertexFormat vertexFormat = VertexFormat.builder()
-			.add("vPosition", BlazeDhVertexFormatUtil.FLOAT_XYZ_POS)
-			.build();
-		
-		RenderPipeline.Builder pipelineBuilder = RenderPipeline.builder();
+		RenderPipelineBuilderWrapper pipelineBuilder = new RenderPipelineBuilderWrapper();
 		{
-			pipelineBuilder.withCull(false);
+			pipelineBuilder.withFaceCulling(false);
 			pipelineBuilder.withDepthWrite(true);
-			pipelineBuilder.withDepthTestFunction(DepthTestFunction.LESS_DEPTH_TEST);
+			pipelineBuilder.withDepthTest(RenderPipelineBuilderWrapper.EDhDepthTest.LESS);
 			pipelineBuilder.withColorWrite(true);
 			pipelineBuilder.withoutBlend();
-			pipelineBuilder.withPolygonMode(PolygonMode.WIREFRAME);
-			pipelineBuilder.withLocation(Identifier.parse("distanthorizons:debug_wireframe_renderer"));
+			pipelineBuilder.withPolygonMode(RenderPipelineBuilderWrapper.EDhPolygonMode.WIREFRAME);
+			pipelineBuilder.withName("debug_wireframe_renderer");
 			
-			pipelineBuilder.withVertexShader(Identifier.fromNamespaceAndPath("distanthorizons", "debug/blaze/vert"));
-			pipelineBuilder.withFragmentShader(Identifier.fromNamespaceAndPath("distanthorizons", "debug/blaze/frag"));
+			pipelineBuilder.withVertexShader("debug/blaze/vert");
+			pipelineBuilder.withFragmentShader("debug/blaze/frag");
 			
-			pipelineBuilder.withUniform("uniformBlock", UniformType.UNIFORM_BUFFER);
+			pipelineBuilder.withUniformBuffer("uniformBlock");
 			
-			pipelineBuilder.withVertexFormat(vertexFormat, VertexFormat.Mode.DEBUG_LINES);
+			
+			VertexFormat vertexFormat = VertexFormat.builder()
+				.add("vPosition", BlazeDhVertexFormatUtil.FLOAT_XYZ_POS)
+				.build();
+			pipelineBuilder.withVertexFormat(vertexFormat);
+			pipelineBuilder.withVertexMode(RenderPipelineBuilderWrapper.EDhVertexMode.LINES);
 		}
 		this.pipeline = pipelineBuilder.build();
 		
@@ -229,11 +230,11 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 	{
 		this.init();
 		
-		if (BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper.isEmpty()
-			|| BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.isEmpty())
-		{
-			return;
-		}
+		//if (BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper.isEmpty()
+		//	|| BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.isEmpty())
+		//{
+		//	return;
+		//}
 		
 		// shouldn't happen, but just in case
 		if (box == null)
@@ -307,12 +308,12 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 		{
 			// Bind instance data //
 			renderPass.setUniform("uniformBlock", this.uniformBuffer);
-			
+
 			renderPass.setPipeline(this.pipeline);
 			renderPass.setIndexBuffer(this.boxIndexBuffer, VertexFormat.IndexType.INT);
-			
+
 			renderPass.setVertexBuffer(0, this.boxVertexBuffer);
-			
+
 			renderPass.drawIndexed(
 				/*indexStart*/ 0,
 				/*firstIndex*/0,

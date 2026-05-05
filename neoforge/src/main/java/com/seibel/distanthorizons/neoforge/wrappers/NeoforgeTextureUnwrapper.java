@@ -7,7 +7,12 @@ public class NeoforgeTextureUnwrapper
 
 import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.textures.GpuTexture;
+
+#if MC_VER <= MC_1_21_11
 import net.neoforged.neoforge.client.blaze3d.validation.ValidationGpuTexture;
+#else
+#endif
+ 
 
 public class NeoforgeTextureUnwrapper
 {
@@ -21,6 +26,7 @@ public class NeoforgeTextureUnwrapper
 	{
 		GlTexture glTexture;
 		
+		#if MC_VER <= MC_1_21_11
 		if (gpuTexture instanceof ValidationGpuTexture)
 		{
 			ValidationGpuTexture validationTexture = (ValidationGpuTexture) gpuTexture;
@@ -30,6 +36,9 @@ public class NeoforgeTextureUnwrapper
 		{
 			glTexture = (GlTexture) gpuTexture;
 		}
+		#else
+		glTexture = (GlTexture) gpuTexture;
+		#endif
 		
 		int id = glTexture.glId();
 		return id;

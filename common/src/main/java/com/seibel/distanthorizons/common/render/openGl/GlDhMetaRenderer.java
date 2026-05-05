@@ -8,13 +8,12 @@ import com.seibel.distanthorizons.api.methods.events.sharedParameterObjects.DhAp
 import com.seibel.distanthorizons.api.methods.events.sharedParameterObjects.DhApiTextureCreatedParam;
 import com.seibel.distanthorizons.common.render.openGl.glObject.GLProxy;
 import com.seibel.distanthorizons.common.render.openGl.glObject.GlDhFramebuffer;
-import com.seibel.distanthorizons.common.render.openGl.glObject.buffer.GlQuadIndexBuffer;
 import com.seibel.distanthorizons.common.render.openGl.glObject.texture.*;
 import com.seibel.distanthorizons.common.render.openGl.postProcessing.apply.GlDhApplyShader;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftGLWrapper;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
 import com.seibel.distanthorizons.core.config.Config;
-import com.seibel.distanthorizons.core.dataObjects.render.bufferBuilding.LodQuadBuilder;
+import com.seibel.distanthorizons.core.dependencyInjection.ModAccessorInjector;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
@@ -22,7 +21,7 @@ import com.seibel.distanthorizons.core.render.DhApiRenderProxy;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.misc.ILightMapWrapper;
-import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.AbstractOptifineAccessor;
+import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IOptifineAccessor;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhMetaRenderer;
 import com.seibel.distanthorizons.coreapi.DependencyInjection.ApiEventInjector;
 import com.seibel.distanthorizons.coreapi.DependencyInjection.OverrideInjector;
@@ -45,6 +44,8 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 	
 	private static final IMinecraftRenderWrapper MC_RENDER = SingletonInjector.INSTANCE.get(IMinecraftRenderWrapper.class);
 	private static final MinecraftGLWrapper GLMC = MinecraftGLWrapper.INSTANCE;
+	
+	private static final IOptifineAccessor OPTIFINE_ACCESSOR = ModAccessorInjector.INSTANCE.get(IOptifineAccessor.class);
 	
 	
 	private int activeFramebufferId = -1;
@@ -96,7 +97,7 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 			this.renderObjectsCreated = true;
 		}
 		
-		this.shaderProgramForThisFrame = GlDhTerrainShaderProgram.INSTANCE;
+		this.shaderProgramForThisFrame = GlDhTerrainRenderer.INSTANCE.getTerrainShaderProgram();
 		IDhApiShaderProgram lodShaderProgramOverride = OverrideInjector.INSTANCE.get(IDhApiShaderProgram.class);
 		if (lodShaderProgramOverride != null && this.shaderProgramForThisFrame.overrideThisFrame())
 		{
@@ -243,7 +244,7 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		
 		
 		// create or get the frame buffer
-		if (AbstractOptifineAccessor.optifinePresent())
+		if (OPTIFINE_ACCESSOR != null)
 		{
 			// use MC/Optifine's default Framebuffer so shaders won't remove the LODs
 			int currentFramebufferId = MC_RENDER.getTargetFramebuffer();
@@ -384,31 +385,26 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		
 		
 		
-		// needs to be fired after all the textures have been created/bound
-		boolean clearTextures = !ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeTextureClearEvent.class, renderParams);
-		if (clearTextures)
+		GL32.glClearDepth(1.0);
+		
+		float[] clearColorValues = new float[4];
+		GL32.glGetFloatv(GL32.GL_COLOR_CLEAR_VALUE, clearColorValues);
+		GL32.glClearColor(clearColorValues[0], clearColorValues[1], clearColorValues[2], 1.0f);
+		
+		if (this.usingMcFramebuffer 
+			&& framebufferOverride == null)
 		{
-			GL32.glClearDepth(1.0);
+			//// Due to using MC/Optifine's framebuffer we need to re-bind the depth texture,
+			//// otherwise we'll be writing to MC/Optifine's depth texture which causes rendering issues
+			//this.framebuffer.addDepthAttachment(this.depthTexture.getTextureId(), EDhDepthBufferFormat.DEPTH32F.isCombinedStencil());
 			
-			float[] clearColorValues = new float[4];
-			GL32.glGetFloatv(GL32.GL_COLOR_CLEAR_VALUE, clearColorValues);
-			GL32.glClearColor(clearColorValues[0], clearColorValues[1], clearColorValues[2], 1.0f);
 			
-			if (this.usingMcFramebuffer 
-				&& framebufferOverride == null)
-			{
-				//// Due to using MC/Optifine's framebuffer we need to re-bind the depth texture,
-				//// otherwise we'll be writing to MC/Optifine's depth texture which causes rendering issues
-				//this.framebuffer.addDepthAttachment(this.depthTexture.getTextureId(), EDhDepthBufferFormat.DEPTH32F.isCombinedStencil());
-				
-				
-				// don't clear the color texture, that removes the sky 
-				GL32.glClear(GL32.GL_DEPTH_BUFFER_BIT);
-			}
-			else if (firstPass)
-			{
-				GL32.glClear(GL32.GL_COLOR_BUFFER_BIT | GL32.GL_DEPTH_BUFFER_BIT);
-			}
+			// don't clear the color texture, that removes the sky 
+			GL32.glClear(GL32.GL_DEPTH_BUFFER_BIT);
+		}
+		else if (firstPass)
+		{
+			GL32.glClear(GL32.GL_COLOR_BUFFER_BIT | GL32.GL_DEPTH_BUFFER_BIT);
 		}
 		
 	}

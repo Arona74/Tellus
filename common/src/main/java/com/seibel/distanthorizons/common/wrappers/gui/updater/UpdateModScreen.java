@@ -13,10 +13,12 @@ import com.seibel.distanthorizons.core.logging.DhLogger;
 
 import net.minecraft.client.gui.screens.Screen;
 
-#if MC_VER >= MC_1_20_1
+#if MC_VER < MC_1_20_1
+import com.mojang.blaze3d.vertex.PoseStack;
+#elif MC_VER <= MC_1_21_11
 import net.minecraft.client.gui.GuiGraphics;
 #else
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 #endif
 
 #if MC_VER <= MC_1_21_10
@@ -172,8 +174,10 @@ public class UpdateModScreen extends DhScreen
 	@Override
     #if MC_VER < MC_1_20_1
 	public void render(PoseStack matrices, int mouseX, int mouseY, float delta)
-    #else
+    #elif MC_VER <= MC_1_21_11
 	public void render(GuiGraphics matrices, int mouseX, int mouseY, float delta)
+    #else
+	public void extractRenderState(GuiGraphicsExtractor matrices, int mouseX, int mouseY, float delta)
     #endif
 	{
 		#if MC_VER < MC_1_20_2
@@ -184,8 +188,12 @@ public class UpdateModScreen extends DhScreen
 		// background blur is already being rendered, rendering again causes the game to crash
 		#endif
 		
+		#if MC_VER <= MC_1_21_11
 		super.render(matrices, mouseX, mouseY, delta); // Render the buttons
-		
+		#else
+		super.extractRenderState(matrices, mouseX, mouseY, delta);
+		#endif
+		 
 		// Render the text's
 		this.DhDrawCenteredString(matrices, this.font, 
 				Translatable(ModInfo.ID + ".updater.text1"), 

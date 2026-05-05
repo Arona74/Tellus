@@ -1,6 +1,8 @@
 package com.seibel.distanthorizons.fabric;
 
 import com.seibel.distanthorizons.api.DhApi;
+import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBlockColorOverrideEvent;
+import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBlockStateWrapperCreatedEvent;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiChunkProcessingEvent;
 import com.seibel.distanthorizons.api.methods.events.DhApiEventRegister;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiLevelLoadEvent;
@@ -16,13 +18,13 @@ import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.wrapperInterfaces.misc.IPluginPacketSender;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.ILevelWrapper;
+import com.seibel.distanthorizons.fabric.testing.TestBlockWrapperCreatedEvent;
 import com.seibel.distanthorizons.fabric.testing.TestChunkInputReplacerEvent;
+import com.seibel.distanthorizons.fabric.testing.TestCustomColorEvent;
 import com.seibel.distanthorizons.fabric.testing.TestWorldGenBindingEvent;
-import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -37,6 +39,14 @@ import com.seibel.distanthorizons.common.CommonPacketPayload;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 #else
 import com.seibel.distanthorizons.core.network.messages.AbstractNetworkMessage;
+#endif
+
+#if MC_VER <= MC_1_21_11
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
+#else
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
 #endif
 
 /**
@@ -81,11 +91,21 @@ public class FabricServerProxy implements AbstractModInitializer.IEventProxy
 		
 		/* Register the mod needed event callbacks */
 		
-		// can be enabled to test overrides/events without having to build a separate API project 
-		if (false)
+		// can be enabled to test overrides/events without having to build a separate API project
 		{
-			DhApiEventRegister.on(DhApiLevelLoadEvent.class, new TestWorldGenBindingEvent());
-			DhApi.events.bind(DhApiChunkProcessingEvent.class, new TestChunkInputReplacerEvent());
+			// test custom world gen 
+			if (false)
+			{
+				DhApiEventRegister.on(DhApiLevelLoadEvent.class, new TestWorldGenBindingEvent());
+				DhApi.events.bind(DhApiChunkProcessingEvent.class, new TestChunkInputReplacerEvent());
+			}
+			
+			// test custom colors
+			if (false)
+			{
+				DhApi.events.bind(DhApiBlockColorOverrideEvent.class, new TestCustomColorEvent());
+				DhApi.events.bind(DhApiBlockStateWrapperCreatedEvent.class, new TestBlockWrapperCreatedEvent());
+			}
 		}
 		
 		
@@ -101,18 +121,31 @@ public class FabricServerProxy implements AbstractModInitializer.IEventProxy
 		});
 		
 		// ServerLevelLoadEvent
+		#if MC_VER <= MC_1_21_11
 		ServerWorldEvents.LOAD.register((server, level) ->
+		#else
+		ServerLevelEvents.LOAD.register((server, level) ->
+		#endif
 		{
 			ServerApi.INSTANCE.serverLevelLoadEvent(this.getServerLevelWrapper(level));
 		});
+		
 		// ServerLevelUnloadEvent
+		#if MC_VER <= MC_1_21_11
 		ServerWorldEvents.UNLOAD.register((server, level) ->
+		#else
+		ServerLevelEvents.UNLOAD.register((server, level) ->
+		#endif
 		{
 			ServerApi.INSTANCE.serverLevelUnloadEvent(this.getServerLevelWrapper(level));
 		});
 		
 		// ServerChunkLoadEvent
+		#if MC_VER <= MC_1_21_11
 		ServerChunkEvents.CHUNK_LOAD.register((server, chunk) ->
+		#else
+		ServerChunkEvents.CHUNK_LOAD.register((server, chunk, generated) ->
+		#endif
 		{
 			ILevelWrapper level = this.getServerLevelWrapper((ServerLevel) chunk.getLevel());
 			ServerApi.INSTANCE.serverChunkLoadEvent(
@@ -129,7 +162,12 @@ public class FabricServerProxy implements AbstractModInitializer.IEventProxy
 		{
 			ServerApi.INSTANCE.serverPlayerDisconnectEvent(this.getServerPlayerWrapper(handler.player));
 		});
+		
+		#if MC_VER <= MC_1_21_11
 		ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, originLevel, destinationLevel) ->
+		#else
+		ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, originLevel, destinationLevel) ->
+		#endif
 		{
 			ServerApi.INSTANCE.serverPlayerLevelChangeEvent(
 				this.getServerPlayerWrapper(player),
@@ -138,7 +176,16 @@ public class FabricServerProxy implements AbstractModInitializer.IEventProxy
 			);
 		});
 		
-		#if MC_VER >= MC_1_20_6
+		#if MC_VER < MC_1_20_6
+		ServerPlayNetworking.registerGlobalReceiver(AbstractPluginPacketSender.WRAPPER_PACKET_RESOURCE, (server, serverPlayer, handler, buffer, packetSender) ->
+		{
+			AbstractNetworkMessage message = PACKET_SENDER.decodeMessage(buffer);
+			if (message != null)
+			{
+				ServerApi.INSTANCE.pluginMessageReceived(ServerPlayerWrapper.getWrapper(serverPlayer), message);
+			}
+		});
+		#elif MC_VER <= MC_1_21_11
 		PayloadTypeRegistry.playC2S().register(CommonPacketPayload.TYPE, new CommonPacketPayload.Codec());
 		if (this.isDedicatedServer)
 		{
@@ -154,13 +201,19 @@ public class FabricServerProxy implements AbstractModInitializer.IEventProxy
 			ServerApi.INSTANCE.pluginMessageReceived(ServerPlayerWrapper.getWrapper(context.player()), payload.message());
 		});
 		#else
-		ServerPlayNetworking.registerGlobalReceiver(AbstractPluginPacketSender.WRAPPER_PACKET_RESOURCE, (server, serverPlayer, handler, buffer, packetSender) ->
+		PayloadTypeRegistry.serverboundPlay().register(CommonPacketPayload.TYPE, new CommonPacketPayload.Codec());
+		if (this.isDedicatedServer)
 		{
-			AbstractNetworkMessage message = PACKET_SENDER.decodeMessage(buffer);
-			if (message != null)
+			PayloadTypeRegistry.clientboundPlay().register(CommonPacketPayload.TYPE, new CommonPacketPayload.Codec());
+		}
+
+		ServerPlayNetworking.registerGlobalReceiver(CommonPacketPayload.TYPE, (payload, context) ->
+		{
+			if (payload.message() == null)
 			{
-				ServerApi.INSTANCE.pluginMessageReceived(ServerPlayerWrapper.getWrapper(serverPlayer), message);
+				return;
 			}
+			ServerApi.INSTANCE.pluginMessageReceived(ServerPlayerWrapper.getWrapper(context.player()), payload.message());
 		});
 		#endif
 	}

@@ -1,12 +1,12 @@
-package com.seibel.distanthorizons.common.render.openGl;
+package com.seibel.distanthorizons.common.render.openGl.terrain;
 
 import com.seibel.distanthorizons.api.interfaces.override.rendering.IDhApiShaderProgram;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.*;
 import com.seibel.distanthorizons.api.methods.events.sharedParameterObjects.DhApiRenderParam;
 import com.seibel.distanthorizons.api.objects.math.DhApiVec3f;
+import com.seibel.distanthorizons.common.render.openGl.GlDhMetaRenderer;
 import com.seibel.distanthorizons.common.render.openGl.glObject.GLProxy;
 import com.seibel.distanthorizons.common.render.openGl.glObject.buffer.GLVertexBuffer;
-import com.seibel.distanthorizons.common.render.openGl.glObject.buffer.GlQuadIndexBuffer;
 import com.seibel.distanthorizons.common.render.openGl.glObject.shader.GlShaderProgram;
 import com.seibel.distanthorizons.common.render.openGl.glObject.vertexAttribute.GlAbstractVertexAttribute;
 import com.seibel.distanthorizons.common.render.openGl.glObject.vertexAttribute.GlVertexAttributePostGL43;
@@ -30,7 +30,6 @@ import com.seibel.distanthorizons.core.util.objects.SortedArraySet;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IProfilerWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IIrisAccessor;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.objects.IVertexBufferWrapper;
-import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhTerrainRenderer;
 import com.seibel.distanthorizons.coreapi.DependencyInjection.ApiEventInjector;
 import org.lwjgl.opengl.GL32;
 
@@ -38,13 +37,11 @@ import org.lwjgl.opengl.GL32;
  * Handles rendering the normal LOD terrain.
  * @see LodQuadBuilder
  */
-public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiShaderProgram, IDhTerrainRenderer
+public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiShaderProgram
 {
 	public static final DhLogger LOGGER = new DhLoggerBuilder()
 		.fileLevelConfig(Config.Common.Logging.logRendererEventToFile)
 		.build();
-	
-	public static final GlDhTerrainShaderProgram INSTANCE = new GlDhTerrainShaderProgram();
 	
 	private static final MinecraftGLWrapper GLMC = MinecraftGLWrapper.INSTANCE;
 	private static final IIrisAccessor IRIS_ACCESSOR = ModAccessorInjector.INSTANCE.get(IIrisAccessor.class);
@@ -87,7 +84,7 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 	//=============//
 	//region
 	
-	private GlDhTerrainShaderProgram()
+	public GlDhTerrainShaderProgram()
 	{
 		super(
 			"assets/distanthorizons/shaders/shared/gl/standard.vert",
@@ -96,7 +93,7 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 		);
 	}
 	
-	public void init()
+	public void tryInit()
 	{
 		if (this.init)
 		{
@@ -173,7 +170,7 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 	@Override
 	public void bind()
 	{
-		this.init();
+		this.tryInit();
 		super.bind();
 		this.vao.bind();
 	}
@@ -262,7 +259,6 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 	//===========//
 	//region
 	
-	@Override
 	public void render(RenderParams renderEventParam, boolean opaquePass, SortedArraySet<LodBufferContainer> bufferContainers, IProfilerWrapper profiler)
 	{
 		//=======================//
@@ -293,14 +289,15 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 			GLMC.disableBlend();
 		}
 		
+		// needs to be triggered after DH attempts to set the GL state so that Iris 
+		// can override it as needed
+		ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeRenderPassEvent.class, renderEventParam);
 		
 		
 		
 		//===========//
 		// rendering //
 		//===========//
-		
-		ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeRenderPassEvent.class, renderEventParam);
 		
 		if (IRIS_ACCESSOR != null)
 		{
@@ -317,6 +314,12 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 			for (int lodIndex = 0; lodIndex < bufferContainers.size(); lodIndex++)
 			{
 				LodBufferContainer bufferContainer = bufferContainers.get(lodIndex);
+				if (!bufferContainer.buffersUploaded)
+				{
+					// make sure we don't accidentally try
+					// rendering a buffer that is (or is going to be) freed 
+					continue;
+				}
 				
 				// set uniforms and fire events
 				{
@@ -332,7 +335,7 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 					ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeBufferRenderEvent.class, new DhApiBeforeBufferRenderEvent.EventParam(renderEventParam, modelPos));
 				}
 				
-				IVertexBufferWrapper[] vertexBuffers = (opaquePass ? bufferContainer.vbos : bufferContainer.vbosTransparent);
+				IVertexBufferWrapper[] vertexBuffers = (opaquePass ? bufferContainer.vboOpaqueWrappers : bufferContainer.vboTransparentWrappers);
 				for (int vboIndex = 0; vboIndex < vertexBuffers.length; vboIndex++)
 				{
 					GLVertexBuffer vbo = (GLVertexBuffer) vertexBuffers[vboIndex];
@@ -341,25 +344,45 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 						continue;
 					}
 					
-					if (vbo.getVertexCount() == 0)
+					
+					// for lock information please view the lock's javadocs
+					long vboReadStamp = vbo.renderStampLock.readLock();
+					long iboReadStamp = vbo.getQuadIBO().renderStampLock.readLock();
+					try
 					{
-						continue;
+						// don't render empty sections
+						if (vbo.getVertexCount() == 0)
+						{
+							continue;
+						}
+						
+						// don't render deleted VBOs (this will crash the driver/game)
+						if (vbo.getId() == 0
+							|| vbo.getQuadIBO().getId() == 0)
+						{
+							continue;
+						}
+						
+						// 4 vertices per face, but 6 indices (IE 2 triangles) per face, aka need to multiply by 1.5
+						int indexCount = (int) (vbo.getVertexCount() * 1.5);
+						
+						vbo.bind();
+						vbo.getQuadIBO().bind();
+						
+						GlDhMetaRenderer.INSTANCE.shaderProgramForThisFrame.bindVertexBuffer(vbo.getId());
+						GL32.glDrawElements(
+							GL32.GL_TRIANGLES,
+							indexCount,
+							vbo.getQuadIBO().getGlType(), 0);
+						
+						vbo.unbind();
+						vbo.getQuadIBO().unbind();
 					}
-					
-					// 4 vertices per face, but 6 indices (IE 2 triangles) per face, aka need to multiply by 1.5
-					int indexCount = (int)(vbo.getVertexCount() * 1.5);
-					
-					vbo.bind();
-					vbo.quadIBO.bind();
-					
-					GlDhMetaRenderer.INSTANCE.shaderProgramForThisFrame.bindVertexBuffer(vbo.getId());
-					GL32.glDrawElements(
-						GL32.GL_TRIANGLES,
-						indexCount,
-						vbo.quadIBO.getType(), 0);
-					
-					vbo.unbind();
-					vbo.quadIBO.unbind();
+					finally
+					{
+						vbo.renderStampLock.unlock(vboReadStamp);
+						vbo.getQuadIBO().renderStampLock.unlock(iboReadStamp);
+					}
 				}
 			}
 		}

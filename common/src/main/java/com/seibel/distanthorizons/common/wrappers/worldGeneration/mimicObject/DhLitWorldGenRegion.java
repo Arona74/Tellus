@@ -23,9 +23,12 @@ package com.seibel.distanthorizons.common.wrappers.worldGeneration.mimicObject;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
+
+import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
 import com.seibel.distanthorizons.common.wrappers.chunk.ChunkWrapper;
 import com.seibel.distanthorizons.common.wrappers.worldGeneration.BatchGenerationEnvironment;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
+import com.seibel.distanthorizons.core.pos.DhChunkPos;
 import com.seibel.distanthorizons.core.util.LodUtil;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.SpawnerBlock;
@@ -90,7 +93,7 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 	public final int writeRadius;
 	public final int size;
 	
-	private final ChunkPos firstPos;
+	private final DhChunkPos firstPos;
 	private final List<ChunkAccess> cache;
 	private final Long2ObjectOpenHashMap<ChunkAccess> chunkMap = new Long2ObjectOpenHashMap<ChunkAccess>();
 	
@@ -150,7 +153,7 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 				centerChunk);
 		#endif
 		
-		this.firstPos = chunkList.get(0).getPos();
+		this.firstPos = McObjectConverter.Convert(chunkList.get(0).getPos());
 		this.serverLevel = serverLevel;
 		this.generator = generator;
 		this.lightEngine = lightEngine;
@@ -166,17 +169,22 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 	@Override
 	public boolean ensureCanWrite(BlockPos blockPos)
 	{
-		int i = SectionPos.blockToSectionCoord(blockPos.getX());
-		int j = SectionPos.blockToSectionCoord(blockPos.getZ());
-		ChunkPos chunkPos = this.getCenter();
-		ChunkAccess center = this.getChunk(chunkPos.x, chunkPos.z);
-		int k = Math.abs(chunkPos.x - i);
-		int l = Math.abs(chunkPos.z - j);
-		if (k > this.writeRadius || l > this.writeRadius)
+		DhChunkPos chunkPos = McObjectConverter.Convert(this.getCenter());
+		
+		int sectionCoordX = SectionPos.blockToSectionCoord(blockPos.getX());
+		int sectionCoordZ = SectionPos.blockToSectionCoord(blockPos.getZ());
+		
+		// TODO what do these "abs" positions mean?
+		int absX = Math.abs(chunkPos.getX() - sectionCoordX);
+		int absZ = Math.abs(chunkPos.getZ() - sectionCoordZ);
+		if (absX > this.writeRadius 
+			|| absZ > this.writeRadius)
 		{
 			return false;
 		}
+		
 		#if MC_VER >= MC_1_18_2
+		ChunkAccess center = this.getChunk(chunkPos.getX(), chunkPos.getZ());
 		if (center.isUpgrading())
 		{
 			LevelHeightAccessor levelHeightAccessor = center.getHeightAccessorForGeneration();
@@ -197,6 +205,7 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 			}
 		}
 		#endif
+		
 		return true;
 	}
 	#endif
@@ -373,7 +382,15 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 		if (chunk == null)
 		{
 			// check memory
-			chunk = this.chunkMap.get(ChunkPos.asLong(chunkX, chunkZ));
+			
+			long chunkPosAsLong;
+			#if MC_VER <= MC_1_21_11
+			chunkPosAsLong = ChunkPos.asLong(chunkX, chunkZ);
+			#else
+			chunkPosAsLong = ChunkPos.pack(chunkX, chunkZ);
+			#endif
+			
+			chunk = this.chunkMap.get(chunkPosAsLong);
 			if (chunk == null)
 			{
 				// chunk isn't in memory, generate a new one
@@ -382,7 +399,7 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 				{
 					throw new NullPointerException("The provided generator should not return null!");
 				}
-				this.chunkMap.put(ChunkPos.asLong(chunkX, chunkZ), chunk);
+				this.chunkMap.put(chunkPosAsLong, chunk);
 			}
 		}
 		
@@ -402,17 +419,18 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 	/** Use this instead of super.hasChunk() to bypass C2ME concurrency checks */
 	public boolean superHasChunk(int x, int z)
 	{
-		int k = x - this.firstPos.x;
-		int l = z - this.firstPos.z;
-		return l >= 0 && l < this.size && k >= 0 && k < this.size;
+		int xOffset = x - this.firstPos.getX();
+		int zOffset = z - this.firstPos.getZ();
+		return zOffset >= 0 && zOffset < this.size 
+			&& xOffset >= 0 && xOffset < this.size;
 	}
 	
 	/** Use this instead of super.getChunk() to bypass C2ME concurrency checks */
 	private ChunkAccess superGetChunk(int x, int z)
 	{
-		int k = x - this.firstPos.x;
-		int l = z - this.firstPos.z;
-		return this.cache.get(k + l * this.size);
+		int xOffset = x - this.firstPos.getX();
+		int zOffset = z - this.firstPos.getZ();
+		return this.cache.get(xOffset + zOffset * this.size);
 	}
 	
 	

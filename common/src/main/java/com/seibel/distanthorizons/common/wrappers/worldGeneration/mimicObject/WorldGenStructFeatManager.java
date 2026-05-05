@@ -29,6 +29,8 @@ import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableList;
 
+import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
+import com.seibel.distanthorizons.core.pos.DhChunkPos;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
@@ -223,9 +225,10 @@ public class WorldGenStructFeatManager extends #if MC_VER < MC_1_19_2 StructureF
 	}
 	#else
 	@Override
-	public List<StructureStart> startsForStructure(ChunkPos sectionPos, Predicate<Structure> predicate)
+	public List<StructureStart> startsForStructure(ChunkPos chunkPos, Predicate<Structure> predicate)
 	{
-		ChunkAccess chunk = _getChunk(sectionPos.x, sectionPos.z, ChunkStatus.STRUCTURE_REFERENCES);
+		DhChunkPos dhChunkPos = McObjectConverter.Convert(chunkPos);
+		ChunkAccess chunk = _getChunk(dhChunkPos.getX(), dhChunkPos.getZ(), ChunkStatus.STRUCTURE_REFERENCES);
 		if (chunk == null) return List.of();
 		
 		// Copied from StructureFeatureManager::startsForFeature(...)

@@ -27,7 +27,6 @@ public class BlazeDhTestTriangleRenderer {}
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.platform.PolygonMode;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
@@ -36,6 +35,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.*;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.render.RenderParams;
@@ -47,6 +48,12 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
+
+#if MC_VER <= MC_1_21_11
+#else
+import com.mojang.blaze3d.pipeline.DepthStencilState;
+import com.mojang.blaze3d.platform.CompareOp;
+#endif
 
 /**
  * Renders the OpenGL/Vulkan triangle
@@ -65,7 +72,8 @@ public class BlazeDhTestTriangleRenderer implements IDhTestTriangleRenderer
 	private RenderPipeline pipeline;
 	private boolean init = false;
 	
-	private GpuTextureView mcColorTextureView;
+	public final BlazeTextureViewWrapper mcColorTextureViewWrapper = new BlazeTextureViewWrapper();
+	public final BlazeTextureViewWrapper mcDepthTextureViewWrapper = new BlazeTextureViewWrapper();
 	
 	private GpuBuffer vboGpuBuffer;
 	
@@ -86,41 +94,27 @@ public class BlazeDhTestTriangleRenderer implements IDhTestTriangleRenderer
 		}
 		this.init = true;
 		
-		
-		
-		VertexFormat vertexFormat = VertexFormat.builder()
-			.add("vPosition", BlazeDhVertexFormatUtil.SCREEN_POS)
-			.add("vColor", BlazeDhVertexFormatUtil.RGBA_FLOAT_COLOR)
-			.build();
-		
-		//int breakpointOne = 0;
-		// needs to manually be set if the VertexFormatElement isn't registered
-		//this.vertexFormat.getOffsetsByElement()[this.posForm.id()] = 0;
-		//this.vertexFormat.getOffsetsByElement()[this.colForm.id()] = Float.BYTES * 2;
-		//
-		//int breakpointTwo = 0;
-		
-		
-		RenderPipeline.Builder pipelineBuilder = RenderPipeline.builder();
+		RenderPipelineBuilderWrapper pipelineBuilder = new RenderPipelineBuilderWrapper();
 		{
-			pipelineBuilder.withCull(false);
+			pipelineBuilder.withFaceCulling(false);
 			pipelineBuilder.withDepthWrite(false);
-			pipelineBuilder.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST);
+			pipelineBuilder.withDepthTest(RenderPipelineBuilderWrapper.EDhDepthTest.NONE);
 			pipelineBuilder.withColorWrite(true);
 			pipelineBuilder.withoutBlend();
-			pipelineBuilder.withPolygonMode(PolygonMode.FILL);
-			pipelineBuilder.withLocation(Identifier.parse("distanthorizons:test_render"));
+			pipelineBuilder.withName("triangle_test");
 			
-			pipelineBuilder.withVertexShader(Identifier.fromNamespaceAndPath("distanthorizons", "test/blaze/vert"));
-			pipelineBuilder.withFragmentShader(Identifier.fromNamespaceAndPath("distanthorizons", "test/blaze/frag"));
+			pipelineBuilder.withVertexShader("test/blaze/vert");
+			pipelineBuilder.withFragmentShader("test/blaze/frag");
 			
-			pipelineBuilder.withVertexFormat(vertexFormat, VertexFormat.Mode.TRIANGLES);
+			VertexFormat vertexFormat = VertexFormat.builder()
+				.add("vPosition", BlazeDhVertexFormatUtil.SCREEN_POS)
+				.add("vColor", BlazeDhVertexFormatUtil.RGBA_FLOAT_COLOR)
+				.build();
+			pipelineBuilder.withVertexFormat(vertexFormat);
+			
+			pipelineBuilder.withVertexMode(RenderPipelineBuilderWrapper.EDhVertexMode.TRIANGLES);
 		}
 		this.pipeline = pipelineBuilder.build();
-		
-		
-		this.mcColorTextureView = GPU_DEVICE.createTextureView(Minecraft.getInstance().getMainRenderTarget().getColorTexture());
-		
 		
 		this.uploadVertexData();
 	}
@@ -170,11 +164,14 @@ public class BlazeDhTestTriangleRenderer implements IDhTestTriangleRenderer
 	{
 		this.tryInit();
 		
+		this.mcColorTextureViewWrapper.tryWrap(Minecraft.getInstance().getMainRenderTarget().getColorTexture());
+		this.mcDepthTextureViewWrapper.tryWrap(Minecraft.getInstance().getMainRenderTarget().getDepthTexture());
+		
 		try (RenderPass renderPass = COMMAND_ENCODER.createRenderPass(
 			this::getRenderPassName,
-			this.mcColorTextureView,
+			this.mcColorTextureViewWrapper.textureView,
 			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			/*mcDepthTextureView*/ null, 
+			this.mcDepthTextureViewWrapper.textureView, 
 			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
 		{
 			renderPass.setVertexBuffer(0, this.vboGpuBuffer);

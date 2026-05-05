@@ -13,7 +13,7 @@ import com.mojang.blaze3d.textures.*;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
-import com.seibel.distanthorizons.core.util.ColorUtil;
+import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 
 import java.util.OptionalDouble;
@@ -79,42 +79,52 @@ public class BlazeTextureWrapper
 	//=======//
 	//region
 	
-	/** does nothing if the texture is already created and the correct size */
-	public void tryCreateOrResize()
+	/** 
+	 * does nothing if the texture is already created and the correct size 
+	 * @return true if the texture was (re)created
+	 */
+	public boolean tryCreateOrResize()
 	{
-		this.tryCreateTexture();
+		boolean textureChanged = this.tryCreateTexture();
 		this.tryCreateSampler();
+		return textureChanged;
 	}
-	private void tryCreateTexture()
+	private boolean tryCreateTexture()
 	{
 		int viewWidth = MC_RENDER.getTargetFramebufferViewportWidth();
 		int viewHeight = MC_RENDER.getTargetFramebufferViewportHeight();
 		
-		if (this.texture == null
-			|| this.width != viewWidth
-			|| this.height != viewHeight)
+		if (this.texture != null
+			&& this.width == viewWidth
+			&& this.height == viewHeight)
 		{
-			if (this.texture != null)
-			{
-				this.texture.close();
-				this.textureView.close();
-			}
-			
-			this.width = viewWidth;
-			this.height = viewHeight;
-			
-			int usage = GpuBuffer.USAGE_HINT_CLIENT_STORAGE 
-				| GpuBuffer.USAGE_COPY_DST 
-				| GpuBuffer.USAGE_VERTEX 
-				| GpuBuffer.USAGE_UNIFORM;
-			this.texture = GPU_DEVICE.createTexture(this.name,
-				usage,
-				this.textureFormat,
-				viewWidth, viewHeight,
-				/*depthOrLayers*/ 1,  /*mipLevels*/ 1
-			);
-			this.textureView = GPU_DEVICE.createTextureView(this.texture);
+			// no changes needed
+			return false;
 		}
+		
+		
+		if (this.texture != null)
+		{
+			this.texture.close();
+			this.textureView.close();
+		}
+		
+		this.width = viewWidth;
+		this.height = viewHeight;
+		
+		int usage = GpuTexture.USAGE_COPY_DST
+			| GpuTexture.USAGE_TEXTURE_BINDING
+			| GpuTexture.USAGE_COPY_SRC
+			| GpuTexture.USAGE_RENDER_ATTACHMENT;
+		this.texture = GPU_DEVICE.createTexture(this.name,
+			usage,
+			this.textureFormat,
+			viewWidth, viewHeight,
+			/*depthOrLayers*/ 1,  /*mipLevels*/ 1
+		);
+		this.textureView = GPU_DEVICE.createTextureView(this.texture);
+		
+		return true;
 	}
 	private void tryCreateSampler()
 	{

@@ -23,14 +23,17 @@ import java.awt.Color;
 import java.lang.invoke.MethodHandles;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.seibel.distanthorizons.api.enums.config.EDhApiLodShading;
 import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
 import com.seibel.distanthorizons.core.config.Config;
 
+import com.seibel.distanthorizons.core.dependencyInjection.ModAccessorInjector;
 import com.seibel.distanthorizons.core.enums.EDhDirection;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
-import com.seibel.distanthorizons.core.util.ColorUtil;
+import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import com.seibel.distanthorizons.core.wrapperInterfaces.misc.ILightMapWrapper;
 
 #if MC_VER < MC_1_17_1
@@ -38,6 +41,7 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.misc.ILightMapWrapper;
 import net.minecraft.client.renderer.FogRenderer;
 import com.mojang.blaze3d.systems.RenderSystem;
 #else
+import net.minecraft.client.renderer.fog.FogData;
 import net.minecraft.client.renderer.fog.FogRenderer;
 #endif
 
@@ -54,15 +58,8 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.world.ILevelWrapper;
 import com.seibel.distanthorizons.core.util.math.Vec3d;
 import com.seibel.distanthorizons.core.util.math.Vec3f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
+import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IOptifineAccessor;
 
-#if MC_VER <= MC_1_12_2
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.entity.RenderManager;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.init.MobEffects;
-import net.minecraft.util.math.BlockPos;
-import net.minecraftforge.fluids.IFluidBlock;
-#else
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -70,17 +67,11 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.effect.MobEffects;
 
 import net.minecraft.world.phys.Vec3;
-import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.NativeImage;
-#endif
-
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector4f;
 
-#if MC_VER <= MC_1_12_2
-import org.lwjgl.opengl.GL15;
-#elif MC_VER < MC_1_17_1
+#if MC_VER < MC_1_17_1
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.material.FluidState;
@@ -108,8 +99,10 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 {
 	public static final MinecraftRenderWrapper INSTANCE = new MinecraftRenderWrapper();
 	
+	private static final IOptifineAccessor OPTIFINE_ACCESSOR = ModAccessorInjector.INSTANCE.get(IOptifineAccessor.class);
+	
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
-	private static final Minecraft MC = Minecraft.#if MC_VER <= MC_1_12_2 getMinecraft() #else getInstance() #endif;
+	private static final Minecraft MC = Minecraft.getInstance();
 	
 	/** 
 	 * In the case of immersive portals multiple levels may be active at once, causing conflicting lightmaps. <br> 
@@ -140,10 +133,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	@Override
 	public Vec3f getLookAtVector()
 	{
-		#if MC_VER <= MC_1_12_2
-		net.minecraft.util.math.Vec3d lookVector = (MC.getRenderViewEntity().getLook(MC.getRenderPartialTicks()));
-		return new Vec3f((float) lookVector.x, (float) lookVector.y, (float) lookVector.z);
-		#elif MC_VER <= MC_1_21_10
+		#if MC_VER <= MC_1_21_10
 		Camera camera = MC.gameRenderer.getMainCamera();
 		return new Vec3f(camera.getLookVector().x(), camera.getLookVector().y(), camera.getLookVector().z());
 		#else
@@ -163,53 +153,44 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		{
 			return false;
 		}
-		else if (MC.player.#if MC_VER <= MC_1_12_2 getActivePotionMap() #else getActiveEffectsMap() #endif == null)
+		else if (MC.player.getActiveEffectsMap() == null)
 		{
 			return false;
 		}
 		else
 		{
-			#if MC_VER <= MC_1_12_2
-			return MC.player.getActivePotionEffect(MobEffects.BLINDNESS) != null;
-			#else
 			return MC.player.getActiveEffectsMap().get(MobEffects.BLINDNESS) != null
 				#if MC_VER >= MC_1_19_2
 					|| MC.player.getActiveEffectsMap().get(MobEffects.DARKNESS) != null // Deep dark effect
 				#endif
 					;
-			#endif
 		}
 	}
 	
 	@Override
 	public Vec3d getCameraExactPosition()
 	{
-		#if MC_VER <= MC_1_12_2
-		RenderManager rm = MC.getRenderManager();
-		return new Vec3d(rm.viewerPosX, rm.viewerPosY, rm.viewerPosZ);
-		#else
 		Camera camera = MC.gameRenderer.getMainCamera();
 		#if MC_VER <= MC_1_21_10
 		Vec3 projectedView = camera.getPosition();
 		#else
 		Vec3 projectedView = camera.position();
 		#endif
-		return new Vec3d(projectedView.x, projectedView.y, projectedView.z);
-		#endif
 		
+		return new Vec3d(projectedView.x, projectedView.y, projectedView.z);
 	}
 	
 	@Override
 	public float getPartialTickTime()
 	{
-		#if MC_VER <= MC_1_12_2
-		return MC.getRenderPartialTicks();
-		#elif MC_VER < MC_1_21_1
+		#if MC_VER < MC_1_21_1
 		return MC.getFrameTime();
 		#elif MC_VER < MC_1_21_3
 		return MC.getTimer().getRealtimeDeltaTicks();
-		#else
+		#elif MC_VER <= MC_1_21_11
 		return MC.deltaTracker.getRealtimeDeltaTicks();
+		#else
+		return MC.getDeltaTracker().getRealtimeDeltaTicks();
 		#endif
 	}
 	
@@ -279,12 +260,30 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 			return Color.white;
 		}
 		
+		float darkenAmount;
+		#if MC_VER <= MC_1_21_11
+		darkenAmount = MC.gameRenderer.getDarkenWorldAmount(MC.deltaTracker.getGameTimeDeltaPartialTick(true));
+		#else
+		darkenAmount = MC.gameRenderer.getBossOverlayWorldDarkening(MC.deltaTracker.getGameTimeDeltaPartialTick(true));
+		#endif
+		
+		#if MC_VER <= MC_1_21_11
 		Vector4f colorValues = mcFogRenderer.setupFog(
 			MC.gameRenderer.getMainCamera(),
 			MC.options.getEffectiveRenderDistance(),
 			MC.deltaTracker,
-			MC.gameRenderer.getDarkenWorldAmount(MC.deltaTracker.getGameTimeDeltaPartialTick(true)),
+			darkenAmount,
 			MC.level);
+		#else
+		FogData fogData = mcFogRenderer.setupFog(
+			MC.gameRenderer.getMainCamera(),
+			MC.options.getEffectiveRenderDistance(),
+			MC.deltaTracker,
+			darkenAmount,
+			MC.level);
+		Vector4f colorValues = fogData.color;
+		#endif
+		
 		return new Color(
 				Math.max(0f, Math.min(colorValues.x, 1f)), // r
 				Math.max(0f, Math.min(colorValues.y, 1f)), // g
@@ -297,19 +296,11 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	@Override
 	public Color getSkyColor()
 	{
-		#if MC_VER <= MC_1_12_2
-		if (MC.world.provider.hasSkyLight())
-		#else	
 		if (MC.level.dimensionType().hasSkyLight())
-		#endif
 		{
 			#if MC_VER < MC_1_17_1
 			float frameTime = this.getPartialTickTime();
-			#if MC_VER <= MC_1_12_2
-			net.minecraft.util.math.Vec3d colorValues = MC.world.getSkyColor(MC.getRenderViewEntity(), frameTime);
-			#else
 			Vec3 colorValues = MC.level.getSkyColor(MC.gameRenderer.getMainCamera().getBlockPosition(), frameTime);
-			#endif
 			return new Color((float) colorValues.x, (float) colorValues.y, (float) colorValues.z);
 			#elif MC_VER < MC_1_21_3
 			float frameTime = this.getPartialTickTime();
@@ -330,23 +321,11 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		}
 	}
 	
-	@Override
-	public double getFov(float partialTicks)
-	{
-		#if MC_VER <= MC_1_12_2
-		return MC.entityRenderer.getFOVModifier(partialTicks, true);
-		#else
-		return MC.gameRenderer.getFov(MC.gameRenderer.getMainCamera(), partialTicks, true);
-		#endif
-	}
-	
 	/** Measured in chunks */
 	@Override
 	public int getRenderDistance()
 	{
-		#if MC_VER <= MC_1_12_2
-		return MC.gameSettings.renderDistanceChunks;
-		#elif MC_VER <= MC_1_17_1
+		#if MC_VER <= MC_1_17_1
 		return MC.options.renderDistance;
 		#else
 		return MC.options.getEffectiveRenderDistance();
@@ -356,18 +335,14 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	@Override
 	public int getFrameLimit()
 	{
-		#if MC_VER <= MC_1_12_2
-		return MC.gameSettings.limitFramerate;
-		#elif MC_VER <= MC_1_18_2
+		#if MC_VER <= MC_1_18_2
 		return MC.options.framerateLimit;
 		#else
 		return MC.options.framerateLimit().get();
 		#endif
 	}
 	
-	#if MC_VER > MC_1_12_2
 	protected RenderTarget getRenderTarget() { return MC.getMainRenderTarget(); }
-	#endif
 	
 	@Override
 	public boolean mcRendersToFrameBuffer()
@@ -393,14 +368,12 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	public int getTargetFramebuffer()
 	{
 		// used so we can access the framebuffer shaders end up rendering to
-		if (AbstractOptifineAccessor.optifinePresent())
+		if (OPTIFINE_ACCESSOR != null)
 		{
 			return this.finalLevelFrameBufferId;
 		}
 		
-		#if MC_VER <= MC_1_12_2
-		return MC.getFramebuffer().framebufferObject;
-		#elif MC_VER < MC_1_21_5
+		#if MC_VER < MC_1_21_5
 		return this.getRenderTarget().frameBufferId;
 		#else
 		// MC renders to a texture and then directly to the default FBO now
@@ -415,10 +388,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	@Override
 	public int getDepthTextureId()
 	{
-		#if MC_VER <= MC_1_12_2
-		//1.12.2 is using renderbuffer instead of framebuffer for depth texture
-		return -1;
-		#elif MC_VER < MC_1_21_5
+		#if MC_VER < MC_1_21_5
 		return this.getRenderTarget().getDepthTextureId();
 		#else
 		try
@@ -448,9 +418,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	@Override
 	public int getColorTextureId() 
 	{
-		#if MC_VER <= MC_1_12_2
-		return MC.getFramebuffer().framebufferTexture;
-		#elif MC_VER < MC_1_21_5
+		#if MC_VER < MC_1_21_5
 		return this.getRenderTarget().getColorTextureId();
 		#else
 		try
@@ -480,9 +448,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	@Override
 	public int getTargetFramebufferViewportWidth()
 	{
-		#if MC_VER <= MC_1_12_2
-		return MC.getFramebuffer().framebufferWidth;
-		#elif MC_VER < MC_1_21_9
+		#if MC_VER < MC_1_21_9
 		return this.getRenderTarget().viewWidth;
 		#else
 		return this.getRenderTarget().width;
@@ -492,9 +458,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	@Override
 	public int getTargetFramebufferViewportHeight()
 	{
-		#if MC_VER <= MC_1_12_2
-		return MC.getFramebuffer().framebufferHeight;
-		#elif MC_VER < MC_1_21_9
+		#if MC_VER < MC_1_21_9
 		return this.getRenderTarget().viewHeight;
 		#else
 		return this.getRenderTarget().height;
@@ -507,11 +471,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	@Override
 	public boolean isFogStateSpecial()
 	{
-		#if MC_VER <= MC_1_12_2
-		BlockPos blockPos = new BlockPos(MC.getRenderViewEntity().getPositionEyes(MC.getRenderPartialTicks()));
-		IBlockState fluidState = MC.getRenderViewEntity().world.getBlockState(blockPos);
-		return this.playerHasBlindingEffect() || fluidState.getMaterial().isLiquid() || fluidState.getBlock() instanceof IFluidBlock;
-		#elif MC_VER < MC_1_17_1
+		#if MC_VER < MC_1_17_1
 		Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
 		FluidState fluidState = camera.getFluidInCamera();
 		Entity entity = camera.getEntity();
@@ -529,7 +489,6 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	 * It's better to use {@link MinecraftRenderWrapper#setLightmapId(int, IClientLevelWrapper)} if possible,
 	 * however old MC versions don't support it.
 	 */
-	#if MC_VER > MC_1_12_2
 	public void updateLightmap(NativeImage lightPixels, IClientLevelWrapper level)
 	{
 		// Using ClientLevelWrapper as the key would be better, but we don't have a consistent way to create the same
@@ -540,8 +499,6 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		LightMapWrapper wrapper = this.lightmapByDimensionType.computeIfAbsent(dimensionType, (dimType) -> new LightMapWrapper());
 		wrapper.uploadLightmap(lightPixels);
 	}
-	#endif
-	
 	public void setLightmapId(int tetxureId, IClientLevelWrapper level)
 	{
 		// Using ClientLevelWrapper as the key would be better, but we don't have a consistent way to create the same
@@ -575,19 +532,20 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		{
 			default:
 			case AUTO:
-				#if MC_VER <= MC_1_12_2
-				// 1.12.2 has no getShade, fall through to ENABLED
-				#else
 				if (MC.level != null)
 				{
 					Direction mcDir = McObjectConverter.Convert(lodDirection);
+					#if MC_VER <= MC_1_21_11
 					return MC.level.getShade(mcDir, true);
+					#else
+					return MC.level.cardinalLighting().byFace(mcDir);
+					#endif
 				}
 				else
 				{
 					return 0.0f;
 				}
-				#endif
+			
 			case ENABLED:
 				switch (lodDirection)
 				{

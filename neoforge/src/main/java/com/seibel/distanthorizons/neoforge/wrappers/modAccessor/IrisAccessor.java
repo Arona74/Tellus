@@ -43,7 +43,7 @@ public class IrisAccessor implements IIrisAccessor
 	@Override
 	public String getModName() 
 	{
-		#if MC_VER == MC_1_21_9 || MC_VER == MC_1_21_11
+		#if MC_VER == MC_1_21_9
 		return "iris"; // Iris doesn't support this MC version
 		#else
 		return Iris.MODID;

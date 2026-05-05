@@ -1,0 +1,516 @@
+import com.github.jengelman.gradle.plugins.shadow.transformers.ResourceTransformer
+import com.github.jengelman.gradle.plugins.shadow.transformers.TransformerContext
+import org.apache.tools.zip.ZipEntry
+import org.apache.tools.zip.ZipOutputStream
+
+import javax.annotation.Nonnull
+import java.util.function.Function
+import java.util.function.Predicate
+
+// Convention plugin for all MC-facing subprojects (common + loaders).
+// Common uses this directly; loaders use it via unimined-fabric/forge/neoforge.
+// IMPORTANT: unimined MUST be applied before shadow/jvmdowngrader
+// so its afterEvaluate runs first and can modify configs.
+
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'xyz.wagyourtail.unimined'
+    id 'com.gradleup.shadow'
+    id 'xyz.wagyourtail.manifold'
+    id 'xyz.wagyourtail.jvmdowngrader'
+}
+
+def isNotCommonProject = project.name != "common"
+
+
+// ==================== Version Properties ====================
+
+project.gradle.ext.getProperties().each { prop ->
+    rootProject.ext.set(prop.key, prop.value)
+}
+
+manifold {
+    version = rootProject.manifold_version
+}
+
+
+// ==================== Repositories ====================
+
+repositories {
+    maven { url "https://libraries.minecraft.net/" }
+    mavenCentral()
+    maven { url "https://repo.enonic.com/public/" }
+    maven { url "https://maven.parchmentmc.org" }
+    maven { url "https://maven.architectury.dev" }
+    maven { url "https://jitpack.io" }
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content { includeGroup "maven.modrinth" }
+    }
+    maven {
+        url "https://www.cursemaven.com"
+        content { includeGroup "curse.maven" }
+    }
+    maven {
+        url "https://repo.spongepowered.org/maven/"
+		// exclusion is needed since sponge has a deprecated version of fabric
+		// that gradle would prefer to get over the up-to-date version modrinth provides
+        content { excludeGroupByRegex "net\\.fabricmc(\\..*)?" }
+    }
+    maven { url "https://maven.terraformersmc.com/" }
+    maven { url "https://maven.neoforged.net/releases/" }
+    flatDir {
+        dirs "${rootDir}/mods/fabric"
+        content { includeGroup "fabric-mod" }
+    }
+    flatDir {
+        dirs "${rootDir}/mods/quilt"
+        content { includeGroup "quilt-mod" }
+    }
+    flatDir {
+        dirs "${rootDir}/mods/forge"
+        content { includeGroup "forge-mod" }
+    }
+}
+
+
+// ==================== Java Config ====================
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = rootProject.java_version as Integer
+    options.encoding = "UTF-8"
+}
+
+java {
+    sourceCompatibility = JavaVersion.toVersion(gradle.ext.java_version as Integer)
+    targetCompatibility = JavaVersion.toVersion(gradle.ext.java_version as Integer)
+    withSourcesJar()
+}
+
+
+// ==================== Loader-Only Config ====================
+
+if (isNotCommonProject) {
+    base { archivesName = rootProject.mod_name }
+    rootProject.ext.versionStr = rootProject.mod_version + "-" + rootProject.minecraft_version
+    version = project.name + "-" + rootProject.versionStr
+    group = rootProject.maven_group
+
+    javadoc.title = rootProject.mod_name + "-" + project.name
+
+    tasks.withType(GenerateModuleMetadata).configureEach {
+        enabled = false
+    }
+    tasks.withType(Test).configureEach {
+        enabled = false
+    }
+    compileTestJava.enabled = false
+    tasks.withType(Sign).configureEach {
+        enabled = false
+    }
+
+    jar {
+        from "LICENSE.txt"
+        manifest {
+            attributes(
+                'Implementation-Title': rootProject.mod_name,
+                'Implementation-Version': rootProject.mod_version,
+                'Multi-Release': true,
+                'Main-Class': 'com.seibel.distanthorizons.core.jar.JarMain',
+            )
+        }
+    }
+}
+
+
+// ==================== Unimined Minecraft Config ====================
+
+unimined.minecraft(sourceSets.main, true) {
+    version gradle.ext.minecraft_version
+
+    if (gradle.ext.minecraft_version.startsWith("1.")) { // 26.1+ doesn't use obfuscation
+        mappings {
+            mojmap()
+            devNamespace "mojmap"
+        }
+    }
+}
+
+if (isNotCommonProject) {
+    // Mixin remapping and common project wiring
+    unimined.minecraft(sourceSets.main, true) {
+        mods.modImplementation {
+            mixinRemap {
+                reset()
+                enableBaseMixin()
+                enableMixinExtra()
+            }
+            // Some Fabric API modules ship AW in 'named' namespace instead of 'intermediary'
+            catchAWNamespaceAssertion()
+        }
+    }
+
+    dependencies {
+        implementation(project(":common"))
+    }
+
+    processResources {
+        from project(":common").sourceSets.main.resources
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        source(project(":common").sourceSets.main.allSource)
+    }
+} else {
+    // Common: fabric for compilation + access widener, no jar remapping or runs
+    unimined.minecraft {
+        fabric {
+            loader gradle.ext.fabric_loader_version
+            accessWidener project.file("src/main/resources/${gradle.ext.accessWidenerVersion}.distanthorizons.accesswidener")
+        }
+        defaultRemapJar = false
+        runs.off = true
+    }
+}
+
+
+// ==================== Configurations ====================
+
+evaluationDependsOn(":core")
+
+configurations {
+    shadowMe
+    coreProjects
+    shadowMe.extendsFrom(coreProjects)
+    implementation.extendsFrom(shadowMe)
+    
+    common
+    implementation.extendsFrom(common)
+}
+
+
+// ==================== Dependencies ====================
+
+// Copy core's compileOnly deps so MC-provided deps are visible without redeclaring them.
+project(":core").configurations.compileOnly.allDependencies.each { dep ->
+    if (!(dep instanceof ProjectDependency))
+        dependencies.add("compileOnly", dep)
+}
+
+dependencies {
+    // Manifold preprocessor & strings
+    annotationProcessor(manifold.module("preprocessor"))
+
+    // NightConfig: implementation in core (bundled) but Unimined strips it from compile classpath
+    compileOnly("com.electronwill.night-config:toml:${rootProject.nightconfig_version}")
+
+    // Core & API projects — bundled into shadow jar
+    coreProjects(project(":core"))
+    coreProjects(project(":api"))
+
+    // JOML: shadow for old MC versions that don't bundle it (core has it compileOnly already)
+    if (project.hasProperty("embed_joml") && embed_joml == "true")
+        shadowMe("org.joml:joml:${rootProject.joml_version}")
+
+    // Common project dependency
+    if (isNotCommonProject)
+        common(project(":common")) { transitive false }
+}
+
+
+// ==================== NativeTransformer ====================
+
+class NativeTransformer implements ResourceTransformer {
+    private Predicate<String> fileMatcher
+    private Function<String, String> filePathMapper
+
+    private final HashMap<String, String> replacements = new HashMap()
+    private final HashMap<String, byte[]> rewrittenFiles = new HashMap()
+    private nativeRelocator
+
+    public File rootDir
+
+    void matchFiles(Predicate<String> matcher) {
+        fileMatcher = matcher
+    }
+
+    void mapPaths(Function<String, String> mapper) {
+        filePathMapper = mapper
+    }
+
+    void relocateNative(String target, String replacement) {
+        if (replacement.length() > target.length()) {
+            throw new GradleException("Length of value \"${replacement}\" exceeds the length of \"${target}\": ${replacement.length()} > ${target.length()}")
+        }
+        replacements.put(target, replacement)
+    }
+
+    @Override
+    boolean canTransformResource(@Nonnull FileTreeElement element) {
+        return fileMatcher != null && fileMatcher.test(element.relativePath.pathString)
+    }
+
+    @Override
+    void transform(@Nonnull TransformerContext context) {
+        byte[] content = context.inputStream.readAllBytes()
+
+        if (nativeRelocator == null) {
+            nativeRelocator = new NativeRelocator(rootDir.toPath().resolve("relocate_natives"))
+        }
+
+        try {
+            String path = filePathMapper != null
+                ? filePathMapper.apply(context.path)
+                : context.path
+            content = nativeRelocator.processBinary(path, content, replacements)
+            rewrittenFiles.put(path, content)
+        }
+        catch (Throwable e) {
+            throw new GradleException("Failed to relocate", e)
+        }
+    }
+
+    @Override
+    boolean hasTransformedResource() { return !rewrittenFiles.isEmpty() }
+
+    @Override
+    void modifyOutputStream(@Nonnull ZipOutputStream os, boolean preserveFileTimestamps) {
+        for (Map.Entry<String, byte[]> rewrittenFile : rewrittenFiles.entrySet()) {
+            os.putNextEntry(new ZipEntry(rewrittenFile.key))
+            os.write(rewrittenFile.value)
+        }
+    }
+}
+
+
+// ==================== Shadow JAR (loaders only) ====================
+
+if (isNotCommonProject) {
+    shadowJar {
+        configurations = [project.configurations.shadowMe]
+        def librariesLocation = "DistantHorizons.libraries"
+
+        // LZ4
+        relocate "net.jpountz", "${librariesLocation}.jpountz"
+
+        // SLF4J
+        relocate "org.slf4j", "${librariesLocation}.slf4j"
+
+        // SQLite
+        relocate "org.sqlite", "dh_sqlite", { exclude "org/sqlite/native/**" }
+        relocate "jdbc:sqlite", "jdbc:dh_sqlite"
+
+        transform(NativeTransformer) {
+            rootDir = project.rootDir
+            matchFiles { it.startsWith("org/sqlite") }
+            mapPaths { it.replace("org/sqlite", "dh_sqlite") }
+            relocateNative "org/sqlite", "dh_sqlite"
+            relocateNative "org_sqlite", "dh_1sqlite"
+        }
+
+        // ZStd
+        relocate "com.github.luben", "dhcomgithubluben"
+        relocate "libzstd-jni", "libzstd-jni_dh"
+        relocate "zstd-jni", "zstd-jni_dh"
+
+        transform(NativeTransformer) {
+            rootDir = project.rootDir
+            matchFiles { it.contains("libzstd-jni") && !it.contains("aix/ppc64") }
+            mapPaths { it.replace("libzstd-jni", "libzstd-jni_dh") }
+            relocateNative "com/github/luben", "dhcomgithubluben"
+            relocateNative "com_github_luben", "dhcomgithubluben"
+        }
+
+        // JOML (conditional)
+        if (project.hasProperty("embed_joml") && embed_joml == "true")
+            relocate "org.joml", "${librariesLocation}.joml"
+
+        // NightConfig
+        relocate "com.electronwill.nightconfig", "${librariesLocation}.electronwill.nightconfig"
+
+        mergeServiceFiles()
+    }
+    afterEvaluate {
+        tasks.named("remapJar").configure {
+            dependsOn(shadowJar)
+            inputFile.set(shadowJar.archiveFile)
+        }
+
+        // Make run tasks use the shadow jar so relocated deps work in dev.
+        // Filter out jars bundled in the shadow jar, but keep jars that the loader also
+        // needs (e.g. NightConfig — DH relocates it, but NeoForge needs the original).
+        def shadowedPaths = configurations.shadowMe.resolve().collect { it.path }.toSet()
+        def loaderPaths = configurations.minecraftLibraries.resolve().collect { it.path }.toSet()
+        tasks.withType(JavaExec).configureEach { runTask ->
+            dependsOn(shadowJar)
+            classpath = files(shadowJar.archiveFile) + classpath.filter { file ->
+                !file.path.contains(project.buildDir.path) &&
+                !file.path.contains("core${File.separator}build") &&
+                !file.path.contains("api${File.separator}build") &&
+                !file.path.contains("common${File.separator}build") &&
+                !(shadowedPaths.contains(file.path) && !loaderPaths.contains(file.path))
+            }
+
+            // Shared run directory so all loaders use the same worlds
+            def isClient = runTask.name.toLowerCase().contains("client")
+            runTask.workingDir = rootProject.file("run/${isClient ? 'client' : 'server'}")
+
+            // Minecraft automatically has G1GC args present,
+            // remove them so we can use ZGC instead
+            def filteredArgs = runTask.jvmArgs.findAll { arg ->
+                !arg.startsWith("-XX:+UseG1GC") &&
+                !arg.startsWith("-XX:G1") &&
+                !arg.startsWith("-XX:MaxGCPauseMillis")
+            }
+            runTask.jvmArgs = filteredArgs
+
+            // fix (Neo)forge debug running
+            doFirst {
+                def modsDir = rootProject.file("run/${isClient ? 'client' : 'server'}/mods")
+                modsDir.mkdirs()
+                
+                // Remove any stale DH jars before copying the fresh one
+                modsDir.listFiles()?.each { file ->
+                    if (file.name.startsWith(rootProject.mod_name)) file.delete()
+                }
+                
+                // Copy shadow jar into mods folder so (Neo)Forge discovers it properly
+                copy {
+                    from shadowJar.archiveFile
+                    into modsDir
+                }
+            }
+            
+            // JVM args
+            runTask.jvmArgs(
+                "-Dio.netty.leakDetection.level=advanced",
+                // TODO only use for modern java versions
+                "-XX:+UseZGC",
+                // TODO don't use for even more modern-er java versions
+                //"-XX:+ZGenerational",
+                rootProject.minecraftMemoryJavaArg,
+            )
+            if (isClient) 
+            {
+                runTask.jvmArgs(
+                    "-Dminecraft.api.auth.host=https://nope.invalid",
+                    "-Dminecraft.api.account.host=https://nope.invalid",
+                    "-Dminecraft.api.session.host=https://nope.invalid",
+                    "-Dminecraft.api.services.host=https://nope.invalid",
+                )
+                runTask.args(
+                    // use a consistent username for easier debugging in a given world (vs randomly teleporting to a new user each time the game boots)
+                    "--username", "Dev",
+                    // "--renderDebugLabels" is a Mojang command to show render names in RenderDoc
+                    "--renderDebugLabels"
+                    )
+                
+                // enabling tracy causes constant memory growth so it isn't always desired
+                if (rootProject.minecraftEnableTracy == "true")
+                {
+                    // "--tracy" is a Mojang command to allow individual frames to be debugged using Tracy https://github.com/wolfpld/tracy/releases/tag/v0.13.1
+                    runTask.args("--tracy")
+                }
+                
+                
+            }
+        }
+    }
+}
+
+
+// ==================== Process Resources (loaders only) ====================
+
+if (isNotCommonProject) {
+    processResources {
+        def resourceTargets = [
+            "build_info.json",
+            "fabric.mod.json",
+            "quilt.mod.json",
+            "META-INF/mods.toml",
+            "META-INF/neoforge.mods.toml",
+        ]
+
+        def compatible_forgemc_versions = "${rootProject.compatible_minecraft_versions}".replaceAll("\"", "").replaceAll("]", ",)")
+
+        // Quilt contributors
+        def quilt_contributors = []
+        def mod_author_list = rootProject.mod_authors.replaceAll("\"", "").replace("[", "").replace("]", "").split(",")
+        for (dev in mod_author_list) {
+            quilt_contributors.push("\"${dev.strip()}\": \"Developer\"")
+        }
+        quilt_contributors.reverse()
+
+        try {
+            if (rootProject.infoGitCommit == "null")
+                rootProject.ext.infoGitCommit = 'git rev-parse --verify HEAD'.execute().text.trim()
+            if (rootProject.infoGitBranch == "null")
+                rootProject.ext.infoGitBranch = 'git symbolic-ref --short HEAD'.execute().text.trim()
+        } catch (Exception e) {
+            rootProject.ext.infoGitCommit = "Git not found"
+            rootProject.ext.infoGitBranch = "Git not found"
+        }
+
+        def replaceProperties = [
+            version                      : rootProject.mod_version,
+            mod_name                     : rootProject.mod_readable_name,
+            group                        : rootProject.maven_group,
+            authors                      : rootProject.mod_authors,
+            description                  : rootProject.mod_description,
+            homepage                     : rootProject.mod_homepage,
+            source                       : rootProject.mod_source,
+            issues                       : rootProject.mod_issues,
+            discord                      : rootProject.mod_discord,
+            minecraft_version            : rootProject.minecraft_version,
+            accessWidenerVersion         : rootProject.accessWidenerVersion,
+            compatible_minecraft_versions: rootProject.compatible_minecraft_versions,
+            compatible_forgemc_versions  : compatible_forgemc_versions,
+            java_version                 : rootProject.java_version,
+            quilt_contributors           : "{" + quilt_contributors.join(", ") + "}",
+            info_git_commit              : rootProject.infoGitBranch,
+            info_git_branch              : rootProject.infoGitCommit,
+            info_build_source            : rootProject.infoBuildSource,
+            fabric_incompatibility_list  : rootProject.fabric_incompatibility_list,
+            fabric_recommend_list        : rootProject.fabric_recommend_list,
+            neoforge_version_range       : rootProject.neoforge_version_range,
+        ]
+
+        inputs.properties replaceProperties
+        replaceProperties.put "project", project
+        filesMatching(resourceTargets) {
+            expand replaceProperties
+        }
+
+        // Remove unused access wideners
+        exclude { file ->
+            if (file.name.contains(".distanthorizons.accesswidener") && file.name != "${rootProject.accessWidenerVersion}.distanthorizons.accesswidener") {
+                return true
+            }
+            return false
+        }
+    }
+
+
+    // ==================== Resource Copy Tasks ====================
+
+    // task copyCommonLoaderResources(type: Copy) {
+    //     from project(":common").file("src/main/resources/${rootProject.accessWidenerVersion}.distanthorizons.accesswidener")
+    //     into(file(project.file("build/resources/main")))
+    //     rename "${rootProject.accessWidenerVersion}.distanthorizons.accesswidener", "distanthorizons.accesswidener"
+    // }
+
+    task copyCoreResources(type: Copy) {
+        from fileTree(project(":core").file("src/main/resources"))
+        into project.file("build/resources/main")
+    }
+
+
+    // ==================== JVMDowngrader ====================
+
+    jvmdg.downgradeTo = JavaVersion.toVersion(rootProject.java_version)
+    downgradeJar.archiveClassifier.set(null)
+    shadeDowngradedApi.archiveClassifier.set(null)
+}

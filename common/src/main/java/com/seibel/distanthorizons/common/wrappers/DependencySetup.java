@@ -25,7 +25,7 @@ import com.seibel.distanthorizons.common.render.blaze.BlazeDhRenderApiDefinition
 import com.seibel.distanthorizons.common.render.openGl.GlDhRenderApiDefinition;
 import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.render.renderer.GenericRenderObjectFactory;
-import com.seibel.distanthorizons.common.wrappers.gui.ClassicConfigGUI;
+import com.seibel.distanthorizons.common.wrappers.gui.classicConfig.ClassicConfigGUI;
 import com.seibel.distanthorizons.common.wrappers.gui.LangWrapper;
 import com.seibel.distanthorizons.common.wrappers.level.KeyedClientLevelManager;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftServerWrapper;
@@ -80,8 +80,20 @@ public class DependencySetup
 		SingletonInjector.INSTANCE.bind(IConfigGui.class, ClassicConfigGUI.CONFIG_CORE_INTERFACE);
 	}
 	
-	public static void setRenderingApiBindings()
+	private static boolean renderingApiBindingsSet = false;
+	/** will be called from a DH thread, not the render thread */
+	public synchronized static void setRenderingApiBindings()
 	{
+		// shouldn't happen, but there was a single report that this method was triggered twice
+		if (renderingApiBindingsSet)
+		{
+			LOGGER.warn("Rendering bindings already set, skipping. How did this happen?");
+			return;
+		}
+		renderingApiBindingsSet = true;
+		
+		
+		
 		EDhApiRenderApi renderingApiEnum = Config.Client.Advanced.Graphics.Experimental.renderingApi.get();
 		if (renderingApiEnum == EDhApiRenderApi.AUTO)
 		{

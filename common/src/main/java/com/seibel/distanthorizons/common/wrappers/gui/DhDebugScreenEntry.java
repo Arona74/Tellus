@@ -3,6 +3,7 @@ package com.seibel.distanthorizons.common.wrappers.gui;
 #if MC_VER < MC_1_21_9
 // not supported for older MC versions
 #else
+
 import com.seibel.distanthorizons.core.logging.f3.F3Screen;
 import com.seibel.distanthorizons.coreapi.ModInfo;
 
@@ -19,6 +20,8 @@ import net.minecraft.world.level.chunk.LevelChunk;
 
 #if MC_VER <= MC_1_21_10
 import net.minecraft.resources.ResourceLocation;
+#else
+import net.minecraft.resources.Identifier;
 #endif
 
 #endif
@@ -32,6 +35,7 @@ public class DhDebugScreenEntry implements net.minecraft.client.gui.components.d
 {
 	public static void register()
 	{
+		#if MC_VER <= MC_1_21_11
 		// This method is private, so its access will need to be widened
 		DebugScreenEntries.register(
 				// The id, this will be displayed on the options screen
@@ -44,6 +48,23 @@ public class DhDebugScreenEntry implements net.minecraft.client.gui.components.d
 				// The screen entry
 				new DhDebugScreenEntry()
 		);
+		#elif MC_VER <= MC_1_21_11
+		DebugScreenEntries.allEntries().put(
+			// The id, this will be displayed on the options screen
+			Identifier.fromNamespaceAndPath(ModInfo.RESOURCE_NAMESPACE, "distant_horizons"),
+
+			// The screen entry
+			new DhDebugScreenEntry()
+		);
+		#else
+		DebugScreenEntries.register(
+			// The id, this will be displayed on the options screen
+			ModInfo.RESOURCE_NAMESPACE,
+			
+			// The screen entry
+			new DhDebugScreenEntry()
+		);
+		#endif
 	}
 	
 	
@@ -57,6 +78,8 @@ public class DhDebugScreenEntry implements net.minecraft.client.gui.components.d
 		{
 			displayer.addLine(message);
 		}
+		
+		//region
 		
 		//// The following will display like so if it is the only entry on the screen:
 		//// First left!                                                First Right!
@@ -86,6 +109,8 @@ public class DhDebugScreenEntry implements net.minecraft.client.gui.components.d
 		//
 		//displayer.addToGroup(GROUP_TWO, "I am another group!");
 		//displayer.addToGroup(GROUP_TWO, "This will appear after with no line breaks!");
+		
+		//endregion
 	}
 	
 	@Override
@@ -94,5 +119,8 @@ public class DhDebugScreenEntry implements net.minecraft.client.gui.components.d
 		// Always show regardless of accessibility option
 		return true;
 	}
+	
+	
+	
 }
 #endif

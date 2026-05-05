@@ -149,7 +149,16 @@ public class McObjectConverter
 	}
 	
 	public static BlockPos Convert(DhBlockPos wrappedPos) { return new BlockPos(wrappedPos.getX(), wrappedPos.getY(), wrappedPos.getZ()); }
+	
 	public static ChunkPos Convert(DhChunkPos wrappedPos) { return new ChunkPos(wrappedPos.getX(), wrappedPos.getZ()); }
+	public static DhChunkPos Convert(ChunkPos mcPos) 
+	{ 
+		#if MC_VER <= MC_1_21_11
+		return new DhChunkPos(mcPos.x, mcPos.z);
+		#else
+		return new DhChunkPos(mcPos.x(), mcPos.z());
+		#endif
+	}
 	
 	public static #if MC_VER <= MC_1_12_2 EnumFacing #else Direction #endif Convert(EDhDirection lodDirection) { return directions[lodDirection.ordinal()]; }
 	public static EDhDirection Convert(#if MC_VER <= MC_1_12_2 EnumFacing #else Direction #endif direction) { return lodDirections[direction.ordinal()]; }

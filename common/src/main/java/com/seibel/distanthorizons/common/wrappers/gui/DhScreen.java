@@ -6,14 +6,18 @@ import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.util.text.ITextComponent;
 #else
 import net.minecraft.client.gui.Font;
-#if MC_VER < MC_1_20_1
-import com.mojang.blaze3d.vertex.PoseStack;
-#else
-import net.minecraft.client.gui.GuiGraphics;
-#endif
+
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+#endif
+
+#if MC_VER < MC_1_20_1
+import com.mojang.blaze3d.vertex.PoseStack;
+#elif MC_VER <= MC_1_21_11
+import net.minecraft.client.gui.GuiGraphics;
+#else
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 #endif
 
 import java.util.List;
@@ -116,7 +120,7 @@ public class DhScreen extends #if MC_VER <= MC_1_12_2 GuiScreen #else Screen #en
 	{
 		guiStack.renderTooltip(font, text, x, y);
 	}
-	#else
+	#elif MC_VER <= MC_1_21_11
 	protected void DhDrawCenteredString(GuiGraphics guiStack, Font font, Component text, int x, int y, int color)
 	{
 		guiStack.drawCenteredString(font, text, x, y, color);
@@ -125,15 +129,28 @@ public class DhScreen extends #if MC_VER <= MC_1_12_2 GuiScreen #else Screen #en
 	{
 		guiStack.drawString(font, text, x, y, color);
 	}
-	//protected void DhRenderTooltip(GuiGraphics guiStack, Font font, List<? extends net.minecraft.util.FormattedCharSequence> text, int x, int y)
-	//{
-	//	//guiStack.renderTooltip(font, text, x, y);
-	//}
 	protected void DhRenderComponentTooltip(GuiGraphics guiStack, Font font, List<Component> comp, int x, int y)
 	{
 		guiStack.setComponentTooltipForNextFrame(font, comp, x, y);
 	}
 	protected void DhRenderTooltip(GuiGraphics guiStack, Font font, Component text, int x, int y)
+	{
+		guiStack.setTooltipForNextFrame(font, text, x, y);
+	}
+	#else
+	protected void DhDrawCenteredString(GuiGraphicsExtractor guiStack, Font font, Component text, int x, int y, int color)
+	{
+		guiStack.centeredText(font, text, x, y, color);
+	}
+	protected void DhDrawString(GuiGraphicsExtractor guiStack, Font font, Component text, int x, int y, int color)
+	{
+		guiStack.text(font, text, x, y, color);
+	}
+	protected void DhRenderComponentTooltip(GuiGraphicsExtractor guiStack, Font font, List<Component> comp, int x, int y)
+	{
+		guiStack.setComponentTooltipForNextFrame(font, comp, x, y);
+	}
+	protected void DhRenderTooltip(GuiGraphicsExtractor guiStack, Font font, Component text, int x, int y)
 	{
 		guiStack.setTooltipForNextFrame(font, text, x, y);
 	}

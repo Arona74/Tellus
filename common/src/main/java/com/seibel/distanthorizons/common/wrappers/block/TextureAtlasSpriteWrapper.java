@@ -19,12 +19,13 @@
 
 package com.seibel.distanthorizons.common.wrappers.block;
 
+import com.seibel.distanthorizons.common.wrappers.chunk.ChunkWrapper;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 #if MC_VER < MC_1_17_1
 #elif MC_VER < MC_1_21_3
 #else
-import com.seibel.distanthorizons.core.util.ColorUtil;
+import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import net.minecraft.client.renderer.texture.SpriteContents;
 #endif
 

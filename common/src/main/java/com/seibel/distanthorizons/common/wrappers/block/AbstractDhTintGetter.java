@@ -6,18 +6,16 @@ import com.seibel.distanthorizons.core.dataObjects.fullData.sources.FullDataSour
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.pos.DhSectionPos;
 import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPosMutable;
-import com.seibel.distanthorizons.core.util.ColorUtil;
+import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import com.seibel.distanthorizons.core.util.FullDataPointUtil;
 
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
 import net.minecraft.client.Minecraft;
 #if MC_VER <= MC_1_12_2
 import net.minecraft.world.biome.Biome;
 #else
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.level.biome.Biome;
 #endif
@@ -34,6 +32,11 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.Holder;
 #endif
 
+#if MC_VER <= MC_1_21_11
+import net.minecraft.world.level.BlockAndTintGetter;
+#else
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+#endif
 
 public abstract class AbstractDhTintGetter implements BlockAndTintGetter
 {
@@ -47,7 +50,7 @@ public abstract class AbstractDhTintGetter implements BlockAndTintGetter
 	
 	private static final ConcurrentHashMap<BlockBiomeWrapperPair, Integer> COLOR_BY_BLOCK_BIOME_PAIR = new ConcurrentHashMap<>();
 	/** returned if the color cache is incomplete */
-	public static final int INVALID_COLOR = Integer.MIN_VALUE;
+	public static final int INVALID_COLOR = -1;
 	
 	
 	protected BiomeWrapper biomeWrapper;
@@ -61,6 +64,7 @@ public abstract class AbstractDhTintGetter implements BlockAndTintGetter
 	//=============//
 	// constructor //
 	//=============//
+	//region
 	
 	public AbstractDhTintGetter() { }
 	
@@ -77,11 +81,14 @@ public abstract class AbstractDhTintGetter implements BlockAndTintGetter
 		this.smoothingRadiusInBlocks = Config.Client.Advanced.Graphics.Quality.lodBiomeBlending.get();
 	}
 	
+	//endregion
 	
 	
-	//================//
-	// shared methods //
-	//================//
+	
+	//===============//
+	// color getters //
+	//===============//
+	//region
 	
 	/** Called by MC's tint getter */
 	@Override
@@ -196,7 +203,7 @@ public abstract class AbstractDhTintGetter implements BlockAndTintGetter
 		BlockBiomeWrapperPair pair = BlockBiomeWrapperPair.get(this.blockStateWrapper, biomeWrapper);
 		
 		// use the cached color if possible
-		Integer cachedColor = COLOR_BY_BLOCK_BIOME_PAIR.get(pair); // explicit Integer return here reduces unnecessary allocations
+		Integer cachedColor = COLOR_BY_BLOCK_BIOME_PAIR.get(pair);
 		if (cachedColor != null)
 		{
 			return cachedColor;
@@ -335,6 +342,27 @@ public abstract class AbstractDhTintGetter implements BlockAndTintGetter
 					return existingBiome;
 				});
 	}
+	
+	//endregion
+	
+	
+	
+	//===========//
+	// set color //
+	//===========//
+	//region
+	
+	/** 
+	 * can be used in newer MC versions
+	 * where the color getting logic is a bit more manual
+	 */
+	public static void setStaticColor(BlockStateWrapper blockStateWrapper, BiomeWrapper biomeWrapper, Integer colorInt)
+	{
+		BlockBiomeWrapperPair pair = BlockBiomeWrapperPair.get(blockStateWrapper, biomeWrapper);
+		COLOR_BY_BLOCK_BIOME_PAIR.put(pair, colorInt);
+	}
+	
+	//endregion
 	
 	
 	

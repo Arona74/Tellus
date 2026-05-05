@@ -18,9 +18,7 @@
  */
 
 package com.seibel.distanthorizons.common.wrappers.block;
-#if MC_VER > MC_1_12_2
-import com.seibel.distanthorizons.core.dataObjects.fullData.sources.FullDataSourceV2;
-import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.LevelReader;
@@ -29,6 +27,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.level.material.FluidState;
 import org.jetbrains.annotations.Nullable;
+
+#if MC_VER <= MC_1_21_11
+#else
+import net.minecraft.world.level.CardinalLighting;
+#endif
+
 
 public class TintWithoutLevelOverrider extends AbstractDhTintGetter
 {
@@ -46,9 +50,12 @@ public class TintWithoutLevelOverrider extends AbstractDhTintGetter
 	// methods //
 	//=========//
 	
+	#if MC_VER <= MC_1_21_11
 	@Override
 	public float getShade(Direction direction, boolean shade)
 	{ throw new UnsupportedOperationException("ERROR: getShade() called on TintWithoutLevelOverrider. Object is for tinting only."); }
+	#endif
+	
 	@Override
 	public LevelLightEngine getLightEngine()
 	{ throw new UnsupportedOperationException("ERROR: getLightEngine() called on TintWithoutLevelOverrider. Object is for tinting only."); }
@@ -87,5 +94,18 @@ public class TintWithoutLevelOverrider extends AbstractDhTintGetter
 	
 	#endif
 	
+	
+	//=================//
+	// post MC 1.21.11 //
+	//=================//
+	
+	#if MC_VER <= MC_1_21_11
+	#else
+	@Override 
+	public CardinalLighting cardinalLighting()
+	{ throw new UnsupportedOperationException("ERROR: cardinalLighting() called on TintWithoutLevelOverrider. Object is for tinting only."); }
+	#endif
+	
+	
+	
 }
-#endif

@@ -21,33 +21,49 @@ package com.seibel.distanthorizons.common.wrappers.minecraft;
 
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IProfilerWrapper;
 
-#if MC_VER <= MC_1_12_2
-import net.minecraft.profiler.Profiler;
-#else
 import net.minecraft.util.profiling.ProfilerFiller;
-#endif
 
-/**
- * @author James Seibel
- * @version 11-20-2021
- */
 public class ProfilerWrapper implements IProfilerWrapper
 {
-	public #if MC_VER <= MC_1_12_2 Profiler #else ProfilerFiller #endif profiler;
+	public ProfilerFiller profiler;
 	
-	public ProfilerWrapper(#if MC_VER <= MC_1_12_2 Profiler #else ProfilerFiller #endif newProfiler) { this.profiler = newProfiler; }
+	public ProfilerWrapper(ProfilerFiller newProfiler) { this.profiler = newProfiler; }
 	
-	
-	/** starts a new section inside the currently running section */
 	@Override
-	public void push(String newSection) { this.profiler.#if MC_VER <= MC_1_12_2 startSection(newSection) #else push(newSection) #endif; }
+	public IProfileBlock push(String newSection) 
+	{
+		this.profiler.push(newSection); 
+		return new ProfileBlock(this.profiler);
+	}
 	
-	/** ends the currently running section and starts a new one */
 	@Override
-	public void popPush(String newSection) { this.profiler.#if MC_VER <= MC_1_12_2 endStartSection(newSection) #else popPush(newSection) #endif; }
+	public void popPush(String newSection) 
+	{
+		this.profiler.popPush(newSection);
+	}
 	
-	/** ends the currently running section */
-	@Override
-	public void pop() { this.profiler.#if MC_VER <= MC_1_12_2 endSection() #else pop() #endif; }
+	
+	
+	//================//
+	// helper classes //
+	//================//
+	//region
+	
+	public static class ProfileBlock implements IProfileBlock
+	{
+		private final ProfilerFiller profiler;
+		public ProfileBlock(ProfilerFiller newProfiler) { this.profiler = newProfiler; }
+		
+		
+		@Override
+		public void close()
+		{
+			this.profiler.pop();
+		}
+	}
+	
+	//endregion
+	
+	
 	
 }

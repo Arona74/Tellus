@@ -21,13 +21,17 @@ package com.seibel.distanthorizons.common.render.openGl.glObject;
 
 import com.seibel.distanthorizons.api.enums.config.EDhApiGLErrorHandlingMode;
 import com.seibel.distanthorizons.api.enums.config.EDhApiGpuUploadMethod;
+import com.seibel.distanthorizons.api.enums.config.EDhApiLoggerLevel;
 import com.seibel.distanthorizons.core.config.Config;
+import com.seibel.distanthorizons.core.config.types.ConfigEntry;
+import com.seibel.distanthorizons.core.dependencyInjection.ModAccessorInjector;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.jar.EPlatform;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.util.objects.GLMessages.*;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
+import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IIrisAccessor;
 import com.seibel.distanthorizons.coreapi.ModInfo;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
@@ -46,10 +50,30 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class GLProxy
 {
-	public static final DhLogger LOGGER = new DhLoggerBuilder()
-			.fileLevelConfig(Config.Common.Logging.logRendererGLEventToFile)
-			.chatLevelConfig(Config.Common.Logging.logRendererGLEventToChat)
-			.build();
+	private static final IIrisAccessor IRIS_ACCESSOR = ModAccessorInjector.INSTANCE.get(IIrisAccessor.class);
+	
+	public static final DhLogger LOGGER;
+	static
+	{
+		DhLoggerBuilder loggerBuilder = new DhLoggerBuilder();
+		loggerBuilder.fileLevelConfig(Config.Common.Logging.logRendererGLEventToFile);
+		
+		// don't send chat messages if Iris is present since
+		// Iris is known to cause (harmless) GL errors
+		// and this can confuse users
+		boolean irisPresent = (IRIS_ACCESSOR != null);
+		if (!irisPresent)
+		{
+			loggerBuilder.chatLevelConfig(Config.Common.Logging.logRendererGLEventToChat);
+		}
+		
+		LOGGER = loggerBuilder.build();
+		
+		if (irisPresent)
+		{
+			LOGGER.info("Iris detected, Distant Horizons OpenGL error logging won't be sent in the chat due to Iris throwing known (harmless) OpenGL errors. This is a bug with Iris, not Distant Horizons.");
+		}
+	}
 	
 	public static final Set<String> LOGGED_GL_MESSAGES = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 	
@@ -220,16 +244,7 @@ public class GLProxy
 		return instance;
 	}
 	
-	public EDhApiGpuUploadMethod getGpuUploadMethod() 
-	{
-		EDhApiGpuUploadMethod uploadOverride = Config.Client.Advanced.Debugging.OpenGl.glUploadMode.get();
-		if (uploadOverride == EDhApiGpuUploadMethod.AUTO)
-		{
-			return this.preferredUploadMethod;
-		}
-		
-		return uploadOverride;
-	}
+	public EDhApiGpuUploadMethod getGpuUploadMethod() { return this.preferredUploadMethod; }
 	
 	public static boolean runningOnRenderThread()
 	{
@@ -247,7 +262,7 @@ public class GLProxy
 	//region
 	
 	/** this method is called on the render thread at the point of the GL Error */
-	private static void logMessage(GLMessage msg)
+	private static void logMessage(GLMessage glMessage)
 	{
 		EDhApiGLErrorHandlingMode errorHandlingMode = Config.Client.Advanced.Debugging.OpenGl.glErrorHandlingMode.get();
 		if (errorHandlingMode == EDhApiGLErrorHandlingMode.IGNORE)
@@ -258,19 +273,26 @@ public class GLProxy
 		
 		
 		boolean onlyLogOnce = Config.Client.Advanced.Debugging.OpenGl.onlyLogGlErrorsOnce.get();
-		String errorMessage = "GL ERROR [" + msg.id + "] from [" + msg.source + "]: [" + msg.message + "]"+(onlyLogOnce ? " this message will only be logged once" : "")+".";
 		if (onlyLogOnce
-			&& !LOGGED_GL_MESSAGES.add(errorMessage))
+			&& !LOGGED_GL_MESSAGES.add(glMessage.message))
 		{
 			// this message has already been logged
 			return;
 		}
 		
+		String errorMessage = "GL ERROR [" + glMessage.id + "] from [" + glMessage.source + "]: [" + glMessage.message + "].";
+		if (onlyLogOnce)
+		{
+			errorMessage += " This message will only be logged once.";
+			errorMessage += " Note: Distant Horizons will catch and log OpenGL errors from other mods, not just DH itself; if everything is rendering correctly these errors can probably be ignored.";
+		}
+		
+		
 		
 		// create an exception so we get a stacktrace of where the message was triggered from
 		RuntimeException exception = new RuntimeException(errorMessage);
 		
-		if (msg.type == EGLMessageType.ERROR || msg.type == EGLMessageType.UNDEFINED_BEHAVIOR)
+		if (glMessage.type == EGLMessageType.ERROR || glMessage.type == EGLMessageType.UNDEFINED_BEHAVIOR)
 		{
 			// critical error
 			
@@ -287,7 +309,7 @@ public class GLProxy
 		{
 			// non-critical log
 			
-			EGLMessageSeverity severity = msg.severity;
+			EGLMessageSeverity severity = glMessage.severity;
 			if (severity == null)
 			{
 				// just in case the message was malformed
