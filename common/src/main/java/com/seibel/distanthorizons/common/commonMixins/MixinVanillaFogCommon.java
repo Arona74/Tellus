@@ -9,24 +9,23 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftCli
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
 
+#if MC_VER <= MC_1_12_2
+#else
+import net.minecraft.client.Camera;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+#endif
+
+#if MC_VER <= MC_1_12_2
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.Camera;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-
-
-import net.minecraft.client.Camera;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-
-#if MC_VER < MC_1_17_1
+import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.init.MobEffects;
+#elif MC_VER < MC_1_17_1
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.client.renderer.FogRenderer;
 import net.minecraft.client.renderer.FogRenderer.FogMode;
 import com.mojang.blaze3d.systems.RenderSystem;
-
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 #elif MC_VER < MC_1_21_3
@@ -57,16 +56,18 @@ import net.minecraft.world.level.material.FogType;
 public class MixinVanillaFogCommon
 {
 	
-	
-	#if MC_VER < MC_1_21_6
+	#if MC_VER <= MC_1_12_2
+	public static boolean cancelFog(int startCoords, Minecraft mc)
+	#elif MC_VER < MC_1_21_6
 	public static boolean cancelFog(Camera camera, FogRenderer.FogMode fogMode)
 	#else
 	public static boolean cancelFog()
 	#endif
 	{
 		
-		
-		#if MC_VER < MC_1_21_6
+		#if MC_VER <= MC_1_12_2
+		EntityPlayerSP entity = mc.player;
+		#elif MC_VER < MC_1_21_6
 		Entity entity = camera.getEntity();
 		#elif MC_VER <= MC_1_21_10
 		Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
@@ -77,12 +78,18 @@ public class MixinVanillaFogCommon
 		#endif
 		
 		
-		boolean cameraNotInFluid = cameraNotInFluid(camera);
+		boolean cameraNotInFluid = cameraNotInFluid(mc);
+		#if MC_VER <= MC_1_12_2
+		boolean isSpecialFog = entity.isPotionActive(MobEffects.BLINDNESS);
+		#else
 		boolean isSpecialFog = (entity instanceof LivingEntity) && ((LivingEntity) entity).hasEffect(MobEffects.BLINDNESS);
+		#endif
 		
 		boolean cancelFog = !isSpecialFog;
 		cancelFog = cancelFog && cameraNotInFluid;
-		#if MC_VER < MC_1_21_6
+		#if MC_VER <= MC_1_12_2
+		cancelFog = cancelFog && startCoords == 0;
+		#elif MC_VER < MC_1_21_6
 		cancelFog = cancelFog && (fogMode == FogRenderer.FogMode.FOG_TERRAIN);
 		#endif
 		
@@ -92,10 +99,15 @@ public class MixinVanillaFogCommon
 		
 		return cancelFog;
 	}
-	
+	#if MC_VER <= MC_1_12_2
+	private static boolean cameraNotInFluid(Minecraft mc)
+	#else
 	private static boolean cameraNotInFluid(Camera camera)
+	#endif
 	{
-		#if MC_VER < MC_1_17_1
+		#if MC_VER <= MC_1_12_2
+		boolean cameraNotInFluid = mc.getRenderViewEntity() != null && !mc.world.getBlockState(mc.getRenderViewEntity().getPosition()).getMaterial().isLiquid();
+		#elif MC_VER < MC_1_17_1
 		FluidState fluidState = camera.getFluidInCamera();
 		boolean cameraNotInFluid = fluidState.isEmpty();
 		#else
@@ -105,6 +117,4 @@ public class MixinVanillaFogCommon
 		
 		return cameraNotInFluid;
 	}
-	
-	
 }

@@ -1,284 +1,45 @@
 plugins {
-    id 'java'
-    id 'java-library'
-    id 'maven-publish'
-    id 'com.gradleup.shadow' version '9.2.2'
-    id 'xyz.wagyourtail.unimined' version '1.4.10-kappa'
-    id 'net.kyori.blossom' version '2.1.0'
+    id 'unimined-cleanroom'
 }
 
-apply from: 'gradle/scripts/helpers.gradle'
 
-// Early Assertions
-assertProperty 'mod_version'
-assertProperty 'maven_group'
-assertProperty 'mod_id'
-assertProperty 'mod_name'
+// ==================== Mod Dependency Helper ====================
 
-version = propertyString('mod_version')
-group = propertyString('maven_group')
-
-//base {
-//    archivesName.set(propertyString('mod_id'))
-//}
-
-
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
-    }
-    //propertyBool('generate_sources_jar')
-    if (true) {
-        withSourcesJar()
-    }
-    //propertyBool('generate_javadocs_jar')
-    if (false) {
-        withJavadocJar()
-    }
+def addMod(path, enabled) {
+    if (enabled == "2")
+        dependencies { modImplementation(path) }
+    else if (enabled == "1")
+        dependencies { compileOnly(path) }
 }
 
-configurations {
-    embed
-    contain
-    implementation.extendsFrom(embed)
-    implementation.extendsFrom(contain)
-    modCompileOnly
-    compileOnly.extendsFrom(modCompileOnly)
-    modRuntimeOnly
-    runtimeOnly.extendsFrom(modRuntimeOnly)
-}
 
-String remapTaskName = "remapShadowJar"
-
-unimined.minecraft {
-    version "1.12.2"
-
-    mappings {
-        mcp("stable", "39-1.12")
-    }
-
-    cleanroom {
-        //propertyBool('use_access_transformer')
-        if (true) {
-            accessTransformer "${rootProject.projectDir}/cleanroom/src/main/resources/1_12_2_distanthorizons_at.cfg"
-        }
-        loader "0.4.4-alpha"
-        runs.auth.username = "Developer"
-        runs.all {
-            systemProperty("crl.dev.mixin", "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json")
-            jvmArgs += ['-Xmx4G']
-            jvmArgs += [
-                '-XX:+UseZGC',
-                '-XX:-UseG1GC'
-            ]
-            jvmArgs += ['-XX:+ZGenerational']
-
-            println "Classpath size BEFORE: ${classpath.files.size()}"
-
-            classpath = classpath.filter { file ->
-                def remove =
-                    file.path.contains("DistantHorizons-common") ||
-                        file.path.contains("DistantHorizons-core") ||
-                        file.path.contains("DistantHorizons-api")
-
-                if (remove) {
-                    println "Removing from classpath: $file"
-                }
-
-                return !remove
-            }
-
-            println "Classpath size AFTER: ${classpath.files.size()}"
-
-            def extraPath = [
-                sourceSets.main.output.classesDirs.asPath,
-                sourceSets.main.output.resourcesDir.absolutePath,
-                rootProject.project(':common').sourceSets.main.output.classesDirs.asPath,
-                rootProject.project(':core').sourceSets.main.output.classesDirs.asPath,
-                rootProject.project(':api').sourceSets.main.output.classesDirs.asPath,
-            ].join(File.pathSeparator)
-
-            jvmArgs -= ("-Dcrl.dev.extrapath=")
-            jvmArgs += ("-Dcrl.dev.extrapath=${extraPath}")
-
-            if (false) {
-                systemProperty("foundation.dump", "true")
-                systemProperty("foundation.verbose", "true")
-            }
-            //propertyBool('is_coremod')
-            if (true) {
-                //coremod_plugin_class_name
-                //forge for now bcs it will crash but correct is .cleanroom
-                systemProperty("fml.coreMods.load", "com.seibel.distanthorizons.cleanroom.DistantHorizonsLoadingPlugin")
-            }
-
-
-            return
-        }
-    }
-
-    defaultRemapJar = false
-
-    //propertyBool('enable_shadow')
-    if (true) {
-        remap(tasks.shadowJar) {
-            mixinRemap {
-                enableBaseMixin()
-                enableMixinExtra()
-                disableRefmap()
-            }
-        }
-    } else {
-        remap(tasks.jar) {
-            mixinRemap {
-                enableBaseMixin()
-                enableMixinExtra()
-                disableRefmap()
-            }
-        }
-    }
-
-    mods {
-        remap(configurations.modCompileOnly)
-        remap(configurations.modRuntimeOnly)
-    }
-}
+// ==================== Dependencies ====================
 
 dependencies {
-    compileOnly "com.cleanroommc:sponge-mixin:0.20.12+mixin.0.8.7"
+  
+}
+
+
+// ==================== Tasks ====================
+
+task deleteResources(type: Delete) {
+    delete file("build/resources/main")
 }
 
 processResources {
-
-    inputs.property 'mod_id', propertyString('mod_id')
-    inputs.property 'mod_name', propertyString('mod_name')
-    inputs.property 'mod_version', propertyString('mod_version')
-    inputs.property 'mod_description', propertyString('mod_description')
-    inputs.property 'mod_authors', propertyString('mod_authors').replace('[', '').replace(']', '').split(',').collect { it.trim().replace('"', '') }.join('", "')
-    inputs.property 'mod_credits', propertyString('mod_credits')
-    inputs.property 'mod_url', propertyString('mod_homepage')
-    inputs.property 'mod_update_json', propertyString('mod_update_json')
-    inputs.property 'mod_logo_path', "assets/distanthorizons/icon.png"
-
-    def filterList = ['mcmod.info', 'pack.mcmeta']
-
-    filesMatching(filterList) { fcd ->
-        fcd.expand(
-            'mod_id': propertyString('mod_id'),
-            'mod_name': propertyString('mod_name'),
-            'mod_version': propertyString('mod_version'),
-            'mod_description': propertyString('mod_description'),
-            'mod_authors': propertyString('mod_authors').replace('[', '').replace(']', '').split(',').collect { it.trim().replace('"', '') }.join('", "'),
-            'mod_credits': propertyString('mod_credits'),
-            'mod_url': propertyString('mod_homepage'),
-            'mod_update_json': propertyString('mod_update_json'),
-            'mod_logo_path': "assets/distanthorizons/icon.png",
-        )
-    }
-
     rename '(.+_at.cfg)', 'META-INF/$1'
+    dependsOn(copyCoreResources)
+    // dependsOn(copyCommonLoaderResources)
 }
 
-sourceSets {
-    main {
-        blossom {
-            javaSources {
-                property('mod_id', propertyString('mod_id'))
-                property('mod_name', propertyString('mod_name'))
-                property('mod_version', propertyString('mod_version'))
-                property('package', "${maven_group}.${mod_id}")
-            }
-        }
-    }
-}
-//propertyBool('enable_shadow')
-if (!true) {
-    shadowJar.enabled = false
+tasks.named('runClient') {
+    dependsOn(copyCoreResources)
+    // dependsOn(copyCommonLoaderResources)
+    finalizedBy(deleteResources)
 }
 
-jar {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    if (configurations.contain.size() > 0) {
-        into('/') {
-            from configurations.contain
-        }
-    }
-    doFirst {
-        archiveClassifier = 'dev'
-        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-        if (configurations.contain.size() > 0) {
-            into('/') {
-                from configurations.contain
-            }
-        }
-        manifest {
-            def attribute_map = [:]
-            attribute_map['ModType'] = "CRL"
-            attribute_map['MixinConfigs'] = "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json"
-            if (configurations.contain.size() > 0) {
-                attribute_map['ContainedDeps'] = configurations.contain.collect { it.name }.join(' ')
-                attribute_map['NonModDeps'] = true
-            }
-            //propertyBool('is_coremod')
-            if (true) {
-                //coremod_plugin_class_name
-                attribute_map['FMLCorePlugin'] = "com.seibel.distanthorizons.cleanroom.DistantHorizonsLoadingPlugin"
-                //coremod_includes_mod
-                if (true) {
-                    attribute_map['FMLCorePluginContainsFMLMod'] = true
-                }
-            }
-            //propertyBool('use_access_transformer')
-            if (true) {
-                attribute_map['FMLAT'] = "1_12_2_distanthorizons_at.cfg"
-            }
-            attributes(attribute_map)
-        }
-    }
-    finalizedBy(tasks.named(remapTaskName).get())
-}
-
-shadowJar {
-    configurations = [project.configurations.shadowMe, project.configurations.shadowCommon]
-    archiveClassifier = "shadow"
-
-    manifest {
-        def attribute_map = [:]
-        attribute_map['ModType'] = "CRL"
-        attribute_map['MixinConfigs'] = "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json"
-        attribute_map['FMLCorePlugin'] = "com.seibel.distanthorizons.cleanroom.DistantHorizonsLoadingPlugin"
-        attribute_map['FMLCorePluginContainsFMLMod'] = true
-        attribute_map['FMLAT'] = "1_12_2_distanthorizons_at.cfg"
-        attributes(attribute_map)
-    }
-}
-
-tasks.named(remapTaskName).configure {
-    doFirst {
-        logging.captureStandardOutput LogLevel.INFO
-    }
-    doLast {
-        logging.captureStandardOutput LogLevel.QUIET
-    }
-}
-
-compileTestJava {
-    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_21
-}
-
-test {
-    useJUnitPlatform()
-    javaLauncher.set(javaToolchains.launcherFor {
-        languageVersion = JavaLanguageVersion.of(21)
-    })
-    //propertyBool('show_testing_output')
-    if (false) {
-        testLogging {
-            showStandardStreams = true
-        }
-    }
-}
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
+sourcesJar {
+    def commonSources = project(":common").sourcesJar
+    dependsOn commonSources
+    from commonSources.archiveFile.map { zipTree(it) }
 }

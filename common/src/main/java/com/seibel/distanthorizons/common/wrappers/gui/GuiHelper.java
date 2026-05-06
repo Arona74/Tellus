@@ -88,11 +88,7 @@ public class GuiHelper
 	#if MC_VER <= MC_1_12_2
 	public static void SetY(GuiTextField w, int y)
 	{
-        #if MC_VER < MC_1_19_4
 		w.y = y;
-        #else
-		w.setY(y);
-        #endif
 	}
 	#endif
 	

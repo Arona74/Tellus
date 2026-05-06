@@ -12,7 +12,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 #endif
 
-#if MC_VER < MC_1_20_1
+#if MC_VER <= MC_1_12_2
+#elif MC_VER < MC_1_20_1
 import com.mojang.blaze3d.vertex.PoseStack;
 #elif MC_VER <= MC_1_21_11
 import net.minecraft.client.gui.GuiGraphics;
@@ -155,7 +156,4 @@ public class DhScreen extends #if MC_VER <= MC_1_12_2 GuiScreen #else Screen #en
 		guiStack.setTooltipForNextFrame(font, text, x, y);
 	}
     #endif
-	
-	
-	
 }

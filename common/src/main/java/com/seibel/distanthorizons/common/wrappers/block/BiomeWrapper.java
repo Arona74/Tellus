@@ -28,12 +28,15 @@ import java.util.concurrent.ConcurrentMap;
 
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.ILevelWrapper;
-import net.minecraft.world.level.Level;
 import com.seibel.distanthorizons.core.logging.DhLogger;
-
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IBiomeWrapper;
 
-#if MC_VER == MC_1_16_5 || MC_VER == MC_1_17_1
+#if MC_VER > MC_1_12_2
+import net.minecraft.world.level.Level;
+#endif
+
+#if MC_VER <= MC_1_12_2
+#elif MC_VER == MC_1_16_5 || MC_VER == MC_1_17_1
 import net.minecraft.core.Registry;
 #elif MC_VER == MC_1_18_2 || MC_VER == MC_1_19_2
 import net.minecraft.core.Holder;
@@ -45,14 +48,21 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 #endif
 
-#if MC_VER <= MC_1_21_10
+#if MC_VER <= MC_1_12_2
+import net.minecraft.util.ResourceLocation;
+#elif MC_VER <= MC_1_21_10
 import net.minecraft.resources.ResourceLocation;
 #else
 import net.minecraft.resources.Identifier;
 import net.minecraft.core.component.DataComponentMap;
 #endif
 
+#if MC_VER <= MC_1_12_2
+import net.minecraft.world.biome.Biome;
+#else
 import net.minecraft.world.level.biome.Biome;
+#endif
+
 
 #if MC_VER >= MC_1_18_2
 import net.minecraft.world.level.biome.Biomes;
@@ -219,8 +229,10 @@ public class BiomeWrapper implements IBiomeWrapper
 		
 		// generate the serial string //
 		
+		#if MC_VER > MC_1_12_2
 		Level level = (Level)levelWrapper.getWrappedMcObject();
 		net.minecraft.core.RegistryAccess registryAccess = level.registryAccess();
+		#endif
 		
 		#if MC_VER <= MC_1_21_10
 		ResourceLocation resourceLocation;
@@ -228,7 +240,9 @@ public class BiomeWrapper implements IBiomeWrapper
 		Identifier resourceLocation;
 		#endif
 		
-		#if MC_VER <= MC_1_17_1
+		#if MC_VER <= MC_1_12_2
+		resourceLocation = biome.getRegistryName();
+		#elif MC_VER <= MC_1_17_1
 		resourceLocation = registryAccess.registryOrThrow(Registry.BIOME_REGISTRY).getKey(this.biome);
 		#elif MC_VER <= MC_1_19_2
 		resourceLocation = registryAccess.registryOrThrow(Registry.BIOME_REGISTRY).getKey(this.biome.value());
@@ -293,10 +307,13 @@ public class BiomeWrapper implements IBiomeWrapper
 		{
 			try
 			{
+				#if MC_VER > MC_1_12_2
 				Level level = (Level) levelWrapper.getWrappedMcObject();
 				net.minecraft.core.RegistryAccess registryAccess = level.registryAccess();
+				#endif
+
 				
-				BiomeDeserializeResult deserializeResult = deserializeBiome(resourceLocationString, registryAccess);
+				BiomeDeserializeResult deserializeResult = deserializeBiome(resourceLocationString #if MC_VER > MC_1_12_2, registryAccess #endif);
 				
 				
 				
@@ -325,7 +342,7 @@ public class BiomeWrapper implements IBiomeWrapper
 		}
 	}
 	
-	public static BiomeDeserializeResult deserializeBiome(String resourceLocationString, net.minecraft.core.RegistryAccess registryAccess) throws IOException
+	public static BiomeDeserializeResult deserializeBiome(String resourceLocationString #if MC_VER > MC_1_12_2, net.minecraft.core.RegistryAccess  registryAccess #endif) throws IOException
 	{
 		// parse the resource location
 		int separatorIndex = resourceLocationString.indexOf(":");
@@ -356,7 +373,10 @@ public class BiomeWrapper implements IBiomeWrapper
 		
 		
 		boolean success;
-		#if MC_VER <= MC_1_17_1
+		#if MC_VER == MC_1_12_2
+		Biome biome = Biome.REGISTRY.getObject(resourceLocation);
+		success = (biome != null);
+		#elif MC_VER == MC_1_16_5 || MC_VER == MC_1_17_1
 		Biome biome = registryAccess.registryOrThrow(Registry.BIOME_REGISTRY).get(resourceLocation);
 		success = (biome != null);
 		#elif MC_VER <= MC_1_19_2

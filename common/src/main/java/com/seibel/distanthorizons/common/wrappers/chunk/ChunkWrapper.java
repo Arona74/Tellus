@@ -31,7 +31,6 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.chunk.ChunkLightStorage
 import com.seibel.distanthorizons.core.wrapperInterfaces.chunk.IChunkWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.misc.IMutableBlockPosWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IBiomeWrapper;
-
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.ILevelWrapper;
 #if MC_VER <= MC_1_12_2
 import net.minecraft.block.state.IBlockState;

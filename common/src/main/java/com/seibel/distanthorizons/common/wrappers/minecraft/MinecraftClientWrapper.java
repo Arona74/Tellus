@@ -21,7 +21,9 @@ package com.seibel.distanthorizons.common.wrappers.minecraft;
 
 import java.io.File;
 
+#if MC_VER > MC_1_12_2
 import com.mojang.blaze3d.platform.Window;
+#endif
 import com.seibel.distanthorizons.common.wrappers.gui.NativeDialogUtil;
 import com.seibel.distanthorizons.common.wrappers.world.ClientLevelWrapper;
 import com.seibel.distanthorizons.core.file.structure.ClientOnlySaveStructure;
@@ -36,19 +38,29 @@ import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPos;
 import com.seibel.distanthorizons.core.pos.DhChunkPos;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
+#if MC_VER <= MC_1_12_2
+import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.client.multiplayer.WorldClient;
+import net.minecraft.crash.CrashReport;
+import net.minecraft.profiler.Profiler;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.text.TextComponentString;
+#else
 import net.minecraft.CrashReport;
 import net.minecraft.client.CloudStatus;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.ChunkPos;
+#endif
 
 import org.jetbrains.annotations.Nullable;
 
-#if MC_VER < MC_1_19_2
+#if MC_VER < MC_1_19_2 && MC_VER > MC_1_12_2
 import net.minecraft.network.chat.TextComponent;
 #endif
 
@@ -57,10 +69,11 @@ import net.minecraft.network.chat.TextComponent;
 import net.minecraft.util.profiling.Profiler;
 #endif
 
-#if MC_VER <= MC_1_21_10
+#if MC_VER <= MC_1_21_10 && MC_VER > MC_1_12_2
 import net.minecraft.client.GraphicsStatus;
 #else
 #endif
+
 
 /**
  * A singleton that wraps the Minecraft object.
@@ -70,7 +83,7 @@ import net.minecraft.client.GraphicsStatus;
 public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecraftSharedWrapper
 {
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
-	private static final Minecraft MINECRAFT = Minecraft.getInstance();
+	private static final Minecraft MINECRAFT = Minecraft.#if MC_VER <= MC_1_12_2 getMinecraft() #else getInstance() #endif;
 	
 	public static final MinecraftClientWrapper INSTANCE = new MinecraftClientWrapper();
 	
@@ -85,19 +98,20 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	//region
 	
 	@Override
-	public boolean hasSinglePlayerServer() { return MINECRAFT.hasSingleplayerServer(); }
+	public boolean hasSinglePlayerServer() { return MINECRAFT.#if MC_VER <= MC_1_12_2 isSingleplayer() #else hasSingleplayerServer() #endif; }
 	@Override
-	public boolean clientConnectedToDedicatedServer() 
-	{ 
-		return MINECRAFT.getCurrentServer() != null 
-				&& !this.hasSinglePlayerServer(); 
+	public boolean clientConnectedToDedicatedServer()
+	{
+		return MINECRAFT.#if MC_VER <= MC_1_12_2 getCurrentServerData() #else getCurrentServer() #endif != null
+			&& !this.hasSinglePlayerServer();
 	}
 	@Override
-	public boolean connectedToReplay() 
-	{ 
-		return MINECRAFT.getCurrentServer() == null
-				&& !this.hasSinglePlayerServer() ; 
+	public boolean connectedToReplay()
+	{
+		return MINECRAFT.#if MC_VER <= MC_1_12_2 getCurrentServerData() #else getCurrentServer() #endif == null
+			&& !this.hasSinglePlayerServer() ;
 	}
+
 	
 	@Override
 	public String getCurrentServerName() 
@@ -108,8 +122,8 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 		}
 		else
 		{
-			ServerData server = MINECRAFT.getCurrentServer();
-			return (server != null) ? server.name : "NULL";
+			ServerData server = MINECRAFT.#if MC_VER <= MC_1_12_2 getCurrentServerData() #else getCurrentServer() #endif;
+			return (server != null) ? server.#if MC_VER <= MC_1_12_2 serverName #else name #endif : "NULL";
 		}
 	}
 	@Override
@@ -121,15 +135,15 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 		}
 		else
 		{
-			ServerData server = MINECRAFT.getCurrentServer();
-			return (server != null) ? server.ip : "NA";
+			ServerData server = MINECRAFT.#if MC_VER <= MC_1_12_2 getCurrentServerData() #else getCurrentServer() #endif;
+			return (server != null) ? server.#if MC_VER <= MC_1_12_2 serverIP #else ip #endif : "NA";
 		}
 	}
 	@Override
 	public String getCurrentServerVersion()
 	{
-		ServerData server = MINECRAFT.getCurrentServer();
-		return (server != null) ? server.version.getString() : "UNKOWN";
+		ServerData server = MINECRAFT.#if MC_VER <= MC_1_12_2 getCurrentServerData() #else getCurrentServer() #endif;
+		return (server != null) ? server.#if MC_VER <= MC_1_12_2 gameVersion #else version.getString() #endif : "UNKOWN";
 	}
 	
 	//endregion
@@ -141,7 +155,7 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	//=================//
 	//region
 	
-	public LocalPlayer getPlayer() { return MINECRAFT.player; }
+	public #if MC_VER <= MC_1_12_2 EntityPlayerSP #else LocalPlayer #endif getPlayer() { return MINECRAFT.player; }
 	
 	@Override
 	public boolean playerExists() { return MINECRAFT.player != null; }
@@ -149,26 +163,28 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	@Override
 	public DhBlockPos getPlayerBlockPos()
 	{
-		LocalPlayer player = this.getPlayer();
+		#if MC_VER <= MC_1_12_2 EntityPlayerSP #else LocalPlayer #endif player = this.getPlayer();
 		if (player == null)
 		{
 			return new DhBlockPos(0, 0, 0);	
 		}
 		
-		BlockPos playerPos = player.blockPosition();
+		BlockPos playerPos = player.#if MC_VER <= MC_1_12_2 getPosition() #else blockPosition() #endif;
 		return new DhBlockPos(playerPos.getX(), playerPos.getY(), playerPos.getZ());
 	}
 	
 	@Override
 	public DhChunkPos getPlayerChunkPos()
 	{
-		LocalPlayer player = this.getPlayer();
+		#if MC_VER <= MC_1_12_2 EntityPlayerSP #else LocalPlayer #endif player = this.getPlayer();
 		if (player == null)
 		{
 			return new DhChunkPos(0, 0);
 		}
 		
-        #if MC_VER < MC_1_17_1
+		#if MC_VER <= MC_1_12_2
+		ChunkPos playerPos = new ChunkPos(player.getPosition());
+        #elif MC_VER < MC_1_17_1
         ChunkPos playerPos = new ChunkPos(player.blockPosition());
         #else
 		ChunkPos playerPos = player.chunkPosition();
@@ -198,7 +214,7 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	@Nullable
 	public IClientLevelWrapper getWrappedClientLevel(boolean bypassLevelKeyManager)
 	{
-		ClientLevel level = MINECRAFT.level;
+		#if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif level = MINECRAFT.#if MC_VER <= MC_1_12_2 world #else level #endif;
 		if (level == null)
 		{
 			return null;
@@ -219,13 +235,15 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	@Override
 	public void sendChatMessage(String string)
 	{
-		LocalPlayer player = this.getPlayer();
+		#if MC_VER <= MC_1_12_2 EntityPlayerSP #else LocalPlayer #endif player = this.getPlayer();
 		if (player == null)
 		{
 			return;
 		}
 		
-        #if MC_VER < MC_1_19_2
+		#if MC_VER <= MC_1_12_2
+		player.sendMessage(new TextComponentString(string));
+        #elif MC_VER < MC_1_19_2
 		player.sendMessage(new TextComponent(string), getPlayer().getUUID());
         #elif MC_VER < MC_1_21_9
 		player.displayClientMessage(net.minecraft.network.chat.Component.translatable(string), /*isOverlay*/false);
@@ -245,13 +263,15 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	@Override
 	public void sendOverlayMessage(String string)
 	{
-		LocalPlayer player = this.getPlayer();
+		#if MC_VER <= MC_1_12_2 EntityPlayerSP #else LocalPlayer #endif player = this.getPlayer();
 		if (player == null)
 		{
 			return;
 		}
 		
-        #if MC_VER < MC_1_19_2
+		#if MC_VER <= MC_1_12_2
+		MINECRAFT.ingameGUI.setOverlayMessage(string, /*animateColor*/false);
+        #elif MC_VER < MC_1_19_2
 		player.displayClientMessage(new TextComponent(string), /*isOverlay*/true);
 		#elif MC_VER <= MC_1_21_11
 		player.displayClientMessage(net.minecraft.network.chat.Component.translatable(string), /*isOverlay*/true);
@@ -273,7 +293,9 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	{
 		LOGGER.info("Disabling vanilla clouds... This is done to prevent vanilla clouds from rendering on top of Distant Horizons LODs.");
 		
-		#if MC_VER <= MC_1_18_2
+		#if MC_VER <= MC_1_12_2
+		MINECRAFT.gameSettings.clouds = 0;
+		#elif MC_VER <= MC_1_18_2
 		MINECRAFT.options.renderClouds = CloudStatus.OFF;
 		#else
 		MINECRAFT.options.cloudStatus().set(CloudStatus.OFF);
@@ -295,7 +317,9 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	{
 		String reasoning = "This is done to fix vanilla chunks (specifically water blocks) not fading into Distant Horizons LODs when DH's 'Vanilla Fade' option is enabled.";
 		
-		#if MC_VER <= MC_1_18_2
+		#if MC_VER <= MC_1_12_2
+		// fabulous graphics was added in MC 1.16
+		#elif MC_VER <= MC_1_18_2
 		LOGGER.info("Disabling fabulous graphics... "+reasoning);
 		
 		GraphicsStatus oldGraphicsStatus = MINECRAFT.options.graphicsMode;
@@ -331,6 +355,7 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	 * no override and not included in {@link IMinecraftClientWrapper}
 	 * since this would only be used in common/client, not core.
 	 */
+	#if MC_VER > MC_1_12_2
 	public 
 		#if MC_VER < MC_1_21_9 long
 		#else Window 
@@ -344,12 +369,15 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 		return MINECRAFT.getWindow();
 		#endif
 	}
+	#endif
 	
 	@Override
 	public IProfilerWrapper getProfiler()
 	{
-		ProfilerFiller profiler;
-		#if MC_VER < MC_1_21_3
+		#if MC_VER <= MC_1_12_2 Profiler #else ProfilerFiller #endif profiler;
+		#if MC_VER <= MC_1_12_2
+		profiler = MINECRAFT.profiler;
+		#elif MC_VER < MC_1_21_3
 		profiler = MINECRAFT.getProfiler();
 		#else
 		profiler = Profiler.get();
@@ -378,7 +406,9 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 		executeOnRenderThread(() -> 
 		{
 			CrashReport report = new CrashReport(errorMessage, exception);
-			#if MC_VER < MC_1_20_4
+			#if MC_VER <= MC_1_12_2
+			MINECRAFT.crashed(report);
+			#elif MC_VER < MC_1_20_4
 			Minecraft.crash(report);
 			#else
 			MINECRAFT.delayCrash(report);
@@ -387,7 +417,7 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	}
 	
 	@Override
-	public void executeOnRenderThread(Runnable runnable) { MINECRAFT.execute(runnable); }
+	public void executeOnRenderThread(Runnable runnable) { MINECRAFT.#if MC_VER <= MC_1_12_2 addScheduledTask #else execute #endif(runnable); }
 	
 	@Override
 	public void showDialog(String title, String message, String dialogType, String iconType)
@@ -403,7 +433,7 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	//region
 	
 	@Override
-	public Object getOptionsObject() { return MINECRAFT.options; }
+	public Object getOptionsObject() { return MINECRAFT.#if MC_VER <= MC_1_12_2 gameSettings #else options #endif; }
 	
 	//endregion
 	
@@ -418,19 +448,23 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	public boolean isDedicatedServer() { return false; }
 	
 	@Override
-	public File getInstallationDirectory() { return MINECRAFT.gameDirectory; }
+	public File getInstallationDirectory() { return MINECRAFT.#if MC_VER <= MC_1_12_2 gameDir #else gameDirectory #endif; }
 	
 	@Override
 	public int getPlayerCount()
 	{
 		// can be null if the server hasn't finished booting up yet
-		if (MINECRAFT.getSingleplayerServer() == null)
+		if (MINECRAFT.#if MC_VER <= MC_1_12_2 getIntegratedServer() #else getSingleplayerServer() #endif == null)
 		{
 			return 1;
 		}
 		else
 		{
+			#if MC_VER <= MC_1_12_2
+			return MINECRAFT.getIntegratedServer().getCurrentPlayerCount();
+			#else
 			return MINECRAFT.getSingleplayerServer().getPlayerCount();
+			#endif
 		}
 	}
 	
