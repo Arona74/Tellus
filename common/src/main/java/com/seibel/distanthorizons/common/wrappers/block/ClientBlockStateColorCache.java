@@ -253,7 +253,7 @@ public class ClientBlockStateColorCache
 			// getQuads() isn't thread safe so we need to put this logic in a lock
 			RESOLVE_LOCK.lock();
 			#if MC_VER <= MC_1_12_2
-			if (this.blockState.getMaterial().isLiquid())
+			if (!this.blockState.getMaterial().isLiquid())
 			#else
 			if (this.blockState.getFluidState().isEmpty())
 			#endif
