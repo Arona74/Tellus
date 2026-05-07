@@ -77,8 +77,12 @@ public class MixinVanillaFogCommon
 		Entity entity = camera.entity();	
 		#endif
 		
-		
+		#if MC_VER <= MC_1_12_2
 		boolean cameraNotInFluid = cameraNotInFluid(mc);
+		#else
+		boolean cameraNotInFluid = cameraNotInFluid(camera);
+		#endif
+		
 		#if MC_VER <= MC_1_12_2
 		boolean isSpecialFog = entity.isPotionActive(MobEffects.BLINDNESS);
 		#else

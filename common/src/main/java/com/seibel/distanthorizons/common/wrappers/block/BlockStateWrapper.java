@@ -483,7 +483,7 @@ public class BlockStateWrapper implements IBlockStateWrapper
 		{
 			return EDhApiBlockMaterial.LAVA;
 		}
-		else if (isLiquid || #if MC_VER <= MC_1_12_2 blockState.getBlock() == Blocks.WATER || blockState.getBlock() == Blocks.FLOWING_WATER #else this.blockState.is(Blocks.WATER) #endif)
+		else if (isLiquid || #if MC_VER <= MC_1_12_2 blockState.getBlock() == Blocks.WATER || blockState.getBlock() == Blocks.FLOWING_WATER #else blockState.is(Blocks.WATER) #endif)
 		{
 			return EDhApiBlockMaterial.WATER;
 		}
@@ -615,7 +615,7 @@ public class BlockStateWrapper implements IBlockStateWrapper
 		if (blockState != null)
 		{
 			#if MC_VER <= MC_1_12_2
-			canOcclude = blockState.isOpaqueCube();
+			canOcclude = blockState.getMaterial().isSolid();
 			#else
 			canOcclude = blockState.canOcclude();
 			#endif
@@ -1085,16 +1085,16 @@ public class BlockStateWrapper implements IBlockStateWrapper
 		#if MC_VER <= MC_1_12_2
 		java.util.Collection<IProperty<?>> blockPropertyCollection = blockState.getPropertyKeys();
 		#else
-		java.util.Collection<Property<?>> blockPropertyCollection = blockState.getProperties();;
+		java.util.Collection<net.minecraft.world.level.block.state.properties.Property<?>> blockPropertyCollection = blockState.getProperties();;
 		#endif
 		
 		// alphabetically sort the list so they are always in the same order
-		List<#if MC_VER <= MC_1_12_2 IProperty<?> #else Property<?> #endif> sortedBlockPropteryList = new ArrayList<>(blockPropertyCollection);
+		List<#if MC_VER <= MC_1_12_2 IProperty<?> #else net.minecraft.world.level.block.state.properties.Property<?> #endif> sortedBlockPropteryList = new ArrayList<>(blockPropertyCollection);
 		sortedBlockPropteryList.sort((a, b) -> a.getName().compareTo(b.getName()));
 		
 		
 		StringBuilder stringBuilder = new StringBuilder();
-		for (#if MC_VER <= MC_1_12_2 IProperty<?> #else Property<?> #endif property : sortedBlockPropteryList)
+		for (#if MC_VER <= MC_1_12_2 IProperty<?> #else net.minecraft.world.level.block.state.properties.Property<?> #endif property : sortedBlockPropteryList)
 		{
 			String propertyName = property.getName();
 			

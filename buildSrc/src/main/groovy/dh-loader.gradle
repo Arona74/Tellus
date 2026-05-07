@@ -403,7 +403,7 @@ if (isNotCommonProject) {
             runTask.jvmArgs = filteredArgs
 
             if(project.name == "forge" || project.name == "neoforge" || project.name == "cleanroom") {
-                // fix (Neo)forge debug running
+                // fix (Neo)forge, Cleanroom debug running
                 doFirst {
                     def modsDir = rootProject.file("run/${isClient ? 'client' : 'server'}/mods")
                     modsDir.mkdirs()
