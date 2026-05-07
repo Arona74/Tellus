@@ -79,7 +79,6 @@ public class CleanroomServerProxy implements AbstractModInitializer.IEventProxy
 	{
 		if (GetEventLevel(event) instanceof WorldServer)
 		{
-			InternalServerGenerator.DH_SERVER_GEN_TICKET_MAP.put(event.getWorld(), ForgeChunkManager.requestTicket(instance, event.getWorld(), ForgeChunkManager.Type.NORMAL));
 			this.serverApi.serverLevelLoadEvent(getServerLevelWrapper((WorldServer) GetEventLevel(event)));
 		}
 	}

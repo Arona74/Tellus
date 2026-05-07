@@ -35,6 +35,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 #if MC_VER <= MC_1_12_2
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
+import net.minecraft.util.EnumBlockRenderType;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.block.BlockRotatedPillar;
 import net.minecraft.block.*;
@@ -252,6 +253,21 @@ public class ClientBlockStateColorCache
 		{
 			// getQuads() isn't thread safe so we need to put this logic in a lock
 			RESOLVE_LOCK.lock();
+			
+			#if MC_VER <= MC_1_12_2
+			if (this.blockState.getRenderType() == EnumBlockRenderType.ENTITYBLOCK_ANIMATED)
+			{
+				this.needPostTinting = false;
+				this.tintIndex = 0;
+				this.baseColor = ColorUtil.argbToInt(255,
+					this.blockStateWrapper.getMapColor().getRed(),
+					this.blockStateWrapper.getMapColor().getGreen(),
+					this.blockStateWrapper.getMapColor().getBlue());
+				this.isColorResolved = true;
+				return;
+			}
+			#endif
+			
 			#if MC_VER <= MC_1_12_2
 			if (!this.blockState.getMaterial().isLiquid())
 			#else

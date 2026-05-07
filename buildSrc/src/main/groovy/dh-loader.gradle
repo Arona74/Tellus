@@ -6,6 +6,7 @@ import org.apache.tools.zip.ZipOutputStream
 import javax.annotation.Nonnull
 import java.util.function.Function
 import java.util.function.Predicate
+import groovy.json.JsonSlurper
 
 // Convention plugin for all MC-facing subprojects (common + loaders).
 // Common uses this directly; loaders use it via unimined-fabric/forge/neoforge.
@@ -469,6 +470,7 @@ if (isNotCommonProject) {
         def resourceTargets = [
             "build_info.json",
             "fabric.mod.json",
+            "mcmod.info",
             "quilt.mod.json",
             "META-INF/mods.toml",
             "META-INF/neoforge.mods.toml",
@@ -479,6 +481,7 @@ if (isNotCommonProject) {
         // Quilt contributors
         def quilt_contributors = []
         def mod_author_list = rootProject.mod_authors.replaceAll("\"", "").replace("[", "").replace("]", "").split(",")
+        def cleanroom_author_list = rootProject.mod_authors.replace('[', '').replace(']', '').split(',').collect { it.trim().replace('"', '') }.join('", "')
         for (dev in mod_author_list) {
             quilt_contributors.push("\"${dev.strip()}\": \"Developer\"")
         }
@@ -496,9 +499,11 @@ if (isNotCommonProject) {
 
         def replaceProperties = [
             version                      : rootProject.mod_version,
+            mod_id                       : rootProject.mod_id,
             mod_name                     : rootProject.mod_readable_name,
             group                        : rootProject.maven_group,
             authors                      : rootProject.mod_authors,
+            cleanroom_authors            : cleanroom_author_list,
             description                  : rootProject.mod_description,
             homepage                     : rootProject.mod_homepage,
             source                       : rootProject.mod_source,
@@ -516,6 +521,7 @@ if (isNotCommonProject) {
             fabric_incompatibility_list  : rootProject.fabric_incompatibility_list,
             fabric_recommend_list        : rootProject.fabric_recommend_list,
             neoforge_version_range       : rootProject.neoforge_version_range,
+            logo_path                    : "assets/distanthorizons/icon.png"
         ]
 
         inputs.properties replaceProperties
@@ -545,6 +551,24 @@ if (isNotCommonProject) {
     task copyCoreResources(type: Copy) {
         from fileTree(project(":core").file("src/main/resources"))
         into project.file("build/resources/main")
+    }
+    
+    tasks.register("convertJsonToLang") {
+        dependsOn(copyCoreResources)
+        
+        File input = project.file("build/resources/main/assets/distanthorizons/lang/en_us.json")
+        File output = project.file("build/resources/main/assets/distanthorizons/lang/en_us.lang")
+        inputs.file(input)
+        outputs.file(output)
+        doLast {
+            output.withWriter("UTF-8") { writer ->
+                new JsonSlurper()
+                    .parse(input)
+                    .each { key, value ->
+                        writer.writeLine("${key}=${value.toString().replace("%", "%%").replace("\n", "\\n")}")
+                    }
+            }
+        }
     }
 
 

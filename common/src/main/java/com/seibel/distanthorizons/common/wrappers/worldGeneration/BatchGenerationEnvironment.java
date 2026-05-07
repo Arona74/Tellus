@@ -792,11 +792,7 @@ public final class BatchGenerationEnvironment implements IBatchGeneratorEnvironm
 		}
 		
 		
-		#if MC_VER <= MC_1_12_2
-		WorldServer worldServer = (WorldServer) this.dhServerLevel.getServerLevelWrapper().getWrappedMcObject();
-		InternalServerGenerator.DH_SERVER_GEN_TICKET_MAP.remove(worldServer);
-		ForgeChunkManager.releaseTicket(InternalServerGenerator.DH_SERVER_GEN_TICKET_MAP.get(worldServer));
-		#else
+		#if MC_VER > MC_1_12_2
 		this.chunkFileReader.close();
 		#endif
 	}
