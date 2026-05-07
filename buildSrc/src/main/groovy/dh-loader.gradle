@@ -364,17 +364,23 @@ if (isNotCommonProject) {
         // Make run tasks use the shadow jar so relocated deps work in dev.
         // Filter out jars bundled in the shadow jar, but keep jars that the loader also
         // needs (e.g. NightConfig — DH relocates it, but NeoForge needs the original).
+        def shadowedPaths = configurations.shadowMe.resolve().collect { it.path }.toSet()
+        def loaderPaths = configurations.minecraftLibraries.resolve().collect { it.path }.toSet()
         tasks.withType(JavaExec).configureEach { runTask ->
             dependsOn(shadowJar)
-            classpath = files(shadowJar.archiveFile) + classpath.filter { file ->
-                // resolve lazily inside doFirst to avoid triggering
-                // minecraft config resolution before Cleanroom/FG3 is ready
-                true
-            }
-            doFirst {
-                def shadowedPaths = configurations.shadowMe.resolve().collect { it.path }.toSet()
-                def loaderPaths = configurations.minecraftLibraries.resolve().collect { it.path }.toSet()
+            if (project.name != "cleanroom") {
                 classpath = files(shadowJar.archiveFile) + classpath.filter { file ->
+                    file != shadowJar.archiveFile.get().asFile &&
+                        !file.path.contains(project.buildDir.path) &&
+                        !file.path.contains("core${File.separator}build") &&
+                        !file.path.contains("api${File.separator}build") &&
+                        !file.path.contains("common${File.separator}build") &&
+                        !(shadowedPaths.contains(file.path) && !loaderPaths.contains(file.path))
+                }
+            } else {
+                // For cleanroom, don't put shadow jar on app classpath.
+                // crl.dev.extrapath loads it via LaunchClassLoader instead.
+                classpath = classpath.filter { file ->
                     !file.path.contains(project.buildDir.path) &&
                         !file.path.contains("core${File.separator}build") &&
                         !file.path.contains("api${File.separator}build") &&
@@ -396,7 +402,7 @@ if (isNotCommonProject) {
             }
             runTask.jvmArgs = filteredArgs
 
-            if(project.name == "forge" || project.name == "neoforge") {
+            if(project.name == "forge" || project.name == "neoforge" || project.name == "cleanroom") {
                 // fix (Neo)forge debug running
                 doFirst {
                     def modsDir = rootProject.file("run/${isClient ? 'client' : 'server'}/mods")
