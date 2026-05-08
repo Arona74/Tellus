@@ -9,6 +9,7 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftCli
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
 
+import net.minecraft.client.Minecraft;
 #if MC_VER <= MC_1_12_2
 #else
 import net.minecraft.client.Camera;
@@ -18,7 +19,6 @@ import net.minecraft.world.entity.LivingEntity;
 #endif
 
 #if MC_VER <= MC_1_12_2
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.init.MobEffects;
 #elif MC_VER < MC_1_17_1
