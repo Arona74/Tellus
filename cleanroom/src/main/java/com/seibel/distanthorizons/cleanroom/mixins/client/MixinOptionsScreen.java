@@ -66,7 +66,7 @@ public class MixinOptionsScreen extends GuiScreen
 							// Create the button and tell it where to go
 							// For now it goes to the client option by default
 							// Add a title to the button
-							"DH" /* ModInfo.ID + ".title" */)));
+							ModInfo.ID + ".title")));
 
 	}
 
