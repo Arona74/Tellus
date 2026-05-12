@@ -3,16 +3,15 @@ package com.seibel.distanthorizons.common.wrappers.gui.classicConfig;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import com.seibel.distanthorizons.api.enums.config.DisallowSelectingViaConfigGui;
 import com.seibel.distanthorizons.common.wrappers.gui.DhScreen;
+import com.seibel.distanthorizons.common.wrappers.gui.DhScreenUtil;
 import com.seibel.distanthorizons.common.wrappers.gui.TexturedButtonWidget;
 import com.seibel.distanthorizons.common.wrappers.gui.config.ConfigGuiInfo;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftClientWrapper;
@@ -21,27 +20,20 @@ import com.seibel.distanthorizons.core.config.ConfigHandler;
 import com.seibel.distanthorizons.core.config.types.*;
 import com.seibel.distanthorizons.common.wrappers.gui.updater.ChangelogScreen;
 
-import com.seibel.distanthorizons.core.config.types.enums.EConfigCommentTextPosition;
 import com.seibel.distanthorizons.core.config.types.enums.EConfigValidity;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.jar.updater.SelfUpdater;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.util.AnnotationUtil;
-import com.seibel.distanthorizons.core.wrapperInterfaces.config.IConfigGui;
 import com.seibel.distanthorizons.core.wrapperInterfaces.config.ILangWrapper;
 import com.seibel.distanthorizons.coreapi.ModInfo;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import com.seibel.distanthorizons.core.logging.DhLogger;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 
@@ -55,7 +47,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 #endif
 
 #if MC_VER >= MC_1_17_1
-import net.minecraft.client.gui.narration.NarratableEntry;
 #endif
 
 #if MC_VER <= MC_1_21_10
@@ -92,6 +83,7 @@ class DhConfigScreen extends DhScreen
 	//=============//
 	// constructor //
 	//=============//
+	//region
 	
 	protected DhConfigScreen(Screen parent, String category)
 	{
@@ -104,15 +96,25 @@ class DhConfigScreen extends DhScreen
 		this.category = category;
 	}
 	
+	//endregion
+	
+	
+	//=============//
+	// tick update //
+	//=============//
+	//region
 	
 	@Override
 	public void tick() { super.tick(); }
+	
+	//endregion
 	
 	
 	
 	//==================//
 	// menu UI creation //
 	//==================//
+	//region
 	
 	@Override
 	protected void init()
@@ -150,7 +152,7 @@ class DhConfigScreen extends DhScreen
 					ChangelogScreen changelogScreen = new ChangelogScreen(this);
 					if (changelogScreen.usable)
 					{
-						Objects.requireNonNull(this.minecraft).setScreen(changelogScreen);
+						DhScreenUtil.showScreen(changelogScreen);
 					}
 					else
 					{
@@ -170,7 +172,7 @@ class DhConfigScreen extends DhScreen
 			(button) ->
 			{
 				ConfigHandler.INSTANCE.configFileHandler.loadFromFile();
-				Objects.requireNonNull(this.minecraft).setScreen(this.parent);
+				DhScreenUtil.showScreen(this.parent);
 			}));
 		
 		// done/close button
@@ -181,7 +183,7 @@ class DhConfigScreen extends DhScreen
 				(button) ->
 				{
 					ConfigHandler.INSTANCE.configFileHandler.saveToFile();
-					Objects.requireNonNull(this.minecraft).setScreen(this.parent);
+					DhScreenUtil.showScreen(this.parent);
 				}));
 		
 		this.configListWidget = new ClassicConfigGUI.ConfigListWidget(this.minecraft, this.width * 2, this.height, 32, 32, 25);
@@ -464,7 +466,7 @@ class DhConfigScreen extends DhScreen
 			{
 				configEntry.uiSetWithoutSaving(configEntry.getDefaultValue());
 				this.reload = true;
-				Objects.requireNonNull(this.minecraft).setScreen(this);
+				DhScreenUtil.showScreen(this);
 			};
 			
 			int resetButtonPosX = this.width
@@ -574,7 +576,7 @@ class DhConfigScreen extends DhScreen
 				((button) ->
 				{
 					ConfigHandler.INSTANCE.configFileHandler.saveToFile();
-					Objects.requireNonNull(this.minecraft).setScreen(ClassicConfigGUI.getScreen(this, configCategory.getDestination()));
+					DhScreenUtil.showScreen(ClassicConfigGUI.getScreen(this, configCategory.getDestination()));
 				}));
 			this.configListWidget.addButton(this, configType, widget, null, null, null);
 			
@@ -655,11 +657,14 @@ class DhConfigScreen extends DhScreen
 	private Component GetTranslatableTextComponentForConfig(AbstractConfigBase<?> configType)
 	{ return Translatable(TRANSLATION_PREFIX + configType.getNameAndCategory()); }
 	
+	//endregion
+	
 	
 	
 	//===========//
 	// rendering //
 	//===========//
+	//region
 	
 	@Override
 #if MC_VER < MC_1_20_1
@@ -779,21 +784,27 @@ class DhConfigScreen extends DhScreen
 		}
 	}
 	
+	//endregion
+	
 	
 	
 	//==========//
 	// shutdown //
 	//==========//
+	//region
 	
 	/** When you close it, it goes to the previous screen and saves */
 	@Override
 	public void onClose()
 	{
 		ConfigHandler.INSTANCE.configFileHandler.saveToFile();
-		Objects.requireNonNull(this.minecraft).setScreen(this.parent);
+		DhScreenUtil.showScreen(this.parent);
 		
 		ClassicConfigGUI.CONFIG_CORE_INTERFACE.onScreenChangeListenerList.forEach((listener) -> listener.run());
 	}
+	
+	//endregion
+	
 	
 	
 }

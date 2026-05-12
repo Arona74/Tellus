@@ -1,6 +1,7 @@
 package com.seibel.distanthorizons.common.wrappers.gui.updater;
 
 import com.seibel.distanthorizons.common.wrappers.gui.DhScreen;
+import com.seibel.distanthorizons.common.wrappers.gui.DhScreenUtil;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.wrapperInterfaces.IVersionConstants;
@@ -222,10 +223,7 @@ public class ChangelogScreen extends DhScreen
 	}
 	
 	@Override
-	public void onClose()
-	{
-		Objects.requireNonNull(this.minecraft).setScreen(this.parent); // Goto the parent screen
-	}
+	public void onClose() { DhScreenUtil.showScreen(this.parent); }
 	
 	public static class TextArea extends ContainerObjectSelectionList<ButtonEntry>
 	{

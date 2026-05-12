@@ -327,10 +327,11 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 		// FIXME: Use better hooks so it doesn't trigger key press events in text boxes
 		ClientTickEvents.END_CLIENT_TICK.register(client -> 
 		{
-			if (client.player != null && !(Minecraft.getInstance().screen instanceof TitleScreen))
-			{
-				this.onKeyInput();
-			}
+			// TODO
+			//if (client.player != null && !(Minecraft.getInstance().screen instanceof TitleScreen))
+			//{
+			//	this.onKeyInput();
+			//}
 		});
 		
 		//endregion

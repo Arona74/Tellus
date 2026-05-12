@@ -24,10 +24,19 @@ import java.util.*;
 
 public class MinecraftScreen
 {
+	//
+	// helper methods
+	//
+	
 	public static Screen getScreen(Screen parent, AbstractScreen screen, String translationName)
-	{
-		return new ConfigScreenRenderer(parent, screen, translationName);
-	}
+	{ return new ConfigScreenRenderer(parent, screen, translationName); }
+	
+	
+	
+	//=========//
+	// screens //
+	//=========//
+	//region
 	
 	private static class ConfigScreenRenderer extends DhScreen
 	{
@@ -152,7 +161,7 @@ public class MinecraftScreen
 		public void onClose()
 		{
 			this.screen.onClose(); // Close our screen
-			Objects.requireNonNull(this.minecraft).setScreen(this.parent); // Goto the parent screen
+			DhScreenUtil.showScreen(this.parent); // Goto the parent screen
 		}
 		
 		@Override
@@ -179,5 +188,9 @@ public class MinecraftScreen
 		}
 		
 	}
+	
+	//endregion
+	
+	
 	
 }

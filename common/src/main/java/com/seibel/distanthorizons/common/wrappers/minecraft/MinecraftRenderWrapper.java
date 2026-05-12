@@ -136,8 +136,11 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		#if MC_VER <= MC_1_21_10
 		Camera camera = MC.gameRenderer.getMainCamera();
 		return new Vec3f(camera.getLookVector().x(), camera.getLookVector().y(), camera.getLookVector().z());
-		#else
+		#elif MC_VER <= MC_26_1_2
 		Camera camera = MC.gameRenderer.getMainCamera();
+		return new Vec3f(camera.forwardVector().x(), camera.forwardVector().y(), camera.forwardVector().z());
+		#else
+		Camera camera = MC.gameRenderer.mainCamera();
 		return new Vec3f(camera.forwardVector().x(), camera.forwardVector().y(), camera.forwardVector().z());
 		#endif
 	}
@@ -170,7 +173,12 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	@Override
 	public Vec3d getCameraExactPosition()
 	{
+		#if MC_VER <= MC_26_1_2
 		Camera camera = MC.gameRenderer.getMainCamera();
+		#else
+		Camera camera = MC.gameRenderer.mainCamera();
+		#endif
+		
 		#if MC_VER <= MC_1_21_10
 		Vec3 projectedView = camera.getPosition();
 		#else
@@ -263,20 +271,29 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		float darkenAmount;
 		#if MC_VER <= MC_1_21_11
 		darkenAmount = MC.gameRenderer.getDarkenWorldAmount(MC.deltaTracker.getGameTimeDeltaPartialTick(true));
-		#else
+		#elif MC_VER <= MC_26_1_2
 		darkenAmount = MC.gameRenderer.getBossOverlayWorldDarkening(MC.deltaTracker.getGameTimeDeltaPartialTick(true));
+		#else
+		darkenAmount = MC.gameRenderer.bossOverlayWorldDarkening(MC.deltaTracker.getGameTimeDeltaPartialTick(true));
+		#endif
+		
+		
+		#if MC_VER <= MC_26_1_2
+		Camera camera = MC.gameRenderer.getMainCamera();
+		#else
+		Camera camera = MC.gameRenderer.mainCamera();
 		#endif
 		
 		#if MC_VER <= MC_1_21_11
 		Vector4f colorValues = mcFogRenderer.setupFog(
-			MC.gameRenderer.getMainCamera(),
+			camera,
 			MC.options.getEffectiveRenderDistance(),
 			MC.deltaTracker,
 			darkenAmount,
 			MC.level);
 		#else
 		FogData fogData = mcFogRenderer.setupFog(
-			MC.gameRenderer.getMainCamera(),
+			camera,
 			MC.options.getEffectiveRenderDistance(),
 			MC.deltaTracker,
 			darkenAmount,
@@ -342,7 +359,14 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		#endif
 	}
 	
-	protected RenderTarget getRenderTarget() { return MC.getMainRenderTarget(); }
+	public RenderTarget getRenderTarget() 
+	{
+		#if MC_VER <= MC_26_1_2
+		return MC.getMainRenderTarget();
+		#else
+		return MC.gameRenderer.mainRenderTarget();
+		#endif
+	}
 	
 	@Override
 	public boolean mcRendersToFrameBuffer()
@@ -415,6 +439,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		}
 		#endif
 	}
+	// TODO vulkan deprecate(?) and add method to get color texture
 	@Override
 	public int getColorTextureId() 
 	{
@@ -479,9 +504,12 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 			isBlind |= fluidState.is(FluidTags.WATER);
 			isBlind |= fluidState.is(FluidTags.LAVA);
 		return isBlind;
-		#else
+		#elif MC_VER <= MC_26_1_2
 		boolean isBlind = this.playerHasBlindingEffect();
 		return MC.gameRenderer.getMainCamera().getFluidInCamera() != FogType.NONE || isBlind;
+		#else
+		boolean isBlind = this.playerHasBlindingEffect();
+		return MC.gameRenderer.mainCamera().getFluidInCamera() != FogType.NONE || isBlind;
 		#endif
 	}
 	
