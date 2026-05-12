@@ -23,19 +23,7 @@ package com.seibel.distanthorizons.common.render.blaze.postProcessing;
 public class BlazeDhSsaoRenderer {}
 
 #else
-	
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.buffers.Std140Builder;
-import com.mojang.blaze3d.buffers.Std140SizeCalculator;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
-import com.mojang.blaze3d.systems.CommandEncoder;
-import com.mojang.blaze3d.systems.GpuDevice;
-import com.mojang.blaze3d.systems.RenderPass;
-import com.mojang.blaze3d.systems.RenderSystem;
+
 import com.seibel.distanthorizons.common.render.blaze.BlazeDhMetaRenderer;
 import com.seibel.distanthorizons.common.render.blaze.apply.BlazeDhApplyRenderer;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
@@ -55,6 +43,25 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
+
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.buffers.Std140Builder;
+import com.mojang.blaze3d.buffers.Std140SizeCalculator;
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.platform.BlendFactor;
+import com.mojang.blaze3d.systems.CommandEncoder;
+import com.mojang.blaze3d.systems.GpuDevice;
+import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.systems.RenderSystem;
+
+#if MC_VER <= MC_26_1_2
+import com.mojang.blaze3d.platform.DestFactor;
+import com.mojang.blaze3d.platform.SourceFactor;
+#else
+import com.mojang.blaze3d.platform.BlendFactor;
+#endif
 
 /** Renders SSAO to the DH LODs. */
 public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
@@ -101,9 +108,17 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 		this.init = true;
 		
 		
+		
+		BlendFunction blendFunc;
+		#if MC_VER <= MC_26_1_2
+		blendFunc = new BlendFunction(SourceFactor.ZERO, DestFactor.SRC_ALPHA, SourceFactor.ZERO, DestFactor.ONE);
+		#else
+		blendFunc = new BlendFunction(BlendFactor.ZERO, BlendFactor.SRC_ALPHA, BlendFactor.ZERO, BlendFactor.ONE);
+		#endif
+		
 		this.applyRenderer = new BlazeDhApplyRenderer(
 			"ssao_apply_to_dh",
-			new BlendFunction(SourceFactor.ZERO, DestFactor.SRC_ALPHA, SourceFactor.ZERO, DestFactor.ONE),
+			blendFunc,
 			"apply/blaze/vert", "ssao/blaze/apply",
 			/*uniforms*/ new String[] { "applyFragUniformBlock" }
 		);

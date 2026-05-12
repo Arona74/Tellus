@@ -23,19 +23,7 @@ package com.seibel.distanthorizons.common.render.blaze.postProcessing;
 public class BlazeDhFogRenderer {}
 
 #else
-	
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.buffers.Std140Builder;
-import com.mojang.blaze3d.buffers.Std140SizeCalculator;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
-import com.mojang.blaze3d.systems.CommandEncoder;
-import com.mojang.blaze3d.systems.GpuDevice;
-import com.mojang.blaze3d.systems.RenderPass;
-import com.mojang.blaze3d.systems.RenderSystem;
+
 import com.seibel.distanthorizons.api.enums.rendering.EDhApiFogColorMode;
 import com.seibel.distanthorizons.api.enums.rendering.EDhApiHeightFogDirection;
 import com.seibel.distanthorizons.api.enums.rendering.EDhApiHeightFogMixMode;
@@ -61,6 +49,24 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
+
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.buffers.Std140Builder;
+import com.mojang.blaze3d.buffers.Std140SizeCalculator;
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.systems.CommandEncoder;
+import com.mojang.blaze3d.systems.GpuDevice;
+import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.systems.RenderSystem;
+
+#if MC_VER <= MC_26_1_2
+import com.mojang.blaze3d.platform.DestFactor;
+import com.mojang.blaze3d.platform.SourceFactor;
+#else
+import com.mojang.blaze3d.platform.BlendFactor;
+#endif
 
 /**
  * Renders fog onto the LODs.
@@ -109,11 +115,16 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 		this.init = true;
 		
 		
-		
+		BlendFunction blendFunc;
+		#if MC_VER <= MC_26_1_2
+		blendFunc = new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA, SourceFactor.ONE, DestFactor.ONE_MINUS_SRC_ALPHA);
+		#else
+		blendFunc = new BlendFunction(BlendFactor.SRC_ALPHA, BlendFactor.ONE_MINUS_SRC_ALPHA, BlendFactor.ONE, BlendFactor.ONE_MINUS_SRC_ALPHA);
+		#endif
 		
 		this.applyRenderer = new BlazeDhApplyRenderer(
 			"fog_apply_to_dh",
-			new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA, SourceFactor.ONE, DestFactor.ONE_MINUS_SRC_ALPHA),
+			blendFunc,
 			"apply/blaze/vert", "apply/blaze/frag"
 		);
 		

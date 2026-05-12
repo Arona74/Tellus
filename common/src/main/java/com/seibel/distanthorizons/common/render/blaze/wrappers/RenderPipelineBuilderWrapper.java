@@ -6,8 +6,8 @@ public class RenderPipelineBuilderWrapper {}
 
 #else
 
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.GpuFormat;
+import com.mojang.blaze3d.pipeline.*;
 import com.mojang.blaze3d.platform.PolygonMode;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -16,13 +16,12 @@ import net.minecraft.resources.Identifier;
 #if MC_VER <= MC_1_21_11
 import com.mojang.blaze3d.platform.DepthTestFunction;
 #else
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.platform.CompareOp;
 #endif
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Optional;
 
 public class RenderPipelineBuilderWrapper
@@ -130,15 +129,27 @@ public class RenderPipelineBuilderWrapper
 		return this;
 	}
 	
+	private final ArrayList<String> samplerNames = new ArrayList<>();
 	public RenderPipelineBuilderWrapper withSampler(String name) throws IllegalArgumentException
 	{
+		#if MC_VER <= MC_26_1_2
 		this.blazePipelineBuilder.withSampler(name);
+		#else
+		samplerNames.add(name);
+		#endif
+		
 		return this;
 	}
 	
+	private final ArrayList<String> uniformBufferNames = new ArrayList<>();
 	public RenderPipelineBuilderWrapper withUniformBuffer(String name) throws IllegalArgumentException
 	{
+		#if MC_VER <= MC_26_1_2
 		this.blazePipelineBuilder.withUniform(name, UniformType.UNIFORM_BUFFER);
+		#else
+		uniformBufferNames.add(name);
+		#endif
+		
 		return this;
 	}
 	
@@ -281,6 +292,31 @@ public class RenderPipelineBuilderWrapper
 			
 			this.blazePipelineBuilder.withVertexFormat(vertexFormat, blazeVertexMode);
 		}
+		
+		
+		// uniform buffers
+		{
+			#if MC_VER <= MC_26_1_2
+			// handled before this point
+			#else
+			
+			BindGroupLayout.Builder bindGroupBuilder = BindGroupLayout.builder();
+			
+			for (String name : this.samplerNames)
+			{
+				bindGroupBuilder.withSampler(name);
+			}
+			
+			for (String name : this.uniformBufferNames)
+			{
+				bindGroupBuilder.withUniform(name, UniformType.UNIFORM_BUFFER);
+			}
+			
+			BindGroupLayout bindGroup = bindGroupBuilder.build();
+			this.blazePipelineBuilder.withBindGroupLayout(bindGroup);
+			#endif
+		}
+		
 		
 		return this.blazePipelineBuilder.build();
 	}

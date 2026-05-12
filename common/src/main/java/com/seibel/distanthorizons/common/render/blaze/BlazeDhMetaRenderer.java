@@ -10,6 +10,7 @@ import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiAfterCo
 import com.seibel.distanthorizons.api.methods.events.sharedParameterObjects.DhApiTextureCreatedParam;
 import com.seibel.distanthorizons.common.render.blaze.apply.BlazeDhApplyRenderer;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
+import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.coreapi.util.ColorUtil;
@@ -86,7 +87,7 @@ public class BlazeDhMetaRenderer implements IDhMetaRenderer
 	@Override
 	public void applyToMcTexture(RenderParams renderParams)
 	{
-		GpuTexture mcColorTexture = Minecraft.getInstance().getMainRenderTarget().getColorTexture();
+		GpuTexture mcColorTexture = MinecraftRenderWrapper.INSTANCE.getRenderTarget().getColorTexture();
 		this.applyRenderer.render(this.dhColorTextureWrapper.texture, this.dhDepthTextureWrapper.texture, mcColorTexture);
 	}
 	

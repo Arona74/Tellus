@@ -5,11 +5,6 @@ public class BlazeTextureWrapper {}
 
 #else
 
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.systems.CommandEncoder;
-import com.mojang.blaze3d.systems.GpuDevice;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.*;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
@@ -17,6 +12,17 @@ import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 
 import java.util.OptionalDouble;
+
+import com.mojang.blaze3d.systems.CommandEncoder;
+import com.mojang.blaze3d.systems.GpuDevice;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.*;
+
+#if MC_VER <= MC_26_1_2
+
+#else
+import com.mojang.blaze3d.GpuFormat;
+#endif
 
 public class BlazeTextureWrapper
 {
@@ -29,7 +35,11 @@ public class BlazeTextureWrapper
 	
 	
 	public final String name;
+	#if MC_VER <= MC_26_1_2
 	public final TextureFormat textureFormat;
+	#else
+	public final GpuFormat textureFormat;
+	#endif
 	
 	public GpuTexture texture = null;
 	public GpuTextureView textureView = null;
@@ -45,10 +55,27 @@ public class BlazeTextureWrapper
 	//==============//
 	//region
 	
-	public static BlazeTextureWrapper createDepth(String name) { return new BlazeTextureWrapper(name, TextureFormat.DEPTH32); }
-	public static BlazeTextureWrapper createColor(String name) { return new BlazeTextureWrapper(name, TextureFormat.RGBA8); }
+	public static BlazeTextureWrapper createDepth(String name) 
+	{ 
+		#if MC_VER <= MC_26_1_2
+		return new BlazeTextureWrapper(name, TextureFormat.DEPTH32);
+		#else
+		return new BlazeTextureWrapper(name, GpuFormat.D32_FLOAT);
+		#endif 
+	}
+	public static BlazeTextureWrapper createColor(String name) 
+	{ 
+		#if MC_VER <= MC_26_1_2
+		return new BlazeTextureWrapper(name, TextureFormat.RGBA8);
+		#else
+		return new BlazeTextureWrapper(name, GpuFormat.RGBA8_UNORM);
+		#endif 
+	}
 	
-	private BlazeTextureWrapper(String name, TextureFormat textureFormat)
+	private BlazeTextureWrapper(
+		String name, 
+		#if MC_VER <= MC_26_1_2 TextureFormat #else GpuFormat #endif textureFormat
+		)
 	{
 		this.name = name;
 		this.textureFormat = textureFormat;
@@ -116,11 +143,13 @@ public class BlazeTextureWrapper
 			| GpuTexture.USAGE_TEXTURE_BINDING
 			| GpuTexture.USAGE_COPY_SRC
 			| GpuTexture.USAGE_RENDER_ATTACHMENT;
-		this.texture = GPU_DEVICE.createTexture(this.name,
+		
+		this.texture = GPU_DEVICE.createTexture(
+			this.name,
 			usage,
 			this.textureFormat,
 			viewWidth, viewHeight,
-			/*depthOrLayers*/ 1,  /*mipLevels*/ 1
+			/*depthOrLayers*/ 1, /*mipLevels*/ 1
 		);
 		this.textureView = GPU_DEVICE.createTextureView(this.texture);
 		

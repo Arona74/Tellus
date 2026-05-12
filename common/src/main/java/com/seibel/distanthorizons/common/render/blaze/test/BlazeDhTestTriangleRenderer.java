@@ -37,6 +37,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
+import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.render.RenderParams;
@@ -164,8 +165,8 @@ public class BlazeDhTestTriangleRenderer implements IDhTestTriangleRenderer
 	{
 		this.tryInit();
 		
-		this.mcColorTextureViewWrapper.tryWrap(Minecraft.getInstance().getMainRenderTarget().getColorTexture());
-		this.mcDepthTextureViewWrapper.tryWrap(Minecraft.getInstance().getMainRenderTarget().getDepthTexture());
+		this.mcColorTextureViewWrapper.tryWrap(MinecraftRenderWrapper.INSTANCE.getRenderTarget().getColorTexture());
+		this.mcDepthTextureViewWrapper.tryWrap(MinecraftRenderWrapper.INSTANCE.getRenderTarget().getDepthTexture());
 		
 		try (RenderPass renderPass = COMMAND_ENCODER.createRenderPass(
 			this::getRenderPassName,

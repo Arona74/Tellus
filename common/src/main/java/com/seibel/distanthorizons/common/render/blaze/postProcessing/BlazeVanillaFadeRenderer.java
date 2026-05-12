@@ -43,6 +43,7 @@ import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
+import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
@@ -164,8 +165,8 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 		this.fadeColorTextureWrapper.tryCreateOrResize();
 		this.fadeDepthTextureWrapper.tryCreateOrResize();
 		
-		this.mcDepthTextureWrapper.tryWrap(Minecraft.getInstance().getMainRenderTarget().getDepthTexture());
-		this.mcColorTextureWrapper.tryWrap(Minecraft.getInstance().getMainRenderTarget().getColorTexture());
+		this.mcDepthTextureWrapper.tryWrap(MinecraftRenderWrapper.INSTANCE.getRenderTarget().getDepthTexture());
+		this.mcColorTextureWrapper.tryWrap(MinecraftRenderWrapper.INSTANCE.getRenderTarget().getColorTexture());
 		
 		
 		{
@@ -198,11 +199,8 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 			Mat4f inverseMcMvmProjMatrix = inverseMcModelViewProjectionMatrix;
 			
 			
-			Mat4f dhProjectionMatrix = RenderUtil.createLodProjectionMatrix(renderParams.mcProjectionMatrix);
-			Mat4f dhModelViewMatrix = RenderUtil.createLodModelViewMatrix(renderParams.mcModelViewMatrix);
-			
-			Mat4f inverseDhModelViewProjectionMatrix = new Mat4f(dhProjectionMatrix);
-			inverseDhModelViewProjectionMatrix.multiply(dhModelViewMatrix);
+			Mat4f inverseDhModelViewProjectionMatrix = new Mat4f(renderParams.dhProjectionMatrix);
+			inverseDhModelViewProjectionMatrix.multiply(renderParams.dhModelViewMatrix);
 			inverseDhModelViewProjectionMatrix.invert();
 			Mat4f inverseDhMvmProjMatrix = inverseDhModelViewProjectionMatrix;
 			
