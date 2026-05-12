@@ -92,7 +92,7 @@ public class MixinVanillaFogCommon
 		boolean cancelFog = !isSpecialFog;
 		cancelFog = cancelFog && cameraNotInFluid;
 		#if MC_VER <= MC_1_12_2
-		cancelFog = cancelFog && startCoords == 0;
+		cancelFog = cancelFog && startCoords == 0; // 0 = terrain fog
 		#elif MC_VER < MC_1_21_6
 		cancelFog = cancelFog && (fogMode == FogRenderer.FogMode.FOG_TERRAIN);
 		#endif

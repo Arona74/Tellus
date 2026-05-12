@@ -19,6 +19,7 @@
 
 package com.seibel.distanthorizons.cleanroom.mixins.client;
 
+import com.seibel.distanthorizons.common.commonMixins.MixinVanillaFogCommon;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.api.internal.ClientApi;
 import com.seibel.distanthorizons.core.config.Config;
@@ -68,15 +69,8 @@ public class MixinEntityRenderer
 	@Inject(at = @At("RETURN"), method = "setupFog")
 	private void disableSetupFog(int startCoords, float partialTicks, CallbackInfo ci)
 	{
-		boolean cameraNotInFluid = mc.getRenderViewEntity() != null && !mc.world.getBlockState(mc.getRenderViewEntity().getPosition()).getMaterial().isLiquid();
-		
-		boolean isSpecialFog = mc.player.isPotionActive(MobEffects.BLINDNESS);
-		
-		if (!isSpecialFog
-			&& cameraNotInFluid
-			&& startCoords == 0 // 0 = terrain fog
-			&& !SingletonInjector.INSTANCE.get(IMinecraftRenderWrapper.class).isFogStateSpecial()
-			&& !Config.Client.Advanced.Graphics.Fog.enableVanillaFog.get())
+		boolean cancelFog = MixinVanillaFogCommon.cancelFog(startCoords, mc);
+		if (cancelFog)
 		{
 			GlStateManager.setFogStart(A_REALLY_REALLY_BIG_VALUE);
 			GlStateManager.setFogEnd(A_EVEN_LARGER_VALUE);
