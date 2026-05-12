@@ -70,10 +70,16 @@ public class DhUpdateScreenBase
 			
 			try
 			{
-				MC.setScreen(new UpdateModScreen(
+				UpdateModScreen updateScreen = new UpdateModScreen(
 					new TitleScreen(false),
 					versionId
-				));
+				);
+				
+				#if MC_VER <= MC_26_1_2
+				MC.setScreen(updateScreen);
+				#else
+				MC.setScreenAndShow(updateScreen);
+				#endif
 			}
 			catch (Exception e)
 			{
