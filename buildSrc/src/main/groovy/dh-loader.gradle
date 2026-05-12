@@ -403,7 +403,10 @@ if (isNotCommonProject) {
             }
             runTask.jvmArgs = filteredArgs
 
-            if(project.name == "forge" || project.name == "neoforge" || project.name == "cleanroom") {
+            if(project.name == "forge" 
+                || project.name == "neoforge" 
+                || project.name == "cleanroom") 
+            {
                 // fix (Neo)forge, Cleanroom debug running
                 doFirst {
                     def modsDir = rootProject.file("run/${isClient ? 'client' : 'server'}/mods")
@@ -456,6 +459,7 @@ if (isNotCommonProject) {
                 
             }
         }
+        
         tasks.downgradeJar.inputFile.set(tasks.named("remapJar").flatMap { it.archiveFile })
         tasks.jar.finalizedBy(tasks.named("remapJar"))
         tasks.named("remapJar").configure { finalizedBy(tasks.shadeDowngradedApi) }
@@ -481,7 +485,7 @@ if (isNotCommonProject) {
         // Quilt contributors
         def quilt_contributors = []
         def mod_author_list = rootProject.mod_authors.replaceAll("\"", "").replace("[", "").replace("]", "").split(",")
-        def cleanroom_author_list = rootProject.mod_authors.replace('[', '').replace(']', '').split(',').collect { it.trim().replace('"', '') }.join('", "')
+        def cleanroom_author_list = rootProject.mod_authors.replace('[', '').replace(']', '').split(',').collect({ it.trim().replace('"', '') }).join('", "')
         for (dev in mod_author_list) {
             quilt_contributors.push("\"${dev.strip()}\": \"Developer\"")
         }
