@@ -74,7 +74,8 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 #endif
 
-#if MC_VER <= MC_1_20_4 && MC_VER > MC_1_12_2
+#if MC_VER <= MC_1_12_2
+#elif MC_VER <= MC_1_20_4
 import net.minecraft.world.level.chunk.ChunkStatus;
 #elif MC_VER > MC_1_12_2
 import net.minecraft.world.level.chunk.status.ChunkStatus;
@@ -93,8 +94,12 @@ public class ChunkWrapper implements IChunkWrapper
 	
 	private static boolean heightmapThreadWarningLogged = false;
 	
+	#if MC_VER <= MC_1_12_2
+	private final Chunk chunk;
+	#else
+	private final ChunkAccess chunk;
+	#endif
 	
-	private final #if MC_VER <= MC_1_12_2 Chunk #else ChunkAccess #endif chunk;
 	private final DhChunkPos chunkPos;
 	private final ILevelWrapper wrappedLevel;
 	
@@ -125,7 +130,9 @@ public class ChunkWrapper implements IChunkWrapper
 	 * fast since it will be called frequently on the MC
 	 * server thread and a slow method will cause server lag.
 	 */
-	public ChunkWrapper(#if MC_VER <= MC_1_12_2 Chunk #else ChunkAccess #endif chunk, ILevelWrapper wrappedLevel)
+	public ChunkWrapper(
+		#if MC_VER <= MC_1_12_2 Chunk #else ChunkAccess #endif chunk, 
+		ILevelWrapper wrappedLevel)
 	{
 		this.chunk = chunk;
 		this.wrappedLevel = wrappedLevel;
@@ -257,7 +264,9 @@ public class ChunkWrapper implements IChunkWrapper
 		
 		return this.maxNonEmptyHeight;
 	}
-	private static boolean isChunkSectionEmpty(#if MC_VER <= MC_1_12_2 ExtendedBlockStorage #else LevelChunkSection #endif section)
+	private static boolean isChunkSectionEmpty(
+		#if MC_VER <= MC_1_12_2 ExtendedBlockStorage #else LevelChunkSection #endif section
+		)
 	{
 		#if MC_VER <= MC_1_17_1
 		return section.isEmpty();
@@ -373,8 +382,12 @@ public class ChunkWrapper implements IChunkWrapper
 	public IBiomeWrapper getBiome(int relX, int relY, int relZ)
 	{
 		#if MC_VER <= MC_1_12_2
+		BlockPos.MutableBlockPos blockPos = MUTABLE_BLOCK_POS_REF.get();
+		blockPos.setPos(relX, relY, relZ);
+		
 		World world = (World) this.wrappedLevel.getWrappedMcObject();
-		return BiomeWrapper.getBiomeWrapper(this.chunk.getBiome(new BlockPos(relX, relY, relZ), world.getBiomeProvider()), wrappedLevel);
+		
+		return BiomeWrapper.getBiomeWrapper(this.chunk.getBiome(blockPos, world.getBiomeProvider()), wrappedLevel);
 		#elif MC_VER < MC_1_17_1
 		return BiomeWrapper.getBiomeWrapper(this.chunk.getBiomes().getNoiseBiome(
 				relX >> 2, relY >> 2, relZ >> 2),
@@ -572,13 +585,41 @@ public class ChunkWrapper implements IChunkWrapper
 	#endif
 	
 	@Override
-	public int getMaxBlockX() { return this.chunk.getPos().#if MC_VER <= MC_1_12_2 getXEnd() #else getMaxBlockX() #endif; }
+	public int getMaxBlockX() 
+	{ 
+		#if MC_VER <= MC_1_12_2
+		return this.chunk.getPos().getXEnd();
+		#else
+		return this.chunk.getPos().getMaxBlockX();
+		#endif 
+	}
 	@Override
-	public int getMaxBlockZ() { return this.chunk.getPos().#if MC_VER <= MC_1_12_2 getZEnd() #else getMaxBlockZ() #endif; }
+	public int getMaxBlockZ() 
+	{ 
+		#if MC_VER <= MC_1_12_2
+		return this.chunk.getPos().getZEnd();
+		#else
+		return this.chunk.getPos().getMaxBlockZ();
+		#endif
+	}
 	@Override
-	public int getMinBlockX() { return this.chunk.getPos().#if MC_VER <= MC_1_12_2 getXStart() #else getMinBlockX() #endif; }
+	public int getMinBlockX() 
+	{ 
+		#if MC_VER <= MC_1_12_2
+		return this.chunk.getPos().getXStart();
+		#else
+		return this.chunk.getPos().getMinBlockX();
+		#endif
+	}
 	@Override
-	public int getMinBlockZ() { return this.chunk.getPos().#if MC_VER <= MC_1_12_2 getZStart() #else getMinBlockZ() #endif; }
+	public int getMinBlockZ() 
+	{
+		#if MC_VER <= MC_1_12_2
+		return this.chunk.getPos().getZStart();
+		#else
+		return this.chunk.getPos().getMinBlockZ();
+		#endif
+	}
 	
 	
 	

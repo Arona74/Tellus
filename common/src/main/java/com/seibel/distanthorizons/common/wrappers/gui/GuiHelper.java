@@ -76,28 +76,29 @@ public class GuiHelper
         #endif
 	}
 	
-	public static void SetX(#if MC_VER <= MC_1_12_2 GuiButton #else AbstractWidget #endif w, int x)
+	#if MC_VER <= MC_1_12_2
+	public static void SetX(GuiButton widget, int x) 
+	#else 
+	public static void SetX(AbstractWidget widget, int x)
+	#endif
 	{
         #if MC_VER < MC_1_19_4
-		w.x = x;
+		widget.x = x;
         #else
-		w.setX(x);
+		widget.setX(x);
         #endif
 	}
 	
 	#if MC_VER <= MC_1_12_2
-	public static void SetY(GuiTextField w, int y)
-	{
-		w.y = y;
-	}
+	public static void SetY(GuiTextField textField, int y) { textField.y = y; }
 	#endif
 	
-	public static void SetY(#if MC_VER <= MC_1_12_2 GuiButton #else AbstractWidget #endif w, int y)
+	public static void SetY(#if MC_VER <= MC_1_12_2 GuiButton #else AbstractWidget #endif widget, int y)
 	{
         #if MC_VER < MC_1_19_4
-		w.y = y;
+		widget.y = y;
         #else
-		w.setY(y);
+		widget.setY(y);
         #endif
 	}
 	

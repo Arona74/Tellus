@@ -114,7 +114,12 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	private static final IOptifineAccessor OPTIFINE_ACCESSOR = ModAccessorInjector.INSTANCE.get(IOptifineAccessor.class);
 	
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
-	private static final Minecraft MC = Minecraft.#if MC_VER <= MC_1_12_2 getMinecraft() #else getInstance() #endif;
+	
+	#if MC_VER <= MC_1_12_2
+	private static final Minecraft MC = Minecraft.getMinecraft();
+	#else
+	private static final Minecraft MC = Minecraft.getInstance();
+	#endif
 	
 	/** 
 	 * In the case of immersive portals multiple levels may be active at once, causing conflicting lightmaps. <br> 

@@ -56,7 +56,11 @@ public class MinecraftServerWrapper implements IMinecraftSharedWrapper
 			throw new IllegalStateException("Trying to get player count before dedicated server completed initialization!");
 		}
 		
-		return this.dedicatedServer.#if MC_VER <= MC_1_12_2 getCurrentPlayerCount() #else getPlayerCount() #endif; 
+		#if MC_VER <= MC_1_12_2
+		return this.dedicatedServer.getCurrentPlayerCount();
+		#else
+		return this.dedicatedServer.getPlayerCount();
+		#endif
 	}
 	
 	

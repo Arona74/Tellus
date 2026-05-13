@@ -83,7 +83,12 @@ import net.minecraft.client.GraphicsStatus;
 public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecraftSharedWrapper
 {
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
-	private static final Minecraft MINECRAFT = Minecraft.#if MC_VER <= MC_1_12_2 getMinecraft() #else getInstance() #endif;
+	
+	#if MC_VER <= MC_1_12_2
+	private static final Minecraft MINECRAFT = Minecraft.getMinecraft();
+	#else
+	private static final Minecraft MINECRAFT = Minecraft.getInstance();
+	#endif
 	
 	public static final MinecraftClientWrapper INSTANCE = new MinecraftClientWrapper();
 	
@@ -98,18 +103,34 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	//region
 	
 	@Override
-	public boolean hasSinglePlayerServer() { return MINECRAFT.#if MC_VER <= MC_1_12_2 isSingleplayer() #else hasSingleplayerServer() #endif; }
+	public boolean hasSinglePlayerServer() 
+	{
+		#if MC_VER <= MC_1_12_2
+		return MINECRAFT.isSingleplayer();
+		#else
+		return MINECRAFT.hasSingleplayerServer();
+		#endif 
+	}
 	@Override
 	public boolean clientConnectedToDedicatedServer()
 	{
-		return MINECRAFT.#if MC_VER <= MC_1_12_2 getCurrentServerData() #else getCurrentServer() #endif != null
+		return this.hasServerConnection()
 			&& !this.hasSinglePlayerServer();
 	}
 	@Override
 	public boolean connectedToReplay()
 	{
-		return MINECRAFT.#if MC_VER <= MC_1_12_2 getCurrentServerData() #else getCurrentServer() #endif == null
+		return !this.hasServerConnection()
 			&& !this.hasSinglePlayerServer() ;
+	}
+	
+	private boolean hasServerConnection()
+	{
+		#if MC_VER <= MC_1_12_2
+		return MINECRAFT.getCurrentServerData() != null;
+		#else
+		MINECRAFT.getCurrentServer() != null; 
+		#endif
 	}
 
 	

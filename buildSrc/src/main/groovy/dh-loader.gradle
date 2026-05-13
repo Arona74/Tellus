@@ -413,9 +413,12 @@ if (isNotCommonProject) {
                     modsDir.mkdirs()
                 
                     // Remove any stale DH jars before copying the fresh one
-                    modsDir.listFiles()?.each { file ->
-                        if (file.name.startsWith(rootProject.mod_name)) file.delete()
-                    }
+                    modsDir.listFiles()?.each({ file ->
+                        if (file.name.startsWith(rootProject.mod_name))
+                        {
+                            file.delete()
+                        }
+                    });
                 
                     // Copy shadow jar into mods folder so (Neo)Forge discovers it properly
                     copy {

@@ -22,7 +22,11 @@ public class ServerKeyedClientLevelWrapper extends ClientLevelWrapper implements
 	// constructor //
 	//=============//
 	
-	public ServerKeyedClientLevelWrapper(#if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif level, String serverKey, String serverLevelKey)
+	#if MC_VER <= MC_1_12_2
+	public ServerKeyedClientLevelWrapper(WorldClient level, String serverKey, String serverLevelKey)
+	#else
+	public ServerKeyedClientLevelWrapper(ClientLevel level, String serverKey, String serverLevelKey)
+    #endif
 	{
 		super(level);
 		this.serverKey = serverKey;

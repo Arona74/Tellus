@@ -101,7 +101,11 @@ public class ClassicConfigGUI
 	//==============//
 	
 	/** if you want to get this config gui's screen call this */
-	public static #if MC_VER <= MC_1_12_2 GuiScreen #else Screen #endif getScreen(#if MC_VER <= MC_1_12_2 GuiScreen #else Screen #endif parent, String category)
+	#if MC_VER <= MC_1_12_2
+	public static GuiScreen getScreen(GuiScreen parent, String category)
+	#else
+	public static Screen getScreen(Screen parent, String category)
+	#endif
 	{ return new DhConfigScreen(parent, category); }
 	
 	
@@ -110,8 +114,12 @@ public class ClassicConfigGUI
 	// helper classes //
 	//================//
 	
-	public static class ConfigListWidget extends #if MC_VER <= MC_1_12_2 GuiListExtended #else ContainerObjectSelectionList<DhButtonEntry> #endif
-	{		
+	#if MC_VER <= MC_1_12_2
+	public static class ConfigListWidget extends GuiListExtended
+	#else
+	public static class ConfigListWidget extends ContainerObjectSelectionList<DhButtonEntry>
+	#endif
+	{
 		#if MC_VER <= MC_1_12_2
 		public List<DhButtonEntry> children = new ArrayList<>();
 		#endif
@@ -261,8 +269,13 @@ public class ClassicConfigGUI
 		private final EConfigCommentTextPosition textPosition;
 		public final AbstractConfigBase dhConfigType;
 		
-		public static final Map< #if MC_VER <= MC_1_12_2 Gui #else AbstractWidget #endif, #if MC_VER <= MC_1_12_2 ITextComponent #else Component #endif> TEXT_BY_WIDGET = new HashMap<>();
-		public static final Map< #if MC_VER <= MC_1_12_2 Gui #else AbstractWidget #endif, DhButtonEntry> BUTTON_BY_WIDGET = new HashMap<>();
+		#if MC_VER <= MC_1_12_2
+		public static final Map<Gui, ITextComponent> TEXT_BY_WIDGET = new HashMap<>();
+		public static final Map<Gui, DhButtonEntry> BUTTON_BY_WIDGET = new HashMap<>();
+		#else
+		public static final Map<AbstractWidget, Component> TEXT_BY_WIDGET = new HashMap<>();
+		public static final Map<AbstractWidget, DhButtonEntry> BUTTON_BY_WIDGET = new HashMap<>();
+		#endif
 		
 		
 		
@@ -364,6 +377,7 @@ public class ClassicConfigGUI
 				if (this.resetButton != null)
 				{
 					SetY(#if MC_VER <= MC_1_12_2 (GuiButton) #endif this.resetButton, y);
+					
 					#if MC_VER <= MC_1_12_2
 					((GuiButton) this.resetButton).drawButton(Minecraft.getMinecraft(), mouseX, mouseY, tickDelta);
 					#elif MC_VER <= MC_1_21_11

@@ -71,28 +71,23 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.client.color.block.BlockTintSource;
 #endif
 
-#if MC_VER <= MC_1_12_2
 /**
  * This stores and calculates the colors
- * the given {@link IBlockState} should have based
+ * the given BlockState should have based
  * on the given {@link IClientLevelWrapper}.
  *
  * @see ColorUtil
  */
-#else
-/**
- * This stores and calculates the colors
- * the given {@link BlockState} should have based
- * on the given {@link IClientLevelWrapper}.
- * 
- * @see ColorUtil
- */
- #endif
 public class ClientBlockStateColorCache
 {
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
 	
-	private static final Minecraft MC = Minecraft.#if MC_VER <= MC_1_12_2 getMinecraft() #else getInstance() #endif;
+	#if MC_VER <= MC_1_12_2
+	private static final Minecraft MC = Minecraft.getMinecraft();
+	#else
+	private static final Minecraft MC = Minecraft.getInstance();
+	#endif
+	
 	
 	#if MC_VER <= MC_1_12_2
 	#else
@@ -115,15 +110,17 @@ public class ClientBlockStateColorCache
 	
 	
 	/** This is the order each direction on a block is processed when attempting to get the texture/color */
-	private static final @Nullable #if MC_VER <= MC_1_12_2 EnumFacing #else Direction #endif[] COLOR_RESOLUTION_DIRECTION_ORDER = 
+	private static final @Nullable 
+		#if MC_VER <= MC_1_12_2 EnumFacing[] #else Direction[] #endif 
+		COLOR_RESOLUTION_DIRECTION_ORDER = 
 		{
-			#if MC_VER <= MC_1_12_2 EnumFacing #else Direction #endif.UP,
+			#if MC_VER <= MC_1_12_2 EnumFacing.UP #else Direction.UP #endif,
 			null, // null represents "unculled" faces, IE the top of farmland
-			#if MC_VER <= MC_1_12_2 EnumFacing #else Direction #endif.NORTH,
-			#if MC_VER <= MC_1_12_2 EnumFacing #else Direction #endif.EAST,
-			#if MC_VER <= MC_1_12_2 EnumFacing #else Direction #endif.WEST,
-			#if MC_VER <= MC_1_12_2 EnumFacing #else Direction #endif.SOUTH,
-			#if MC_VER <= MC_1_12_2 EnumFacing #else Direction #endif.DOWN
+			#if MC_VER <= MC_1_12_2 EnumFacing.NORTH #else Direction.NORTH #endif,
+			#if MC_VER <= MC_1_12_2 EnumFacing.EAST #else Direction.EAST #endif,
+			#if MC_VER <= MC_1_12_2 EnumFacing.WEST #else Direction.WEST #endif,
+			#if MC_VER <= MC_1_12_2 EnumFacing.SOUTH #else Direction.SOUTH #endif,
+			#if MC_VER <= MC_1_12_2 EnumFacing.DOWN #else Direction.DOWN #endif
 		};
 	
 	private static final int FLOWER_COLOR_SCALE = 5;
@@ -281,8 +278,16 @@ public class ClientBlockStateColorCache
 			{
 				// look for the first non-empty direction
 				List<BakedQuad> quads = null;
-				for (#if MC_VER <= MC_1_12_2 EnumFacing #else Direction #endif direction : COLOR_RESOLUTION_DIRECTION_ORDER)
+				
+				#if MC_VER <= MC_1_12_2 
+				EnumFacing direction; 
+				#else 
+				Direction direction;
+				#endif
+				
+				for (int i = 0; i < COLOR_RESOLUTION_DIRECTION_ORDER.length; i++)
 				{
+					direction = COLOR_RESOLUTION_DIRECTION_ORDER[i];
 					quads = this.getQuadsForDirection(direction);
 					if (quads != null && !quads.isEmpty()
 						&& !(

@@ -42,7 +42,13 @@ public class KeyedClientLevelManager implements IKeyedClientLevelManager
 	@Override
 	public IServerKeyedClientLevel setServerKeyedLevel(IClientLevelWrapper clientLevel, String serverKey, String levelKey)
 	{
-		IServerKeyedClientLevel keyedLevel = new ServerKeyedClientLevelWrapper(#if MC_VER <= MC_1_12_2 (WorldClient) #else (ClientLevel) #endif clientLevel.getWrappedMcObject(), serverKey, levelKey);
+		IServerKeyedClientLevel keyedLevel;
+		#if MC_VER <= MC_1_12_2
+		keyedLevel = new ServerKeyedClientLevelWrapper((WorldClient) clientLevel.getWrappedMcObject(), serverKey, levelKey);
+		#else 
+		keyedLevel = new ServerKeyedClientLevelWrapper((ClientLevel) clientLevel.getWrappedMcObject(), serverKey, levelKey);
+		#endif
+		
 		this.serverKeyedLevel = keyedLevel;
 		this.enabled = true;
 		return keyedLevel;
