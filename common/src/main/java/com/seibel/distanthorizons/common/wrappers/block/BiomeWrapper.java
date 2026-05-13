@@ -342,7 +342,9 @@ public class BiomeWrapper implements IBiomeWrapper
 		}
 	}
 	
-	public static BiomeDeserializeResult deserializeBiome(String resourceLocationString #if MC_VER > MC_1_12_2, net.minecraft.core.RegistryAccess  registryAccess #endif) throws IOException
+	public static BiomeDeserializeResult deserializeBiome(String resourceLocationString 
+		#if MC_VER > MC_1_12_2, net.minecraft.core.RegistryAccess registryAccess #endif
+		) throws IOException
 	{
 		// parse the resource location
 		int separatorIndex = resourceLocationString.indexOf(":");
@@ -373,10 +375,10 @@ public class BiomeWrapper implements IBiomeWrapper
 		
 		
 		boolean success;
-		#if MC_VER == MC_1_12_2
+		#if MC_VER <= MC_1_12_2
 		Biome biome = Biome.REGISTRY.getObject(resourceLocation);
 		success = (biome != null);
-		#elif MC_VER == MC_1_16_5 || MC_VER == MC_1_17_1
+		#elif MC_VER <= MC_1_17_1
 		Biome biome = registryAccess.registryOrThrow(Registry.BIOME_REGISTRY).get(resourceLocation);
 		success = (biome != null);
 		#elif MC_VER <= MC_1_19_2

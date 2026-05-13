@@ -59,13 +59,6 @@ import org.lwjgl.opengl.GL32;
 
 import java.util.concurrent.AbstractExecutorService;
 
-/**
- * This handles all events sent to the client,
- * and is the starting point for most of the mod.
- *
- * @author James_Seibel
- * @version 2023-7-27
- */
 public class CleanroomClientProxy implements AbstractModInitializer.IEventProxy
 {
 	private static final IMinecraftClientWrapper MC = SingletonInjector.INSTANCE.get(IMinecraftClientWrapper.class);
@@ -124,6 +117,7 @@ public class CleanroomClientProxy implements AbstractModInitializer.IEventProxy
 	//==============//
 	// chunk events //
 	//==============//
+	//region
 	
 	@SubscribeEvent
 	public void rightClickBlockEvent(PlayerInteractEvent.RightClickBlock event)
@@ -185,11 +179,14 @@ public class CleanroomClientProxy implements AbstractModInitializer.IEventProxy
 		}
 	}
 	
+	//endregion
+	
 	
 	
 	//==============//
 	// key bindings //
 	//==============//
+	//region
 	
 	@SubscribeEvent
 	public void registerKeyBindings(InputEvent.KeyInputEvent event)
@@ -206,10 +203,14 @@ public class CleanroomClientProxy implements AbstractModInitializer.IEventProxy
 		ClientApi.INSTANCE.keyPressedEvent(event.getKey());*/
 	}
 	
+	//endregion
+	
+	
 	
 	//===========//
 	// rendering //
 	//===========//
+	//region
 	
 	@SubscribeEvent
 	public void afterLevelRenderEvent(TickEvent.RenderTickEvent event)
@@ -231,11 +232,20 @@ public class CleanroomClientProxy implements AbstractModInitializer.IEventProxy
 	}
 	
 	@SubscribeEvent
-	public void onRenderOverlay(RenderGameOverlayEvent.Text event) {
+	public void onRenderOverlay(RenderGameOverlayEvent.Text event) 
+	{
 		Minecraft mc = Minecraft.getMinecraft();
-		if (event.isCanceled() || !mc.gameSettings.showDebugInfo) return;
+		if (event.isCanceled() 
+			|| !mc.gameSettings.showDebugInfo)
+		{
+			return;
+		}
 		
 		F3Screen.addStringToDisplay(event.getRight());
 	}
+	
+	//endregion
+	
+	
 	
 }

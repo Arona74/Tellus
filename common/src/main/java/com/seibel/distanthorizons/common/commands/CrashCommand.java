@@ -17,7 +17,7 @@ import static net.minecraft.commands.Commands.literal;
 #endif
 
 
-public class CrashCommand #if MC_VER > MC_1_12_2 extends AbstractCommand #endif
+public class CrashCommand extends AbstractCommand
 {
 	#if MC_VER <= MC_1_12_2
 	public void execute(ICommandSender sender, String[] args)

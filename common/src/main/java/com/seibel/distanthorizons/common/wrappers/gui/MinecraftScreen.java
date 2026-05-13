@@ -34,7 +34,11 @@ import java.util.*;
 
 public class MinecraftScreen
 {
-	public static #if MC_VER <= MC_1_12_2 GuiScreen #else Screen #endif getScreen(#if MC_VER <= MC_1_12_2 GuiScreen #else Screen #endif parent, AbstractScreen screen, String translationName)
+	#if MC_VER <= MC_1_12_2
+	public static GuiScreen getScreen(GuiScreen parent, AbstractScreen screen, String translationName)
+	#else
+	public static Screen getScreen(Screen parent, AbstractScreen screen, String translationName)
+	#endif
 	{
 		return new ConfigScreenRenderer(parent, screen, translationName);
 	}
@@ -56,7 +60,9 @@ public class MinecraftScreen
 		{ return net.minecraft.network.chat.Component.translatable(str, args); }
         #endif
 		
-		protected ConfigScreenRenderer(#if MC_VER <= MC_1_12_2 GuiScreen #else Screen #endif parent, AbstractScreen screen, String translationName)
+		protected ConfigScreenRenderer(
+			#if MC_VER <= MC_1_12_2 GuiScreen #else Screen #endif parent, 
+			AbstractScreen screen, String translationName)
 		{
 			super(translate(translationName));
 			#if MC_VER <= MC_1_12_2
@@ -77,7 +83,13 @@ public class MinecraftScreen
 		protected void init()
 		#endif
 		{
-			super.#if MC_VER <= MC_1_12_2 initGui(); #else init(); #endif // Init Minecraft's screen
+			#if MC_VER <= MC_1_12_2
+			super.initGui();
+			#else
+			super.init();
+			#endif
+			
+			
 			#if MC_VER <= MC_1_12_2
 			this.screen.width = Display.getWidth();
 			this.screen.height = Display.getHeight();

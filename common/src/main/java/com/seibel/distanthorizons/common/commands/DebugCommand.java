@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class DebugCommand #if MC_VER > MC_1_12_2 extends AbstractCommand #endif
+public class DebugCommand extends AbstractCommand
 {
 	private static String getDebugString()
 	{

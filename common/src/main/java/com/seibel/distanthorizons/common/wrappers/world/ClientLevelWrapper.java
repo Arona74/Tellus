@@ -85,7 +85,8 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 	private final ConcurrentHashMap<#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif, ClientBlockStateColorCache> blockColorCacheByBlockState = new ConcurrentHashMap<>();
 	
 	/** cached method reference to reduce GC overhead */
-	private final Function<#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif, ClientBlockStateColorCache> createCachedBlockColorCacheFunc = (blockState) -> new ClientBlockStateColorCache(blockState, this);
+	private final Function<#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif, ClientBlockStateColorCache> createCachedBlockColorCacheFunc 
+		= (blockState) -> new ClientBlockStateColorCache(blockState, this);
 	
 	
 	private boolean cloudColorFailLogged = false;

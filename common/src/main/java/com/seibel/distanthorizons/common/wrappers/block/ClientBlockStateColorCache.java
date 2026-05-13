@@ -94,7 +94,11 @@ public class ClientBlockStateColorCache
 	
 	private static final Minecraft MC = Minecraft.#if MC_VER <= MC_1_12_2 getMinecraft() #else getInstance() #endif;
 	
-	private static final HashSet<#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif> BLOCK_STATES_THAT_NEED_LEVEL = new HashSet<>();
+	#if MC_VER <= MC_1_12_2
+	#else
+	private static final HashSet<BlockState> BLOCK_STATES_THAT_NEED_LEVEL = new HashSet<>();
+	#endif
+	
 	private static final HashSet<#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif> BROKEN_BLOCK_STATES = new HashSet<>();
 	
 	/** 
@@ -106,6 +110,8 @@ public class ClientBlockStateColorCache
 	 * </code>
 	 */
 	private static final ReentrantLock RESOLVE_LOCK = new ReentrantLock();
+	
+	public static final int INVALID_COLOR = -1;
 	
 	
 	/** This is the order each direction on a block is processed when attempting to get the texture/color */
@@ -225,7 +231,9 @@ public class ClientBlockStateColorCache
 	//=============//
 	//region
 	
-	public ClientBlockStateColorCache(#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif blockState, IClientLevelWrapper clientLevelWrapper)
+	public ClientBlockStateColorCache(
+		#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif blockState, 
+		IClientLevelWrapper clientLevelWrapper)
 	{
 		this.blockState = blockState;
 		this.blockStateWrapper = BlockStateWrapper.fromBlockState(blockState, clientLevelWrapper);
@@ -241,6 +249,7 @@ public class ClientBlockStateColorCache
 	//===================//
 	// color calculation //
 	//===================//
+	//region
 	
 	private void resolveColors()
 	{
@@ -268,11 +277,7 @@ public class ClientBlockStateColorCache
 			}
 			#endif
 			
-			#if MC_VER <= MC_1_12_2
-			if (!this.blockState.getMaterial().isLiquid())
-			#else
-			if (this.blockState.getFluidState().isEmpty())
-			#endif
+			if (!this.blockStateWrapper.isLiquid())
 			{
 				// look for the first non-empty direction
 				List<BakedQuad> quads = null;
@@ -593,6 +598,8 @@ public class ClientBlockStateColorCache
 				EColorMode.getColorMode(this.blockState.getBlock()));
 	}
 	
+	//endregion
+	
 	
 	
 	//===============//
@@ -602,11 +609,7 @@ public class ClientBlockStateColorCache
 	public int getColor(BiomeWrapper biomeWrapper, FullDataSourceV2 fullDataSource, DhBlockPos blockPos)
 	{
 		// only get the tint if the block needs to be tinted
-		#if MC_VER <= MC_1_12_2
-		int tintColor = -1;
-        #else
-		int tintColor = AbstractDhTintGetter.INVALID_COLOR;
-		#endif
+		int tintColor = INVALID_COLOR;
 		
 		if (this.needPostTinting)
 		{
@@ -624,8 +627,10 @@ public class ClientBlockStateColorCache
 				// 1.12.2 doesn't have BlockAndTintGetter -> get tintColor from biome
 				WorldClient world = (WorldClient) this.clientLevelWrapper.getWrappedMcObject();
 				BlockPos mcPos = new BlockPos(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+				
 				Block block = this.blockState.getBlock();
-				if (block instanceof BlockGrass || block instanceof BlockBush)
+				if (block instanceof BlockGrass 
+					|| block instanceof BlockBush)
 				{
 					tintColor = biomeWrapper.biome.getGrassColorAtPos(mcPos);
 				}
@@ -635,7 +640,8 @@ public class ClientBlockStateColorCache
 				}
 				else if (block instanceof BlockLiquid) // We don't want lava to fall into the else block
 				{
-					if(block == Blocks.WATER || block == Blocks.FLOWING_WATER)
+					if(block == Blocks.WATER 
+						|| block == Blocks.FLOWING_WATER)
 					{
 						tintColor = biomeWrapper.biome.getWaterColor();
 					}
@@ -721,29 +727,32 @@ public class ClientBlockStateColorCache
 					}
 				}
 				#endif
-			// level-specific logic is only needed for MC 1.21.11 and older
-			#if MC_VER <= MC_1_21_11 && MC_VER > MC_1_12_2
-			// use the level logic only if requested
-			if (BLOCK_STATES_THAT_NEED_LEVEL.contains(this.blockState))
-			{
-				// the level shouldn't be used all the time due to it breaking some blocks tinting
-				// specifically oceans don't render correctly
 				
-				TintGetterOverride tintOverride = TintOverrideGetter.get();
-				tintOverride.update(biomeWrapper, this.blockStateWrapper, fullDataSource, this.clientLevelWrapper);
 				
-				tintColor = tintOverride.tryGetBlockTint(new DhBlockPosMutable(blockPos));
-				if (tintColor == AbstractDhTintGetter.INVALID_COLOR)
+				// level-specific logic is only needed for MC 1.21.11 and older
+				#if MC_VER <= MC_1_21_11 && MC_VER > MC_1_12_2
+				// use the level logic only if requested
+				if (BLOCK_STATES_THAT_NEED_LEVEL.contains(this.blockState))
 				{
-					tintColor = Minecraft.getInstance()
-							.getBlockColors()
-							.getColor(this.blockState,
-									tintOverride,
-									McObjectConverter.Convert(blockPos),
-									this.tintIndex);
+					// the level shouldn't be used all the time due to it breaking some blocks tinting
+					// specifically oceans don't render correctly
+					
+					TintGetterOverride tintOverride = TintOverrideGetter.get();
+					tintOverride.update(biomeWrapper, this.blockStateWrapper, fullDataSource, this.clientLevelWrapper);
+					
+					tintColor = tintOverride.tryGetBlockTint(new DhBlockPosMutable(blockPos));
+					if (tintColor == AbstractDhTintGetter.INVALID_COLOR)
+					{
+						tintColor = Minecraft.getInstance()
+								.getBlockColors()
+								.getColor(this.blockState,
+										tintOverride,
+										McObjectConverter.Convert(blockPos),
+										this.tintIndex);
+					}
 				}
-			}
-			#endif
+				#endif
+				
 			}
 			catch (Exception e)
 			{
@@ -758,11 +767,7 @@ public class ClientBlockStateColorCache
 		
 		
 		int returnColor;
-		#if MC_VER <= MC_1_12_2
-		if (tintColor != -1)
-		#else
-		if (tintColor != AbstractDhTintGetter.INVALID_COLOR)
-		#endif
+		if (tintColor != INVALID_COLOR)
 		{
 			returnColor = ColorUtil.multiplyARGBwithRGB(this.baseColor, tintColor);
 		}

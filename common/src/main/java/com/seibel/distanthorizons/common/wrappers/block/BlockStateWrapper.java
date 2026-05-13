@@ -153,33 +153,58 @@ public class BlockStateWrapper implements IBlockStateWrapper
 	// constructors //
 	//==============//
 	//region
-	#if MC_VER <= MC_1_12_2
 	/**
-	 * Can be faster than {@link BlockStateWrapper#fromBlockState(IBlockState, ILevelWrapper)}
+	 * Can be faster than BlockStateWrapper#fromBlockState(BlockState, ILevelWrapper)
 	 * in cases where the same block state is expected to be referenced multiple times.
 	 */
-	#else
-	/**
-	 * Can be faster than {@link BlockStateWrapper#fromBlockState(BlockState, ILevelWrapper)}
-	 * in cases where the same block state is expected to be referenced multiple times.
-	 */
-	 #endif
-	public static BlockStateWrapper fromBlockState(#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif blockState, ILevelWrapper levelWrapper, IBlockStateWrapper guess)
+	public static BlockStateWrapper fromBlockState(
+		#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif blockState, 
+		ILevelWrapper levelWrapper, IBlockStateWrapper guess)
 	{
-		#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif guessBlockState = (guess == null || guess.isAir()) ? null : (#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif) guess.getWrappedMcObject();
-		#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif inputBlockState = (blockState == null || #if MC_VER <= MC_1_12_2 blockState.getBlock() == Blocks.AIR #else blockState.isAir() #endif) ? null : blockState;
-		
-		if (guess instanceof BlockStateWrapper
-			&& guessBlockState == inputBlockState)
-		{
-			return (BlockStateWrapper) guess;
-		}
-		else
+		if (guess == null)
 		{
 			return fromBlockState(blockState, levelWrapper);
 		}
+		
+		
+		// guess block state
+		BlockStateWrapper wrapperGuess = (BlockStateWrapper) guess;
+		#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif guessBlockState;
+		if(isAir(wrapperGuess.blockState))
+		{
+			guessBlockState = null;
+		}
+		else
+		{
+			#if MC_VER <= MC_1_12_2
+			guessBlockState = (IBlockState) guess.getWrappedMcObject();
+			#else 
+			guessBlockState = (BlockState) guess.getWrappedMcObject();
+			#endif
+		}
+		
+		// input block state
+		#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif inputBlockState;
+		if (isAir(blockState))
+		{
+			inputBlockState = null;
+		}
+		else
+		{
+			inputBlockState = blockState;
+		}
+		
+		
+		if (guessBlockState == inputBlockState)
+		{
+			return (BlockStateWrapper) guess;
+		}
+		
+		return fromBlockState(blockState, levelWrapper);
 	}
-	public static BlockStateWrapper fromBlockState(@Nullable #if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif blockState, ILevelWrapper levelWrapper)
+	public static BlockStateWrapper fromBlockState(
+		@Nullable #if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif blockState, 
+		ILevelWrapper levelWrapper)
 	{
 		// air is a special case
 		if (isAir(blockState))
@@ -248,13 +273,13 @@ public class BlockStateWrapper implements IBlockStateWrapper
 			}
 			else
 			{
-			#if MC_VER <= MC_1_12_2
-			this.isLiquid = this.blockState.getMaterial().isLiquid() || this.blockState.getBlock() instanceof IFluidBlock;
-	        #elif MC_VER < MC_1_20_1
-			this.isLiquid = this.blockState.getMaterial().isLiquid() || !this.blockState.getFluidState().isEmpty();
-	        #else
-			this.isLiquid = !this.blockState.getFluidState().isEmpty();
-	        #endif
+				#if MC_VER <= MC_1_12_2
+				this.isLiquid = this.blockState.getMaterial().isLiquid() || this.blockState.getBlock() instanceof IFluidBlock;
+				#elif MC_VER < MC_1_20_1
+				this.isLiquid = this.blockState.getMaterial().isLiquid() || !this.blockState.getFluidState().isEmpty();
+				#else
+				this.isLiquid = !this.blockState.getFluidState().isEmpty();
+				#endif
 			}
 		}
 		
@@ -349,7 +374,7 @@ public class BlockStateWrapper implements IBlockStateWrapper
 			
 			// beacon tint color
 			Color beaconTintColor = null;
-			// 1.12.2 doesn't have block for beacon beam
+			// 1.12.2 doesn't support changing the beacon beam color
 			#if MC_VER > MC_1_12_2
 			if (this.blockState != null
 				// beacon blocks also show up here, but since they block the beacon beam we don't want their color		
@@ -462,71 +487,188 @@ public class BlockStateWrapper implements IBlockStateWrapper
 		@Nullable #if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif blockState,
 		String lowercaseSerialString,
 		boolean isLiquid
-	)
+		)
 	{
-		if (blockState == null)
+		if (isAir(blockState))
 		{
 			return EDhApiBlockMaterial.AIR;
 		}
 		
 		
-		if (#if MC_VER <= MC_1_12_2 blockState.getBlock() instanceof BlockLeaves #else blockState.is(BlockTags.LEAVES) #endif
+		
+		//========//
+		// leaves //
+		//========//
+		//region
+		
+		boolean isLeafBlock;
+		#if MC_VER <= MC_1_12_2
+		isLeafBlock = blockState.getBlock() instanceof BlockLeaves;
+		#else 
+		isLeafBlock = blockState.is(BlockTags.LEAVES);
+		#endif
+		if (isLeafBlock
 			|| lowercaseSerialString.contains("bamboo")
 			|| lowercaseSerialString.contains("cactus")
 			|| lowercaseSerialString.contains("chorus_flower")
 			|| lowercaseSerialString.contains("mushroom")
-		)
+			)
 		{
 			return EDhApiBlockMaterial.LEAVES;
 		}
-		else if (#if MC_VER <= MC_1_12_2 blockState.getBlock() == Blocks.LAVA || blockState.getBlock() == Blocks.FLOWING_LAVA #else blockState.is(Blocks.LAVA) #endif)
+		//endregion
+		
+		
+		
+		//======//
+		// lava //
+		//======//
+		//region
+		
+		boolean isLavaBlock;
+		#if MC_VER <= MC_1_12_2
+		isLavaBlock = blockState.getBlock() == Blocks.LAVA || blockState.getBlock() == Blocks.FLOWING_LAVA;
+		#else
+		isLavaBlock = blockState.is(Blocks.LAVA);
+		#endif
+		if (isLavaBlock)
 		{
 			return EDhApiBlockMaterial.LAVA;
 		}
-		else if (isLiquid || #if MC_VER <= MC_1_12_2 blockState.getBlock() == Blocks.WATER || blockState.getBlock() == Blocks.FLOWING_WATER #else blockState.is(Blocks.WATER) #endif)
+		
+		//endregion
+		
+		
+		
+		//=======//
+		// water //
+		//=======//
+		//region
+		
+		boolean isWaterBlock;
+	    #if MC_VER <= MC_1_12_2
+		isWaterBlock = blockState.getBlock() == Blocks.WATER || blockState.getBlock() == Blocks.FLOWING_WATER;
+		#else
+		isWaterBlock = blockState.is(Blocks.WATER);
+		#endif
+		if (isLiquid
+			|| isWaterBlock)
 		{
 			return EDhApiBlockMaterial.WATER;
 		}
-		else if (#if MC_VER <= MC_1_12_2 blockState.getBlock().getSoundType() #else blockState.getSoundType() #endif == SoundType.WOOD
+		
+		//endregion
+		
+		
+		
+		//======//
+		// wood //
+		//======//
+		//region
+		
+		boolean isWoodSoundingBlock;
+		#if MC_VER <= MC_1_12_2
+		isWoodSoundingBlock = blockState.getBlock().getSoundType() == SoundType.WOOD;
+		#else 
+		isWoodSoundingBlock = blockState.getSoundType() == SoundType.WOOD;
+		#endif
+		
+		boolean isCherryWood;
+		#if MC_VER <= MC_1_19_2
+		isCherryWood = false;
+		#else 
+		isWoodSoundingBlock = blockState.getSoundType() == SoundType.CHERRY_WOOD;
+		#endif
+		
+		if (isWoodSoundingBlock
 			|| lowercaseSerialString.contains("root")
-			#if MC_VER >= MC_1_19_4
-			|| blockState.getSoundType() == SoundType.CHERRY_WOOD
-			#endif
-		)
+			|| isCherryWood
+			)
 		{
 			return EDhApiBlockMaterial.WOOD;
 		}
-		else if (#if MC_VER <= MC_1_12_2 blockState.getBlock().getSoundType() #else blockState.getSoundType() #endif == SoundType.METAL
-			#if MC_VER >= MC_1_19_2
-			|| blockState.getSoundType() == SoundType.COPPER
-			#endif
-			#if MC_VER >= MC_1_20_4
-			|| blockState.getSoundType() == SoundType.COPPER_BULB
-			|| blockState.getSoundType() == SoundType.COPPER_GRATE
-			#endif
-		)
+		
+		//endregion
+		
+		
+		
+		//=======//
+		// metal //
+		//=======//
+		//region
+		
+		boolean isMetalSoundingBlock;
+		#if MC_VER <= MC_1_12_2
+		isMetalSoundingBlock = blockState.getBlock().getSoundType() == SoundType.METAL;
+		#else
+		isMetalSoundingBlock = blockState.getSoundType() == SoundType.METAL;
+		#endif
+		
+		boolean isCopperSounding;
+		#if MC_VER <= MC_1_18_2
+		isCopperSounding = false;
+		#elif MC_VER <= MC_1_20_2
+		isCopperSounding = blockState.getSoundType() == SoundType.COPPER
+		#else
+		isCopperSounding
+		    = blockState.getSoundType() == SoundType.COPPER
+				|| blockState.getSoundType() == SoundType.COPPER_BULB
+				|| blockState.getSoundType() == SoundType.COPPER_GRATE;
+		#endif
+		
+		if (isMetalSoundingBlock
+			|| isCopperSounding)
 		{
 			return EDhApiBlockMaterial.METAL;
 		}
-		else if (
-			lowercaseSerialString.contains("grass_block")
-				|| lowercaseSerialString.contains("grass_slab")
-		)
+		
+		//endregion
+		
+		
+		
+		//=======//
+		// grass //
+		//=======//
+		//region
+		
+		if (lowercaseSerialString.contains("grass_block")
+			|| lowercaseSerialString.contains("grass_slab")
+			)
 		{
 			return EDhApiBlockMaterial.GRASS;
 		}
-		else if (
+		
+		//endregion
+		
+		
+		
+		//======//
+		// dirt //
+		//======//
+		//region
+		
+		if (
 			lowercaseSerialString.contains("dirt")
-				|| lowercaseSerialString.contains("gravel")
-				|| lowercaseSerialString.contains("mud")
-				|| lowercaseSerialString.contains("podzol")
-				|| lowercaseSerialString.contains("mycelium")
-		)
+			|| lowercaseSerialString.contains("gravel")
+			|| lowercaseSerialString.contains("mud")
+			|| lowercaseSerialString.contains("podzol")
+			|| lowercaseSerialString.contains("mycelium")
+			)
 		{
 			return EDhApiBlockMaterial.DIRT;
 		}
+		
+		//endregion
+		
+		
+		
+		//===========//
+		// deepslate //
+		//===========//
+		//region
+		
 		#if MC_VER >= MC_1_17_1
-		else if (blockState.getSoundType() == SoundType.DEEPSLATE
+		if (blockState.getSoundType() == SoundType.DEEPSLATE
 			|| blockState.getSoundType() == SoundType.DEEPSLATE_BRICKS
 			|| blockState.getSoundType() == SoundType.DEEPSLATE_TILES
 			|| blockState.getSoundType() == SoundType.POLISHED_DEEPSLATE
@@ -535,35 +677,68 @@ public class BlockStateWrapper implements IBlockStateWrapper
 			return EDhApiBlockMaterial.DEEPSLATE;
 		} 
 		#endif
-		else if (lowercaseSerialString.contains("snow"))
-		{
-			return EDhApiBlockMaterial.SNOW;
-		}
-		else if (lowercaseSerialString.contains("sand"))
-		{
-			return EDhApiBlockMaterial.SAND;
-		}
-		else if (lowercaseSerialString.contains("terracotta"))
-		{
-			return EDhApiBlockMaterial.TERRACOTTA;
-		}
-		else if (#if MC_VER <= MC_1_12_2 blockState.getBlock() == Blocks.NETHERRACK #else blockState.is(BlockTags.BASE_STONE_NETHER) #endif)
+		
+		//endregion
+		
+		
+		
+		//============//
+		// netherrack //
+		//============//
+		//region
+		
+		boolean isNetherRack;
+		#if MC_VER <= MC_1_12_2
+		isNetherRack = blockState.getBlock() == Blocks.NETHERRACK;
+		#else
+		isNetherRack = blockState.is(BlockTags.BASE_STONE_NETHER);
+		#endif
+		
+		if (isNetherRack)
 		{
 			return EDhApiBlockMaterial.NETHER_STONE;
 		}
-		else if (lowercaseSerialString.contains("stone")
+		
+		//endregion
+		
+		
+		
+		//=============//
+		// misc/simple //
+		//=============//
+		//region
+		
+		if (lowercaseSerialString.contains("snow"))
+		{
+			return EDhApiBlockMaterial.SNOW;
+		}
+		
+		if (lowercaseSerialString.contains("sand"))
+		{
+			return EDhApiBlockMaterial.SAND;
+		}
+		
+		if (lowercaseSerialString.contains("terracotta"))
+		{
+			return EDhApiBlockMaterial.TERRACOTTA;
+		}
+		
+		if (lowercaseSerialString.contains("stone")
 			|| lowercaseSerialString.contains("ore"))
 		{
 			return EDhApiBlockMaterial.STONE;
 		}
-		else if (#if MC_VER <= MC_1_12_2 blockState.getLightValue() #else blockState.getLightEmission() #endif > 0)
+		
+		if (getLightEmission(blockState) > 0)
 		{
 			return EDhApiBlockMaterial.ILLUMINATED;
 		}
-		else
-		{
-			return EDhApiBlockMaterial.UNKNOWN;
-		}
+		
+		//endregion
+		
+		
+		
+		return EDhApiBlockMaterial.UNKNOWN;
 	}
 	
 	private static int calculateOpacity(
@@ -691,8 +866,10 @@ public class BlockStateWrapper implements IBlockStateWrapper
 			return waterSurfaceReplacementBlocks;
 		}
 		
-		ObjectOpenHashSet<String> baseIgnoredBlock = new ObjectOpenHashSet<>();
-		waterSurfaceReplacementBlocks = getAllBlockWrappers(Config.Client.Advanced.Graphics.Culling.waterSurfaceBlockReplacementCsv, baseIgnoredBlock, levelWrapper);
+		ObjectOpenHashSet<String> baseIgnoredBlockResourceSet = new ObjectOpenHashSet<>();
+		waterSurfaceReplacementBlocks = getAllBlockWrappers(Config.Client.Advanced.Graphics.Culling.waterSurfaceBlockReplacementCsv, baseIgnoredBlockResourceSet, levelWrapper);
+		waterSubsurfaceReplacementBlocks.remove(AIR);
+		
 		return waterSurfaceReplacementBlocks;
 	}
 	public static ObjectOpenHashSet<IBlockStateWrapper> getWaterSubsurfaceReplacementBlocks(ILevelWrapper levelWrapper)
@@ -703,8 +880,10 @@ public class BlockStateWrapper implements IBlockStateWrapper
 			return waterSubsurfaceReplacementBlocks;
 		}
 		
-		ObjectOpenHashSet<String> baseIgnoredBlock = new ObjectOpenHashSet<>();
-		waterSubsurfaceReplacementBlocks = getAllBlockWrappers(Config.Client.Advanced.Graphics.Culling.waterSubSurfaceBlockReplacementCsv, baseIgnoredBlock, levelWrapper);
+		ObjectOpenHashSet<String> baseIgnoredBlockResourceSet = new ObjectOpenHashSet<>();
+		waterSubsurfaceReplacementBlocks = getAllBlockWrappers(Config.Client.Advanced.Graphics.Culling.waterSubSurfaceBlockReplacementCsv, baseIgnoredBlockResourceSet, levelWrapper);
+		// air will be present if any invalid resource locations are present
+		// but we don't want to replace air with water, that'll cause monoliths
 		waterSubsurfaceReplacementBlocks.remove(AIR);
 		
 		return waterSubsurfaceReplacementBlocks;
@@ -826,7 +1005,21 @@ public class BlockStateWrapper implements IBlockStateWrapper
 	public int getOpacity() { return this.opacity; }
 	
 	@Override
-	public int getLightEmission() { return (this.blockState != null) ? #if MC_VER <= MC_1_12_2 this.blockState.getLightValue() #else this.blockState.getLightEmission() #endif : 0; }
+	public int getLightEmission() { return getLightEmission(this.blockState); }
+	public static int getLightEmission(#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif blockState)
+	{
+		if (blockState == null)
+		{
+			return 0;
+		}
+		
+		#if MC_VER <= MC_1_12_2 
+		return blockState.getLightValue();
+		#else
+		return blockState.getLightEmission();
+		#endif
+	}
+	
 	
 	@Override
 	public String getSerialString() { return this.serialString; }
@@ -836,7 +1029,19 @@ public class BlockStateWrapper implements IBlockStateWrapper
 	
 	@Override
 	public boolean isAir() { return isAir(this.blockState); }
-	public static boolean isAir(#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif blockState) { return blockState == null || #if MC_VER <= MC_1_12_2 blockState.getBlock() == Blocks.AIR #else blockState.isAir() #endif; }
+	public static boolean isAir(#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif blockState) 
+	{
+		if (blockState == null)
+		{
+			return true;
+		}
+		
+		#if MC_VER <= MC_1_12_2
+		return blockState.getBlock() == Blocks.AIR;
+		#else
+		return blockState.isAir();
+		#endif
+	}
 	
 	@Override
 	public boolean isSolid() { return this.isSolid; }
@@ -1056,7 +1261,12 @@ public class BlockStateWrapper implements IBlockStateWrapper
 						}
 					}
 					
-					foundState = #if MC_VER <= MC_1_12_2 block.getDefaultState() #else block.defaultBlockState() #endif;
+					
+					#if MC_VER <= MC_1_12_2
+					foundState = block.getDefaultState(); 
+					#else 
+					foundState = block.defaultBlockState(); 
+					#endif
 				}
 				
 				foundWrapper = fromBlockState(foundState, levelWrapper);
@@ -1086,12 +1296,13 @@ public class BlockStateWrapper implements IBlockStateWrapper
 		// get the property list for this block (doesn't contain this block state's values, just the names and possible values)
 		#if MC_VER <= MC_1_12_2
 		java.util.Collection<IProperty<?>> blockPropertyCollection = blockState.getPropertyKeys();
+		List<IProperty<?>> sortedBlockPropteryList = new ArrayList<>(blockPropertyCollection);
 		#else
 		java.util.Collection<net.minecraft.world.level.block.state.properties.Property<?>> blockPropertyCollection = blockState.getProperties();;
+		List<net.minecraft.world.level.block.state.properties.Property<?>> sortedBlockPropteryList = new ArrayList<>(blockPropertyCollection);
 		#endif
 		
 		// alphabetically sort the list so they are always in the same order
-		List<#if MC_VER <= MC_1_12_2 IProperty<?> #else net.minecraft.world.level.block.state.properties.Property<?> #endif> sortedBlockPropteryList = new ArrayList<>(blockPropertyCollection);
 		sortedBlockPropteryList.sort((a, b) -> a.getName().compareTo(b.getName()));
 		
 		

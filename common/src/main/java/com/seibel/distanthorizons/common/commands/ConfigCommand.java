@@ -33,7 +33,7 @@ import java.util.function.ToIntBiFunction;
 /**
  * Command for managing config.
  */
-public class ConfigCommand #if MC_VER > MC_1_12_2 extends AbstractCommand #endif
+public class ConfigCommand extends AbstractCommand
 {
 	#if MC_VER <= MC_1_12_2
 	@SuppressWarnings({"unchecked", "rawtypes"})
@@ -94,7 +94,9 @@ public class ConfigCommand #if MC_VER > MC_1_12_2 extends AbstractCommand #endif
 			}
 		}
 	}
+	
 	#else
+	
 	private static final List<CommandArgumentData<?>> commandArguments = Arrays.asList(
 			new CommandArgumentData<>(Integer.class, configEntry -> integer(configEntry.getMin(), configEntry.getMax()), IntegerArgumentType::getInteger),
 			new CommandArgumentData<>(Double.class, configEntry -> doubleArg(configEntry.getMin(), configEntry.getMax()), DoubleArgumentType::getDouble),

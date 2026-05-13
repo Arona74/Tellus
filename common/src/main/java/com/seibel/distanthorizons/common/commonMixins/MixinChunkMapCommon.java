@@ -18,8 +18,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 public class MixinChunkMapCommon
 {
-	
-	public static void onChunkSave(#if MC_VER <= MC_1_12_2 WorldServer #else ServerLevel #endif level, #if MC_VER <= MC_1_12_2 Chunk #else ChunkAccess #endif chunk #if MC_VER > MC_1_12_2, CallbackInfoReturnable<Boolean> ci #endif)
+	#if MC_VER <= MC_1_12_2
+	public static void onChunkSave(WorldServer level, Chunk chunk)
+	#else
+	public static void onChunkSave(ServerLevel level, ChunkAccess chunk, CallbackInfoReturnable<Boolean> ci)
+	#endif
 	{
 		IServerLevelWrapper levelWrapper = ServerLevelWrapper.getWrapper(level);
 		
@@ -77,8 +80,13 @@ public class MixinChunkMapCommon
 		// biome validation //
 		
 		// some chunks may be missing their biomes, which cause issues when attempting to save them
-		#if MC_VER <= MC_1_17_1
-		if (chunk.#if MC_VER <= MC_1_12_2 getBiomeArray() #else getBiomes() #endif == null)
+		#if MC_VER <= MC_1_12_2
+		if (chunk. getBiomeArray() == null)
+		{
+			return;
+		}
+		#elif MC_VER <= MC_1_17_1
+		if (chunk.getBiomes() == null)
 		{
 			return;
 		}

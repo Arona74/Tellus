@@ -34,16 +34,22 @@ import net.minecraft.world.level.LevelAccessor;
 public class ProxyUtil
 {
 	
-	public static ILevelWrapper getLevelWrapper(#if MC_VER <= MC_1_12_2 World #else LevelAccessor #endif level)
+	public static ILevelWrapper getLevelWrapper(
+		#if MC_VER <= MC_1_12_2 World #else LevelAccessor #endif level
+		)
 	{
 		ILevelWrapper levelWrapper;
 		if (level instanceof #if MC_VER <= MC_1_12_2 WorldServer #else ServerLevel #endif)
 		{
-			levelWrapper = ServerLevelWrapper.getWrapper(#if MC_VER <= MC_1_12_2 (WorldServer) #else (ServerLevel) #endif level);
+			levelWrapper = ServerLevelWrapper.getWrapper(
+				#if MC_VER <= MC_1_12_2 (WorldServer) #else (ServerLevel) #endif level
+			);
 		}
 		else
 		{
-			levelWrapper = ClientLevelWrapper.getWrapper(#if MC_VER <= MC_1_12_2 (WorldClient) #else (ClientLevel) #endif level);
+			levelWrapper = ClientLevelWrapper.getWrapper(
+				#if MC_VER <= MC_1_12_2 (WorldClient) #else (ClientLevel) #endif level
+			);
 		}
 		
 		return levelWrapper;

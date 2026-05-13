@@ -82,15 +82,18 @@ public class CleanroomServerProxy implements AbstractModInitializer.IEventProxy
 	//=============//
 	// constructor //
 	//=============//
+	//region
 	
 	public CleanroomServerProxy(boolean isDedicated) { this.isDedicated = isDedicated; }
+	
+	//endregion
 	
 	
 	
 	//========//
 	// events //
 	//========//
-	
+	//region
 	
 	// ServerLevelLoadEvent
 	@SubscribeEvent
@@ -132,9 +135,11 @@ public class CleanroomServerProxy implements AbstractModInitializer.IEventProxy
 	@SubscribeEvent
 	public void playerLoggedInEvent(PlayerEvent.PlayerLoggedInEvent event)
 	{ this.serverApi.serverPlayerJoinEvent(getServerPlayerWrapper(event)); }
+	
 	@SubscribeEvent
 	public void playerLoggedOutEvent(PlayerEvent.PlayerLoggedOutEvent event)
 	{ this.serverApi.serverPlayerDisconnectEvent(getServerPlayerWrapper(event)); }
+	
 	@SubscribeEvent
 	public void playerChangedDimensionEvent(PlayerEvent.PlayerChangedDimensionEvent event)
 	{
@@ -145,14 +150,16 @@ public class CleanroomServerProxy implements AbstractModInitializer.IEventProxy
 		);
 	}
 	
+	//endregion
+	
 	
 	
 	//================//
 	// helper methods //
 	//================//
+	//region
 	
 	private static ServerLevelWrapper getServerLevelWrapper(WorldServer level) { return ServerLevelWrapper.getWrapper(level); }
-	
 	
 	private static ServerLevelWrapper getServerLevelWrapper(int dimensionId, PlayerEvent event)
 	{
@@ -166,8 +173,9 @@ public class CleanroomServerProxy implements AbstractModInitializer.IEventProxy
 	}
 	
 	private static ServerPlayerWrapper getServerPlayerWrapper(PlayerEvent event)
-	{
-		return ServerPlayerWrapper.getWrapper((EntityPlayerMP) event.player);
-	}
+	{ return ServerPlayerWrapper.getWrapper((EntityPlayerMP) event.player); }
+	
+	//endregion
+	
 	
 }

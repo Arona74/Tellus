@@ -46,23 +46,21 @@ public abstract class MixinEntityPlayerMP implements IMixinServerPlayer
 	@Nullable
 	private volatile WorldServer distantHorizons$dimensionChangeDestination;
 	
+	
+	
 	@Override
 	@Nullable
 	public WorldServer distantHorizons$getDimensionChangeDestination()
-	{
-		return this.distantHorizons$dimensionChangeDestination;
-	}
+	{ return this.distantHorizons$dimensionChangeDestination; }
 	
 	@Inject(at = @At("HEAD"), method = "changeDimension(ILnet/minecraftforge/common/util/ITeleporter;)Lnet/minecraft/entity/Entity;")
 	public void setDimensionChangeDestination(int destinationDimensionID, ITeleporter teleporter, CallbackInfoReturnable<Entity> cir)
-	{
-		this.distantHorizons$dimensionChangeDestination = this.server.getWorld(destinationDimensionID);
-	}
+	{ this.distantHorizons$dimensionChangeDestination = this.server.getWorld(destinationDimensionID); }
 	
 	@Inject(at = @At("RETURN"), method = "clearInvulnerableDimensionChange")
 	public void clearDimensionChangeDestination(CallbackInfo ci)
-	{
-		this.distantHorizons$dimensionChangeDestination = null;
-	}
+	{ this.distantHorizons$dimensionChangeDestination = null; }
+	
+	
 	
 }

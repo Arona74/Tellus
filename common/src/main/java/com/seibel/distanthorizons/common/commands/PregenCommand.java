@@ -32,7 +32,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 
-public class PregenCommand #if MC_VER > MC_1_12_2 extends AbstractCommand #endif
+public class PregenCommand extends AbstractCommand
 {
 	private PregenManager getPregenManager()
 	{

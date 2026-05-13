@@ -15,7 +15,11 @@ public class GetConfigScreen
 {
 	protected static final DhLogger LOGGER = new DhLoggerBuilder().build();
 	
-	public static #if MC_VER <= MC_1_12_2 GuiScreen #else Screen #endif getScreen(#if MC_VER <= MC_1_12_2 GuiScreen #else Screen #endif parent)
+	#if MC_VER <= MC_1_12_2
+	public static GuiScreen getScreen(GuiScreen parent)
+	#else 
+	public static Screen getScreen(Screen parent)
+	#endif
 	{
 		if (ModInfo.IS_DEV_BUILD)
 		{

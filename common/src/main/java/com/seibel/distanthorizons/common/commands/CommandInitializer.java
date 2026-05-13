@@ -38,6 +38,8 @@ public class CommandInitializer
 	private static final PermissionCheck COMMAND_PERMISSION_CHECK = new PermissionCheck.Require(Permissions.COMMANDS_OWNER);
 	#endif
 	
+	
+	
 	#if MC_VER <= MC_1_12_2
 	public static ICommand initCommands()
 	{
@@ -98,7 +100,9 @@ public class CommandInitializer
 		};
 		
 	}
+	
 	#else
+	
 	/**
 	 * A received command dispatcher, which is held until the server is ready to initialize the commands.
 	 */

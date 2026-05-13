@@ -1,4 +1,5 @@
 package com.seibel.distanthorizons.common.wrappers.gui;
+
 #if MC_VER <= MC_1_12_2
 import net.minecraft.client.gui.GuiButton;
 

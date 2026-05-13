@@ -566,6 +566,7 @@ if (isNotCommonProject) {
         outputs.file(output)
         doLast {
             output.withWriter("UTF-8") { writer ->
+                writer.writeLine("#PARSE_ESCAPES")
                 new JsonSlurper()
                     .parse(input)
                     .each { key, value ->
