@@ -119,7 +119,11 @@ public class BiomeWrapper implements IBiomeWrapper
 	// constructors //
 	//==============//
 	
-	public static BiomeWrapper getBiomeWrapper(#if MC_VER < MC_1_18_2 Biome #else Holder<Biome> #endif biome, ILevelWrapper levelWrapper)
+	#if MC_VER < MC_1_18_2
+	public static BiomeWrapper getBiomeWrapper(Biome biome, ILevelWrapper levelWrapper)
+	#else
+	public static BiomeWrapper getBiomeWrapper(Holder<Biome> biome, ILevelWrapper levelWrapper)
+	#endif
 	{
 		if (biome == null)
 		{
@@ -139,7 +143,12 @@ public class BiomeWrapper implements IBiomeWrapper
 			return newWrapper;
 		}
 	}
-	private BiomeWrapper(#if MC_VER < MC_1_18_2 Biome #else Holder<Biome> #endif biome, ILevelWrapper levelWrapper)
+	
+	#if MC_VER < MC_1_18_2
+	private BiomeWrapper(Biome biome, ILevelWrapper levelWrapper)
+	#else
+	private BiomeWrapper(Holder<Biome> biome, ILevelWrapper levelWrapper)
+	#endif
 	{
 		this.biome = biome;
 		this.serialString = this.serialize(levelWrapper);
@@ -312,9 +321,11 @@ public class BiomeWrapper implements IBiomeWrapper
 				net.minecraft.core.RegistryAccess registryAccess = level.registryAccess();
 				#endif
 
-				
-				BiomeDeserializeResult deserializeResult = deserializeBiome(resourceLocationString #if MC_VER > MC_1_12_2, registryAccess #endif);
-				
+				#if MC_VER <= MC_1_12_2
+				BiomeDeserializeResult deserializeResult = deserializeBiome(resourceLocationString);
+				#else
+				BiomeDeserializeResult deserializeResult = deserializeBiome(resourceLocationString, registryAccess);
+				#endif				
 				
 				
 				if (!deserializeResult.success)
@@ -342,9 +353,11 @@ public class BiomeWrapper implements IBiomeWrapper
 		}
 	}
 	
-	public static BiomeDeserializeResult deserializeBiome(String resourceLocationString 
-		#if MC_VER > MC_1_12_2, net.minecraft.core.RegistryAccess registryAccess #endif
-		) throws IOException
+	#if MC_VER <= MC_1_12_2
+	public static BiomeDeserializeResult deserializeBiome(String resourceLocationString) throws IOException
+	#else
+	public static BiomeDeserializeResult deserializeBiome(String resourceLocationString, net.minecraft.core.RegistryAccess registryAccess) throws IOException
+	#endif
 	{
 		// parse the resource location
 		int separatorIndex = resourceLocationString.indexOf(":");
@@ -435,9 +448,13 @@ public class BiomeWrapper implements IBiomeWrapper
 		public final Biome biome;
 		#else
 		public final Holder<Biome> biome;
-    #endif
+        #endif
 		
-		public BiomeDeserializeResult(boolean success, #if MC_VER < MC_1_18_2 Biome #else Holder<Biome> #endif biome)
+		#if MC_VER < MC_1_18_2
+		public BiomeDeserializeResult(boolean success, Biome biome)
+		#else
+		public BiomeDeserializeResult(boolean success, Holder<Biome> biome)
+		#endif
 		{
 			this.success = success;
 			this.biome = biome;
