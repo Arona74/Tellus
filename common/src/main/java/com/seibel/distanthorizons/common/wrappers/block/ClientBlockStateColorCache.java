@@ -674,7 +674,7 @@ public class ClientBlockStateColorCache
 						
 						// try using DH's cached tint values first if possible
 						tintColor = tintOverride.tryGetBlockTint(new DhBlockPosMutable(blockPos));
-						if (tintColor == AbstractDhTintGetter.INVALID_COLOR)
+						if (tintColor == ClientBlockStateColorCache.INVALID_COLOR)
 						{
 							// one or more tint values weren't calculated,
 							// we need MC's color resolver
@@ -705,7 +705,7 @@ public class ClientBlockStateColorCache
 							if (tintColor == -1)
 							{
 								// no color found, use the base color
-								tintColor = AbstractDhTintGetter.INVALID_COLOR;
+								tintColor = ClientBlockStateColorCache.INVALID_COLOR;
 							}
 							
 							// save this color to speed up future queries

@@ -129,7 +129,7 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 		#if MC_VER <= MC_1_12_2
 		return MINECRAFT.getCurrentServerData() != null;
 		#else
-		MINECRAFT.getCurrentServer() != null; 
+		return MINECRAFT.getCurrentServer() != null; 
 		#endif
 	}
 

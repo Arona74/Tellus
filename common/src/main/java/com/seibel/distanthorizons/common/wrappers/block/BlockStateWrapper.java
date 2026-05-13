@@ -576,8 +576,8 @@ public class BlockStateWrapper implements IBlockStateWrapper
 		boolean isCherryWood;
 		#if MC_VER <= MC_1_19_2
 		isCherryWood = false;
-		#else 
-		isWoodSoundingBlock = blockState.getSoundType() == SoundType.CHERRY_WOOD;
+		#else
+		isCherryWood = blockState.getSoundType() == SoundType.CHERRY_WOOD;
 		#endif
 		
 		if (isWoodSoundingBlock
