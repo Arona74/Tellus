@@ -154,7 +154,14 @@ public abstract class AbstractModInitializer
 			
 			this.checkForUpdates();
 			
-			LOGGER.info(ModInfo.READABLE_NAME + " server Initialized at " + server.#if MC_VER <= MC_1_12_2 getDataDirectory() #else getServerDirectory() #endif);
+			String serverFolderPath;
+			#if MC_VER <= MC_1_12_2
+			serverFolderPath = server.getDataDirectory() + "";
+			#else
+			serverFolderPath = server.getServerDirectory() + "";
+			#endif
+			
+			LOGGER.info(ModInfo.READABLE_NAME + " server Initialized at " + serverFolderPath);
 		});
 	}
 	
