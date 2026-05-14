@@ -198,6 +198,7 @@ public final class BatchGenerationEnvironment implements IBatchGeneratorEnvironm
 		this.updateManager = WorldChunkUpdateManager.INSTANCE.getByLevelWrapper(this.dhServerLevel.getServerLevelWrapper());
 		this.globalParams = new GlobalWorldGenParams(dhServerLevel);
 		this.internalServerGenerator = new InternalServerGenerator(this.globalParams, this.dhServerLevel);
+		
 		#if MC_VER > MC_1_12_2
 		this.chunkFileReader = new ChunkFileReader(this.globalParams);
 		
@@ -327,8 +328,11 @@ public final class BatchGenerationEnvironment implements IBatchGeneratorEnvironm
 		//================//
 		// variable setup //
 		//================//
+		
 		#if MC_VER <= MC_1_12_2
+		// MC 1.12 can only run world gen on the main thread
 		this.internalServerGenerator.generateChunksViaInternalServer(genEvent);
+		
 		#else
 		int borderSize = MAX_WORLD_GEN_CHUNK_BORDER_NEEDED;
 		// genEvent.size - 1 converts the even width size to an odd number for MC compatability

@@ -170,6 +170,7 @@ class DhConfigScreen extends DhScreen
 		#else
 		super.init();
 		#endif
+		
 		if (!this.reload)
 		{
 			ConfigHandler.INSTANCE.configFileHandler.loadFromFile();

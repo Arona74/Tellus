@@ -63,7 +63,7 @@ public class McObjectConverter
 		FloatBuffer buffer = FloatBuffer.allocate(16);
 		storeMatrix(mcMatrix, buffer);
 		Mat4f matrix = new Mat4f(buffer);
-        #if MC_VER < MC_1_19_4 && MC_VER > MC_1_12_2
+        #if MC_VER > MC_1_12_2 && MC_VER < MC_1_19_4
 		matrix.transpose(); // In 1.19.3 and later, we no longer need to transpose it
         #endif
 		return matrix;
@@ -109,7 +109,9 @@ public class McObjectConverter
 	static
 	{
 		EDhDirection[] lodDirs = EDhDirection.values();
+		
 		directions = new #if MC_VER <= MC_1_12_2 EnumFacing #else Direction #endif[lodDirs.length];
+		
 		lodDirections = new EDhDirection[lodDirs.length];
 		for (EDhDirection lodDir : lodDirs)
 		{

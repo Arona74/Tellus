@@ -173,26 +173,27 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		{
 			return false;
 		}
+		
 		#if MC_VER <= MC_1_12_2
-		else if (MC.player.getActivePotionMap() == null)
-		#else
-		else if (MC.player.getActiveEffectsMap() == null)
-		#endif
+		if (MC.player.getActivePotionMap() == null)
 		{
 			return false;
 		}
-		else
+		
+		return MC.player.getActivePotionEffect(MobEffects.BLINDNESS) != null;
+		#else
+		if (MC.player.getActiveEffectsMap() == null)
 		{
-			#if MC_VER <= MC_1_12_2
-			return MC.player.getActivePotionEffect(MobEffects.BLINDNESS) != null;
-			#else
-			return MC.player.getActiveEffectsMap().get(MobEffects.BLINDNESS) != null
-				#if MC_VER >= MC_1_19_2
-					|| MC.player.getActiveEffectsMap().get(MobEffects.DARKNESS) != null // Deep dark effect
-				#endif
-					;
-			#endif
+			return false;
 		}
+		
+		return MC.player.getActiveEffectsMap().get(MobEffects.BLINDNESS) != null
+			#if MC_VER >= MC_1_19_2
+				|| MC.player.getActiveEffectsMap().get(MobEffects.DARKNESS) != null // Deep dark effect
+			#endif
+				;
+		#endif
+		
 	}
 	
 	@Override

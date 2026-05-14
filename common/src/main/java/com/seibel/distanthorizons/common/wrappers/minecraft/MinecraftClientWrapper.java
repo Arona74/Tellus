@@ -143,8 +143,13 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 		}
 		else
 		{
-			ServerData server = MINECRAFT.#if MC_VER <= MC_1_12_2 getCurrentServerData() #else getCurrentServer() #endif;
-			return (server != null) ? server.#if MC_VER <= MC_1_12_2 serverName #else name #endif : "NULL";
+			#if MC_VER <= MC_1_12_2
+			ServerData server = MINECRAFT.getCurrentServerData();
+			return (server != null) ? server.serverName : "NULL";
+			#else
+			ServerData server = MINECRAFT.getCurrentServer();
+			return (server != null) ? server.name : "NULL";
+			#endif
 		}
 	}
 	@Override
@@ -382,11 +387,13 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	
 	public void disableVanillaChunkFadeIn()
 	{
-		LOGGER.info("Disabling vanilla chunk fade in... This is done to prevent vanilla chunks from flashing on the Distant Horizons boarder when moving (which is distracting).");
+		String message = "Disabling vanilla chunk fade in... This is done to prevent vanilla chunks from flashing on the Distant Horizons boarder when moving (which is distracting).";
 		
 		#if MC_VER <= MC_1_21_10
 		// chunk fade in was added MC 1.21.11
 		#else
+		LOGGER.info(message);
+		
 		MINECRAFT.options.chunkSectionFadeInTime().set(0.0);
 		#endif
 	}

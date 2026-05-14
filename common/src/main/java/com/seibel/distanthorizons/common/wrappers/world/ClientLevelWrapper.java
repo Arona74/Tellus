@@ -6,6 +6,7 @@ import com.seibel.distanthorizons.common.wrappers.block.BiomeWrapper;
 import com.seibel.distanthorizons.common.wrappers.block.BlockStateWrapper;
 import com.seibel.distanthorizons.common.wrappers.block.ClientBlockStateColorCache;
 import com.seibel.distanthorizons.common.wrappers.chunk.ChunkWrapper;
+import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftClientWrapper;
 import com.seibel.distanthorizons.core.dataObjects.fullData.sources.FullDataSourceV2;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.level.*;
@@ -76,17 +77,31 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 	 * where, upon world closure, some levels aren't shutdown/removed properly
 	 * and/or for servers were the level object isn't consistent
 	 */
-	private static final Map<#if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif, WeakReference<ClientLevelWrapper>> LEVEL_WRAPPER_REF_BY_CLIENT_LEVEL = Collections.synchronizedMap(new WeakHashMap<>());
+	private static final Map<
+		#if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif, 
+		WeakReference<ClientLevelWrapper>> LEVEL_WRAPPER_REF_BY_CLIENT_LEVEL = Collections.synchronizedMap(new WeakHashMap<>());
 	private static final IKeyedClientLevelManager KEYED_CLIENT_LEVEL_MANAGER = SingletonInjector.INSTANCE.get(IKeyedClientLevelManager.class);
 	
-	private static final Minecraft MINECRAFT = Minecraft.#if MC_VER <= MC_1_12_2 getMinecraft() #else getInstance() #endif;
+	#if MC_VER <= MC_1_12_2
+	private static final Minecraft MINECRAFT = Minecraft.getMinecraft();
+	#else
+	private static final Minecraft MINECRAFT = Minecraft.getInstance();
+	#endif
 	
-	private final #if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif level;
-	private final ConcurrentHashMap<#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif, ClientBlockStateColorCache> blockColorCacheByBlockState = new ConcurrentHashMap<>();
+	#if MC_VER <= MC_1_12_2
+	private final WorldClient level;
+	private final ConcurrentHashMap<IBlockState, ClientBlockStateColorCache> blockColorCacheByBlockState = new ConcurrentHashMap<>();
+	#else
+	private final ClientLevel level;
+	private final ConcurrentHashMap<BlockState, ClientBlockStateColorCache> blockColorCacheByBlockState = new ConcurrentHashMap<>();
+	#endif
+	
 	
 	/** cached method reference to reduce GC overhead */
-	private final Function<#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif, ClientBlockStateColorCache> createCachedBlockColorCacheFunc 
-		= (blockState) -> new ClientBlockStateColorCache(blockState, this);
+	private final Function<
+		#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif, 
+		ClientBlockStateColorCache> createCachedBlockColorCacheFunc
+			= (blockState) -> new ClientBlockStateColorCache(blockState, this);
 	
 	
 	private boolean cloudColorFailLogged = false;
@@ -117,7 +132,9 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 	 * IE rendering.
 	 */
 	@Nullable
-	public static IClientLevelWrapper getWrapperIfDifferent(@Nullable IClientLevelWrapper levelWrapper, @NotNull #if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif level)
+	public static IClientLevelWrapper getWrapperIfDifferent(
+		@Nullable IClientLevelWrapper levelWrapper, 
+		@NotNull #if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif level)
 	{
 		if (KEYED_CLIENT_LEVEL_MANAGER.isEnabled() && KEYED_CLIENT_LEVEL_MANAGER.getServerKeyedLevel() != levelWrapper)
 		{
@@ -135,10 +152,13 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 	}
 	
 	@Nullable
-	public static IClientLevelWrapper getWrapper(@NotNull #if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif level) { return getWrapper(level, false); }
+	public static IClientLevelWrapper getWrapper(
+		@NotNull #if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif level) 
+	{ return getWrapper(level, false); }
 	
 	@Nullable
-	public static IClientLevelWrapper getWrapper(@Nullable #if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif level, boolean bypassLevelKeyManager)
+	public static IClientLevelWrapper getWrapper(
+		@Nullable #if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif level, boolean bypassLevelKeyManager)
 	{
 		if (!bypassLevelKeyManager)
 		{
@@ -197,7 +217,7 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 			#if MC_VER <= MC_1_12_2
 			WorldServer[] serverLevels = MINECRAFT.getIntegratedServer().worlds;
 			#else
-			Iterable<#if MC_VER <= MC_1_12_2 WorldServer #else ServerLevel #endif> serverLevels = MINECRAFT.getSingleplayerServer().getAllLevels();
+			Iterable<ServerLevel> serverLevels = MINECRAFT.getSingleplayerServer().getAllLevels();
 			#endif
 			
 			// attempt to find the server level with the same dimension type
@@ -457,10 +477,20 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 	public Color getCloudColor(float tickDelta)
 	{
 		#if MC_VER < MC_1_21_3
-		#if MC_VER <= MC_1_12_2 Vec3d #else Vec3 #endif colorVec3 = null;
+		
+		#if MC_VER <= MC_1_12_2
+		Vec3d colorVec3 = null;
+		#else
+		Vec3 colorVec3 = null;
+		#endif
 		try
 		{
-			colorVec3 = this.level.#if MC_VER <= MC_1_12_2 getCloudColour #else getCloudColor #endif (tickDelta);
+			#if MC_VER <= MC_1_12_2
+			colorVec3 = this.level.getCloudColour(tickDelta);
+			#else
+			colorVec3 = this.level.getCloudColor(tickDelta);
+			#endif
+			
 			return new Color((float)colorVec3.x, (float)colorVec3.y, (float)colorVec3.z);
 		}
 		catch (Exception e)
@@ -543,5 +573,7 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 	}
 	
 	//endregion
+	
+	
 	
 }

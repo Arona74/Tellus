@@ -107,6 +107,7 @@ public class ServerPlayerWrapper implements IServerPlayerWrapper
 		#else
 		ServerLevel  level = ((IMixinServerPlayer) this.getServerPlayer()).distantHorizons$getDimensionChangeDestination();
 		#endif
+		
 		if (level == null)
 		{
 			#if MC_VER <= MC_1_12_2

@@ -35,12 +35,16 @@ public class ProfilerWrapper implements IProfilerWrapper
 	public ProfilerFiller profiler;
 	#endif
 	
+	
+	
 	#if MC_VER <= MC_1_12_2
 	public ProfilerWrapper(Profiler newProfiler)
 	#else
 	public ProfilerWrapper(ProfilerFiller newProfiler)
 	#endif
 	{ this.profiler = newProfiler; }
+	
+	
 	
 	@Override
 	public IProfileBlock push(String newSection) 
