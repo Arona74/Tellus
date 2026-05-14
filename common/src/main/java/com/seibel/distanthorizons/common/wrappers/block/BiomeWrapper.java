@@ -118,6 +118,7 @@ public class BiomeWrapper implements IBiomeWrapper
 	//==============//
 	// constructors //
 	//==============//
+	//region
 	
 	#if MC_VER < MC_1_18_2
 	public static BiomeWrapper getBiomeWrapper(Biome biome, ILevelWrapper levelWrapper)
@@ -157,11 +158,14 @@ public class BiomeWrapper implements IBiomeWrapper
 		//LOGGER.trace("Created BiomeWrapper ["+this.serialString+"] for ["+biome+"]");
 	}
 	
+	//endregion
+	
 	
 	
 	//=========//
 	// methods //
 	//=========//
+	//region
 	
 	@Override
 	public String getName()
@@ -207,11 +211,14 @@ public class BiomeWrapper implements IBiomeWrapper
 	@Override
 	public String toString() { return this.getSerialString(); }
 	
+	//endregion
+	
 	
 	
 	//=======================//
 	// serialization methods //
 	//=======================//
+	//region
 	
 	public String serialize(ILevelWrapper levelWrapper)
 	{
@@ -435,10 +442,14 @@ public class BiomeWrapper implements IBiomeWrapper
 		return new BiomeDeserializeResult(success, biome);
 	}
 	
+	//endregion
+	
+	
 	
 	//================//
 	// helper classes //
 	//================//
+	//region
 	
 	public static class BiomeDeserializeResult
 	{
@@ -460,6 +471,9 @@ public class BiomeWrapper implements IBiomeWrapper
 			this.biome = biome;
 		}
 	}
+	
+	//endregion
+	
 	
 	
 }

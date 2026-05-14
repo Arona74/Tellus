@@ -94,7 +94,11 @@ public class ClientBlockStateColorCache
 	private static final HashSet<BlockState> BLOCK_STATES_THAT_NEED_LEVEL = new HashSet<>();
 	#endif
 	
-	private static final HashSet<#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif> BROKEN_BLOCK_STATES = new HashSet<>();
+	#if MC_VER <= MC_1_12_2
+	private static final HashSet<IBlockState> BROKEN_BLOCK_STATES = new HashSet<>();
+	#else
+	private static final HashSet<BlockState> BROKEN_BLOCK_STATES = new HashSet<>();
+	#endif
 	
 	/** 
 	 * Methods using MC's "RandomSource" object aren't thread safe <br>
@@ -110,18 +114,29 @@ public class ClientBlockStateColorCache
 	
 	
 	/** This is the order each direction on a block is processed when attempting to get the texture/color */
-	private static final @Nullable 
-		#if MC_VER <= MC_1_12_2 EnumFacing[] #else Direction[] #endif 
-		COLOR_RESOLUTION_DIRECTION_ORDER = 
+	#if MC_VER <= MC_1_12_2
+	private static final @Nullable EnumFacing[] COLOR_RESOLUTION_DIRECTION_ORDER = 
 		{
-			#if MC_VER <= MC_1_12_2 EnumFacing.UP #else Direction.UP #endif,
+			EnumFacing.UP,
 			null, // null represents "unculled" faces, IE the top of farmland
-			#if MC_VER <= MC_1_12_2 EnumFacing.NORTH #else Direction.NORTH #endif,
-			#if MC_VER <= MC_1_12_2 EnumFacing.EAST #else Direction.EAST #endif,
-			#if MC_VER <= MC_1_12_2 EnumFacing.WEST #else Direction.WEST #endif,
-			#if MC_VER <= MC_1_12_2 EnumFacing.SOUTH #else Direction.SOUTH #endif,
-			#if MC_VER <= MC_1_12_2 EnumFacing.DOWN #else Direction.DOWN #endif
+			EnumFacing.NORTH,
+			EnumFacing.EAST,
+			EnumFacing.WEST,
+			EnumFacing.SOUTH,
+			EnumFacing.DOWN
 		};
+	#else
+	private static final @Nullable Direction[] COLOR_RESOLUTION_DIRECTION_ORDER = 
+		{
+			Direction.UP,
+			null, // null represents "unculled" faces, IE the top of farmland
+			Direction.NORTH,
+			Direction.EAST,
+			Direction.WEST,
+			Direction.SOUTH,
+			Direction.DOWN
+		};
+	#endif
 	
 	private static final int FLOWER_COLOR_SCALE = 5;
 	
@@ -135,7 +150,11 @@ public class ClientBlockStateColorCache
 	#endif
 	
 	private final IClientLevelWrapper clientLevelWrapper;
-	private final #if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif blockState;
+	#if MC_VER <= MC_1_12_2
+	private final IBlockState blockState;
+	#else
+	private final BlockState blockState;
+	#endif
 	private final BlockStateWrapper blockStateWrapper;
 	
 	private boolean isColorResolved = false;
@@ -228,9 +247,11 @@ public class ClientBlockStateColorCache
 	//=============//
 	//region
 	
-	public ClientBlockStateColorCache(
-		#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif blockState, 
-		IClientLevelWrapper clientLevelWrapper)
+	#if MC_VER <= MC_1_12_2
+	public ClientBlockStateColorCache(IBlockState blockState, IClientLevelWrapper clientLevelWrapper)
+	#else
+	public ClientBlockStateColorCache(BlockState blockState, IClientLevelWrapper clientLevelWrapper)
+	#endif
 	{
 		this.blockState = blockState;
 		this.blockStateWrapper = BlockStateWrapper.fromBlockState(blockState, clientLevelWrapper);
@@ -394,9 +415,17 @@ public class ClientBlockStateColorCache
 	@Nullable
 	private List<BakedQuad> getUnculledQuads() { return this.getQuadsForDirection(null); }
 	@Nullable
-	private List<BakedQuad> getQuadsForDirection(@Nullable #if MC_VER <= MC_1_12_2 EnumFacing #else Direction #endif direction)
+	#if MC_VER <= MC_1_12_2
+	private List<BakedQuad> getQuadsForDirection(@Nullable EnumFacing direction)
+	#else
+	private List<BakedQuad> getQuadsForDirection(@Nullable Direction direction)
+	#endif
 	{
-		#if MC_VER <= MC_1_12_2 IBlockState #else BlockState #endif effectiveBlockState = this.blockState;
+		#if MC_VER <= MC_1_12_2
+		IBlockState effectiveBlockState = this.blockState;
+		#else
+		BlockState effectiveBlockState = this.blockState;
+		#endif
 		
 		// if this block is a slab, use it's double variant so we can get the top face,
 		// otherwise the color will use the side, which isn't as accurate
@@ -610,6 +639,7 @@ public class ClientBlockStateColorCache
 	//===============//
 	// public getter //
 	//===============//
+	//region
 	
 	public int getColor(BiomeWrapper biomeWrapper, FullDataSourceV2 fullDataSource, DhBlockPos blockPos)
 	{
@@ -802,6 +832,8 @@ public class ClientBlockStateColorCache
 		return returnColor;
 	}
 	
+	//endregion
+	
 	
 	
 	//================//
@@ -819,14 +851,54 @@ public class ClientBlockStateColorCache
 		
 		static EColorMode getColorMode(Block block)
 		{
-			if (block instanceof #if MC_VER <= MC_1_12_2 BlockLeaves #else LeavesBlock #endif)
+			
+			
+			
+			//========//
+			// leaves //
+			//========//
+			//region
+			
+			boolean isLeavesBlock;
+			#if MC_VER <= MC_1_12_2
+			isLeavesBlock = block instanceof BlockLeaves;
+	        #else
+			isLeavesBlock = block instanceof LeavesBlock;
+	        #endif
+			if (isLeavesBlock)
 			{
 				return Leaves;
 			}
-			if (block instanceof #if MC_VER <= MC_1_12_2 BlockFlower #else FlowerBlock #endif)
+			
+			//endregion
+
+
+
+			//========//
+			// flower //
+			//========//
+			//region
+			
+			boolean isFlowerBlock;
+			#if MC_VER <= MC_1_12_2
+			isFlowerBlock = block instanceof BlockFlower;
+			#else
+			isFlowerBlock = block instanceof FlowerBlock;
+			#endif
+			if (isFlowerBlock)
 			{
 				return Flower;
 			}
+
+			//endregion
+			
+			
+			
+			//=============//
+			// misc/simple //
+			//=============//
+			//region
+			
 			if (block.toString().contains("glass"))
 			{
 				return Glass;
@@ -835,6 +907,11 @@ public class ClientBlockStateColorCache
 			{
 				return Chisel;
 			}
+			
+			//endregion
+			
+			
+			
 			return Default;
 		}
 	}

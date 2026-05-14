@@ -124,15 +124,17 @@ public class ChunkWrapper implements IChunkWrapper
 	//=============//
 	// constructor //
 	//=============//
-	
+	//region
 	/**
 	 * Note: this constructor should be very
 	 * fast since it will be called frequently on the MC
 	 * server thread and a slow method will cause server lag.
 	 */
-	public ChunkWrapper(
-		#if MC_VER <= MC_1_12_2 Chunk #else ChunkAccess #endif chunk, 
-		ILevelWrapper wrappedLevel)
+	#if MC_VER <= MC_1_12_2
+	public ChunkWrapper(Chunk chunk, ILevelWrapper wrappedLevel)
+	#else
+	public ChunkWrapper(ChunkAccess chunk, ILevelWrapper wrappedLevel)
+	#endif
 	{
 		this.chunk = chunk;
 		this.wrappedLevel = wrappedLevel;
@@ -147,15 +149,22 @@ public class ChunkWrapper implements IChunkWrapper
 	@Override
 	public ChunkWrapper copy() { return new ChunkWrapper(this.chunk, this.wrappedLevel); }
 	
+	//endregion
+	
 	
 	
 	//=========//
 	// getters //
 	//=========//
+	//region
 	
 	@Override
 	public int getHeight() { return getHeight(this.chunk); }
-	public static int getHeight(#if MC_VER <= MC_1_12_2 Chunk #else ChunkAccess #endif chunk)
+	#if MC_VER <= MC_1_12_2
+	public static int getHeight(Chunk chunk)
+	#else
+	public static int getHeight(ChunkAccess chunk)
+	#endif
 	{
 		#if MC_VER < MC_1_17_1
 		return 255;
@@ -166,7 +175,11 @@ public class ChunkWrapper implements IChunkWrapper
 	
 	@Override
 	public int getInclusiveMinBuildHeight() { return getInclusiveMinBuildHeight(this.chunk); }
-	public static int getInclusiveMinBuildHeight(#if MC_VER <= MC_1_12_2 Chunk #else ChunkAccess #endif chunk)
+	#if MC_VER <= MC_1_12_2
+	public static int getInclusiveMinBuildHeight(Chunk chunk)
+	#else
+	public static int getInclusiveMinBuildHeight(ChunkAccess chunk)
+	#endif
 	{
 		#if MC_VER < MC_1_17_1
 		return 0;
@@ -179,7 +192,11 @@ public class ChunkWrapper implements IChunkWrapper
 	
 	@Override
 	public int getExclusiveMaxBuildHeight() { return getExclusiveMaxBuildHeight(this.chunk); }
-	public static int getExclusiveMaxBuildHeight(#if MC_VER <= MC_1_12_2 Chunk #else ChunkAccess #endif chunk) 
+	#if MC_VER <= MC_1_12_2
+	public static int getExclusiveMaxBuildHeight(Chunk chunk) 
+	#else
+	public static int getExclusiveMaxBuildHeight(ChunkAccess chunk) 
+	#endif
 	{
 		#if MC_VER <= MC_1_12_2
 		return 256;
@@ -264,9 +281,11 @@ public class ChunkWrapper implements IChunkWrapper
 		
 		return this.maxNonEmptyHeight;
 	}
-	private static boolean isChunkSectionEmpty(
-		#if MC_VER <= MC_1_12_2 ExtendedBlockStorage #else LevelChunkSection #endif section
-		)
+	#if MC_VER <= MC_1_12_2
+	private static boolean isChunkSectionEmpty(ExtendedBlockStorage section)
+	#else
+	private static boolean isChunkSectionEmpty(LevelChunkSection section)
+	#endif
 	{
 		#if MC_VER <= MC_1_17_1
 		return section.isEmpty();
@@ -556,7 +575,12 @@ public class ChunkWrapper implements IChunkWrapper
 	@Override
 	public DhChunkPos getChunkPos() { return this.chunkPos; }
 	
-	public #if MC_VER <= MC_1_12_2 Chunk #else ChunkAccess #endif getChunk() { return this.chunk; }
+	#if MC_VER <= MC_1_12_2
+	public Chunk getChunk()
+	#else
+	public ChunkAccess getChunk()
+	#endif
+	{ return this.chunk; }
 	
 	#if MC_VER > MC_1_12_2
 	public void trySetStatus(ChunkStatus status) { trySetStatus(this.getChunk(), status); }
@@ -621,11 +645,14 @@ public class ChunkWrapper implements IChunkWrapper
 		#endif
 	}
 	
+	//endregion
+	
 	
 	
 	//==========//
 	// lighting //
 	//==========//
+	//region
 	
 	@Override 
 	public void setIsDhSkyLightCorrect(boolean isDhLightCorrect) { this.isDhSkyLightCorrect = isDhLightCorrect; }
@@ -740,11 +767,14 @@ public class ChunkWrapper implements IChunkWrapper
 		return this.blockLightPosList;
 	}
 	
+	//endregion
+	
 	
 	
 	//================//
 	// base overrides //
 	//================//
+	//region
 	
 	@Override
 	public String toString() { return this.chunk.getClass().getSimpleName() + this.chunk.getPos(); }
@@ -759,5 +789,9 @@ public class ChunkWrapper implements IChunkWrapper
 	//	
 	//	return this.blockBiomeHashCode;
 	//}
+	
+	//endregion
+	
+	
 	
 }

@@ -36,31 +36,64 @@ import java.util.concurrent.ConcurrentMap;
 #endif
 public class ServerPlayerWrapper implements IServerPlayerWrapper
 {
-	private static final ConcurrentMap<#if MC_VER <= MC_1_12_2 NetHandlerPlayServer #else ServerGamePacketListenerImpl #endif , ServerPlayerWrapper> serverPlayerWrapperMap = new MapMaker().weakKeys().weakValues().makeMap();
+	#if MC_VER <= MC_1_12_2
+	private static final ConcurrentMap<NetHandlerPlayServer, ServerPlayerWrapper> serverPlayerWrapperMap = new MapMaker().weakKeys().weakValues().makeMap();
+	#else
+	private static final ConcurrentMap<ServerGamePacketListenerImpl, ServerPlayerWrapper> serverPlayerWrapperMap = new MapMaker().weakKeys().weakValues().makeMap();
+	#endif
 	
-	private final #if MC_VER <= MC_1_12_2 NetHandlerPlayServer #else ServerGamePacketListenerImpl #endif connection;
+	#if MC_VER <= MC_1_12_2
+	private final NetHandlerPlayServer connection;
+	#else
+	private final ServerGamePacketListenerImpl connection;
+	#endif
 	
 	
 	
 	//=============//
 	// constructor //
 	//=============//
+	//region
 	
-	public static ServerPlayerWrapper getWrapper(#if MC_VER <= MC_1_12_2 EntityPlayerMP #else ServerPlayer #endif serverPlayer)
+	#if MC_VER <= MC_1_12_2
+	public static ServerPlayerWrapper getWrapper(EntityPlayerMP serverPlayer)
+	#else
+	public static ServerPlayerWrapper getWrapper(ServerPlayer serverPlayer)
+	#endif
 	{ return serverPlayerWrapperMap.computeIfAbsent(serverPlayer.connection, ignored -> new ServerPlayerWrapper(serverPlayer.connection)); }
 	
-	private ServerPlayerWrapper(#if MC_VER <= MC_1_12_2 NetHandlerPlayServer #else ServerGamePacketListenerImpl #endif connection) { this.connection = connection; }
+	#if MC_VER <= MC_1_12_2
+	private ServerPlayerWrapper(NetHandlerPlayServer connection)
+	#else
+	private ServerPlayerWrapper(ServerGamePacketListenerImpl connection)
+	#endif
+	{ this.connection = connection; }
+	
+	//endregion
 	
 	
 	
 	//=========//
 	// getters //
 	//=========//
+	//region
 	
-	private #if MC_VER <= MC_1_12_2 EntityPlayerMP #else ServerPlayer #endif getServerPlayer() { return this.connection.player; }
+	#if MC_VER <= MC_1_12_2
+	private EntityPlayerMP getServerPlayer()
+	#else
+	private ServerPlayer getServerPlayer()
+	#endif
+	{ return this.connection.player; }
 	
 	@Override
-	public String getName() { return this.getServerPlayer().getName()#if MC_VER > MC_1_12_2 .getString() #endif ; }
+	public String getName()
+	{
+		#if MC_VER <= MC_1_12_2
+		return this.getServerPlayer().getName();
+		#else
+		return this.getServerPlayer().getName().getString();
+		#endif
+	}
 	
 	@Override
 	public IServerLevelWrapper getLevel()
@@ -103,11 +136,14 @@ public class ServerPlayerWrapper implements IServerPlayerWrapper
 		#endif
 	}
 	
+	//endregion
 	
+
 	
 	//================//
 	// base overrides //
 	//================//
+	//region
 	
 	@Override
 	public Object getWrappedMcObject() { return this.getServerPlayer(); }
@@ -132,5 +168,9 @@ public class ServerPlayerWrapper implements IServerPlayerWrapper
 	
 	@Override
 	public int hashCode() { return Objects.hashCode(this.connection); }
+	
+	//endregion
+	
+	
 	
 }

@@ -74,6 +74,7 @@ public class ClassicConfigGUI
 	//==============//
 	// Initializers //
 	//==============//
+	//region
 	
 	// Some regexes to check if an input is valid
 	public static final Pattern INTEGER_ONLY_REGEX = Pattern.compile("(-?[0-9]*)");
@@ -94,12 +95,14 @@ public class ClassicConfigGUI
 		
 	}
 	
+	//endregion
+	
 	
 	
 	//==============//
 	// GUI handling //
 	//==============//
-	
+	//region
 	/** if you want to get this config gui's screen call this */
 	#if MC_VER <= MC_1_12_2
 	public static GuiScreen getScreen(GuiScreen parent, String category)
@@ -108,11 +111,14 @@ public class ClassicConfigGUI
 	#endif
 	{ return new DhConfigScreen(parent, category); }
 	
+	//endregion
+	
 	
 	
 	//================//
 	// helper classes //
 	//================//
+	//region
 	
 	#if MC_VER <= MC_1_12_2
 	public static class ConfigListWidget extends GuiListExtended
@@ -124,7 +130,11 @@ public class ClassicConfigGUI
 		public List<DhButtonEntry> children = new ArrayList<>();
 		#endif
 		
-		#if MC_VER <= MC_1_12_2 FontRenderer #else Font #endif textRenderer;
+		#if MC_VER <= MC_1_12_2
+		FontRenderer textRenderer;
+		#else
+		Font textRenderer;
+		#endif
 		
 		public ConfigListWidget(Minecraft minecraftClient, int canvasWidth, int canvasHeight, int topMargin, int botMargin, int itemSpacing)
 		{
@@ -142,7 +152,7 @@ public class ClassicConfigGUI
 			#endif
 		}
 		
-		#if MC_VER<= MC_1_12_2
+		#if MC_VER <= MC_1_12_2
 		@Override
 		protected int getSize()
 		{
@@ -180,11 +190,24 @@ public class ClassicConfigGUI
 		}
 		
 		@Override
-		public int #if MC_VER <= MC_1_12_2 getListWidth() #else getRowWidth() #endif { return 10_000; }
+		#if MC_VER <= MC_1_12_2
+		public int getListWidth()
+		#else
+		public int getRowWidth()
+		#endif
+		{ return 10_000; }
 		
-		public #if MC_VER <= MC_1_12_2 Gui #else AbstractWidget #endif getHoveredButton(double mouseX, double mouseY)
+		#if MC_VER <= MC_1_12_2
+		public Gui getHoveredButton(double mouseX, double mouseY)
+		#else
+		public AbstractWidget getHoveredButton(double mouseX, double mouseY)
+		#endif
 		{
-			for (DhButtonEntry buttonEntry : #if MC_VER <= MC_1_12_2 this.children #else this.children() #endif)
+			#if MC_VER <= MC_1_12_2
+			for (DhButtonEntry buttonEntry : this.children)
+			#else
+			for (DhButtonEntry buttonEntry : this.children())
+			#endif
 			{
 				#if MC_VER <= MC_1_12_2
 				Gui gui = buttonEntry.button;
@@ -244,14 +267,18 @@ public class ClassicConfigGUI
 		
 	}
 	
-	
-	public static class DhButtonEntry #if MC_VER <= MC_1_12_2 implements GuiListExtended.IGuiListEntry #else extends ContainerObjectSelectionList.Entry<DhButtonEntry> #endif
+	#if MC_VER <= MC_1_12_2
+	public static class DhButtonEntry implements GuiListExtended.IGuiListEntry
+	#else
+	public static class DhButtonEntry extends ContainerObjectSelectionList.Entry<DhButtonEntry>
+	#endif
 	{
 		#if MC_VER <= MC_1_12_2
 		private static final FontRenderer textRenderer = Minecraft.getMinecraft().fontRenderer;		
 		#else
 		private static final Font textRenderer = Minecraft.getInstance().font;
 		#endif
+		
 		private final DhConfigScreen gui;
 		#if MC_VER <= MC_1_12_2
 		public final Gui button;
@@ -262,8 +289,18 @@ public class ClassicConfigGUI
 		private final AbstractWidget resetButton;
 		private final AbstractWidget button;
 		#endif
-		private final #if MC_VER <= MC_1_12_2 ITextComponent #else Component #endif text;
-		private final List<#if MC_VER <= MC_1_12_2 Gui #else AbstractWidget #endif> children = new ArrayList<>();
+		
+		#if MC_VER <= MC_1_12_2
+		private final ITextComponent text;
+		#else
+		private final Component text;
+		#endif
+		
+		#if MC_VER <= MC_1_12_2
+		private final List<Gui> children = new ArrayList<>();
+		#else
+		private final List<AbstractWidget> children = new ArrayList<>();
+		#endif
 		
 		@NotNull
 		private final EConfigCommentTextPosition textPosition;
@@ -366,17 +403,23 @@ public class ClassicConfigGUI
 					}
 					#else
 					SetY(this.button, y);
-					#if MC_VER <= MC_1_21_11
-					this.button.render(matrices, mouseX, mouseY, tickDelta);
-					#else
-					this.button.extractRenderState(matrices, mouseX, mouseY, tickDelta);
-					#endif
+					{
+						#if MC_VER <= MC_1_21_11
+						this.button.render(matrices, mouseX, mouseY, tickDelta);
+						#else
+						this.button.extractRenderState(matrices, mouseX, mouseY, tickDelta);
+						#endif
+					}	
 					#endif
 				}
 				
 				if (this.resetButton != null)
 				{
-					SetY(#if MC_VER <= MC_1_12_2 (GuiButton) #endif this.resetButton, y);
+					#if MC_VER <= MC_1_12_2
+					SetY((GuiButton) this.resetButton, y);
+					#else
+					SetY(this.resetButton, y);
+					#endif
 					
 					#if MC_VER <= MC_1_12_2
 					((GuiButton) this.resetButton).drawButton(Minecraft.getMinecraft(), mouseX, mouseY, tickDelta);
@@ -389,7 +432,12 @@ public class ClassicConfigGUI
 				
 				if (this.indexButton != null)
 				{
-					SetY(#if MC_VER <= MC_1_12_2 (GuiButton) #endif this.indexButton, y);
+					#if MC_VER <= MC_1_12_2
+					SetY((GuiButton) this.indexButton, y);
+					#else
+					SetY(this.indexButton, y);
+					#endif
+					
 					#if MC_VER <= MC_1_12_2
 					((GuiButton) this.indexButton).drawButton(Minecraft.getMinecraft(), mouseX, mouseY, tickDelta);
 					#elif MC_VER <= MC_1_21_11
@@ -439,17 +487,20 @@ public class ClassicConfigGUI
 					}
 				
 				#if MC_VER <= MC_1_12_2
-				textRenderer.drawString(this.text.getFormattedText(), textXPos, y + 5,0xFFFFFF);
+				textRenderer.drawString(
+						this.text.getFormattedText(),
+						textXPos, y + 5, 
+						0xFFFFFF);
                 #elif MC_VER < MC_1_20_1
 				GuiComponent.drawString(matrices, textRenderer, 
-					this.text, 
-					textXPos, y + 5, 
-					0xFFFFFF);
+						this.text, 
+						textXPos, y + 5, 
+						0xFFFFFF);
 				#elif MC_VER < MC_1_21_6
-					matrices.drawString(textRenderer,
-							this.text,
-							textXPos, y + 5,
-							0xFFFFFF);
+				matrices.drawString(textRenderer,
+						this.text,
+						textXPos, y + 5,
+						0xFFFFFF);
 				#elif MC_VER <= MC_1_21_11
 				matrices.drawString(textRenderer, 
 						this.text,
@@ -500,11 +551,14 @@ public class ClassicConfigGUI
 		
 	}
 	
+	//endregion
+	
 	
 	
 	//================//
 	// event handling //
 	//================//
+	//region
 	
 	public static class ConfigCoreInterface implements IConfigGui
 	{
@@ -523,4 +577,5 @@ public class ClassicConfigGUI
 		
 	}
 	
+	//endregion
 }

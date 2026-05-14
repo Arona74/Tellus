@@ -103,23 +103,30 @@ public class TexturedButtonWidget extends Button
 	private final int textureHeight;
 	#endif
 	
-	
-	public TexturedButtonWidget(
-		#if MC_VER <= MC_1_12_2 int id, #endif int x, int y, int width, int height, int u, int v, int hoveredVOffset, 
-		#if MC_VER <= MC_1_21_10 ResourceLocation textureResourceLocation, 
-		#else Identifier textureResourceLocation, 
-		#endif 
-		int textureWidth, int textureHeight, #if MC_VER > MC_1_12_2 OnPress pressAction,#endif #if MC_VER <= MC_1_12_2 String #else Component #endif text) 
+	#if MC_VER <= MC_1_12_2
+	public TexturedButtonWidget(int id, int x, int y, int width, int height, int u, int v, int hoveredVOffset, ResourceLocation textureResourceLocation, int textureWidth, int textureHeight, String text)
 	{
-		this(#if MC_VER <= MC_1_12_2 id, #endif x, y, width, height, u, v, hoveredVOffset, textureResourceLocation, textureWidth, textureHeight, #if MC_VER > MC_1_12_2 pressAction, #endif text, true);
+		this(id, x, y, width, height, u, v, hoveredVOffset, textureResourceLocation, textureWidth, textureHeight, text, true);
 	}
-	public TexturedButtonWidget(
-		#if MC_VER <= MC_1_12_2 int id, #endif int x, int y, int width, int height, int u, int v, int hoveredVOffset, 
-		#if MC_VER <= MC_1_21_10 ResourceLocation textureResourceLocation, 
-		#else Identifier textureResourceLocation, 
-		#endif
-		int textureWidth, int textureHeight, #if MC_VER > MC_1_12_2 OnPress pressAction,#endif #if MC_VER <= MC_1_12_2 String #else Component #endif text, 
-		boolean renderBackground)
+	#elif MC_VER <= MC_1_21_10
+	public TexturedButtonWidget(int x, int y, int width, int height, int u, int v, int hoveredVOffset, ResourceLocation textureResourceLocation, int textureWidth, int textureHeight, OnPress pressAction, Component text) 
+	{
+		this(x, y, width, height, u, v, hoveredVOffset, textureResourceLocation, textureWidth, textureHeight, pressAction, text, true);
+	}
+	#else
+	public TexturedButtonWidget(int x, int y, int width, int height, int u, int v, int hoveredVOffset, Identifier textureResourceLocation, int textureWidth, int textureHeight, OnPress pressAction, Component text)
+	{
+		this(x, y, width, height, u, v, hoveredVOffset, textureResourceLocation, textureWidth, textureHeight, pressAction, text, true);
+	}
+	#endif
+	
+	#if MC_VER <= MC_1_12_2
+	public TexturedButtonWidget(int id, int x, int y, int width, int height, int u, int v, int hoveredVOffset, ResourceLocation textureResourceLocation, int textureWidth, int textureHeight, String text, boolean renderBackground)
+	#elif MC_VER <= MC_1_21_10
+	public TexturedButtonWidget(int x, int y, int width, int height, int u, int v, int hoveredVOffset, ResourceLocation textureResourceLocation, int textureWidth, int textureHeight, OnPress pressAction, Component text, boolean renderBackground)
+	#else
+	public TexturedButtonWidget(int x, int y, int width, int height, int u, int v, int hoveredVOffset, Identifier textureResourceLocation, int textureWidth, int textureHeight, OnPress pressAction, Component text, boolean renderBackground)
+	#endif
 	{
 		#if MC_VER <= MC_1_12_2
 		super(id, x, y, width, height, text);

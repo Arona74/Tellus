@@ -6,9 +6,11 @@ import net.minecraft.client.resources.I18n;
 #else
 import net.minecraft.client.resources.language.I18n;
 #endif
+
 public class LangWrapper implements ILangWrapper
 {
 	public static final LangWrapper INSTANCE = new LangWrapper();
+	
 	@Override
 	public boolean langExists(String str)
 	{

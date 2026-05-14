@@ -29,21 +29,38 @@ import net.minecraft.util.profiling.ProfilerFiller;
 
 public class ProfilerWrapper implements IProfilerWrapper
 {
-	public #if MC_VER <= MC_1_12_2 Profiler #else ProfilerFiller #endif profiler;
+	#if MC_VER <= MC_1_12_2
+	public Profiler profiler;
+	#else
+	public ProfilerFiller profiler;
+	#endif
 	
-	public ProfilerWrapper(#if MC_VER <= MC_1_12_2 Profiler #else ProfilerFiller #endif newProfiler) { this.profiler = newProfiler; }
+	#if MC_VER <= MC_1_12_2
+	public ProfilerWrapper(Profiler newProfiler)
+	#else
+	public ProfilerWrapper(ProfilerFiller newProfiler)
+	#endif
+	{ this.profiler = newProfiler; }
 	
 	@Override
 	public IProfileBlock push(String newSection) 
 	{
-		this.profiler.#if MC_VER <= MC_1_12_2 startSection(newSection) #else push(newSection) #endif;
+		#if MC_VER <= MC_1_12_2
+		this.profiler.startSection(newSection);
+		#else
+		this.profiler.push(newSection);
+		#endif
 		return new ProfileBlock(this.profiler);
 	}
 	
 	@Override
 	public void popPush(String newSection) 
 	{
-		this.profiler.#if MC_VER <= MC_1_12_2 endStartSection(newSection) #else popPush(newSection) #endif;
+		#if MC_VER <= MC_1_12_2
+		this.profiler.endStartSection(newSection);
+		#else
+		this.profiler.popPush(newSection) ;
+		#endif
 	}
 	
 	
@@ -55,14 +72,27 @@ public class ProfilerWrapper implements IProfilerWrapper
 	
 	public static class ProfileBlock implements IProfileBlock
 	{
-		public #if MC_VER <= MC_1_12_2 Profiler #else ProfilerFiller #endif profiler;
-		public ProfileBlock(#if MC_VER <= MC_1_12_2 Profiler #else ProfilerFiller #endif newProfiler) { this.profiler = newProfiler; }
-		
+		#if MC_VER <= MC_1_12_2
+		public Profiler profiler;
+		#else
+		public ProfilerFiller profiler;
+		#endif
+
+		#if MC_VER <= MC_1_12_2
+		public ProfileBlock(Profiler newProfiler)
+		#else
+		public ProfileBlock(ProfilerFiller newProfiler)
+		#endif
+		{ this.profiler = newProfiler; }
 		
 		@Override
 		public void close()
 		{
-			this.profiler.#if MC_VER <= MC_1_12_2 endSection() #else pop() #endif;
+			#if MC_VER <= MC_1_12_2
+			this.profiler.endSection();
+			#else
+			this.profiler.pop();
+			#endif
 		}
 	}
 	

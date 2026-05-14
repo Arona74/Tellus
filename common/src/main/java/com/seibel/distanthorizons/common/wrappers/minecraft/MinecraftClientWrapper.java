@@ -156,16 +156,45 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 		}
 		else
 		{
-			ServerData server = MINECRAFT.#if MC_VER <= MC_1_12_2 getCurrentServerData() #else getCurrentServer() #endif;
-			return (server != null) ? server.#if MC_VER <= MC_1_12_2 serverIP #else ip #endif : "NA";
+			ServerData server = getCurrentServerData();
+			return getServerIp(server);
 		}
 	}
 	@Override
 	public String getCurrentServerVersion()
 	{
-		ServerData server = MINECRAFT.#if MC_VER <= MC_1_12_2 getCurrentServerData() #else getCurrentServer() #endif;
-		return (server != null) ? server.#if MC_VER <= MC_1_12_2 gameVersion #else version.getString() #endif : "UNKOWN";
+		ServerData server = getCurrentServerData();
+		return getServerVersion(server);
 	}
+	
+	private ServerData getCurrentServerData()
+	{
+		#if MC_VER <= MC_1_12_2
+		return MINECRAFT.getCurrentServerData();
+		#else
+		return MINECRAFT.getCurrentServer();
+		#endif
+	}
+	private String getServerIp(ServerData server)
+	{
+		if (server == null) { return "NA"; }
+		
+		#if MC_VER <= MC_1_12_2
+		return server.serverIP;
+		#else
+		return server.ip;
+		#endif		
+	}
+	private String getServerVersion(ServerData server)
+	{
+		if (server == null) { return "UNKOWN"; }
+		
+		#if MC_VER <= MC_1_12_2
+		return server.gameVersion;
+		#else
+		return server.version.getString();
+		#endif
+	}	
 	
 	//endregion
 	
@@ -176,7 +205,11 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	//=================//
 	//region
 	
-	public #if MC_VER <= MC_1_12_2 EntityPlayerSP #else LocalPlayer #endif getPlayer() { return MINECRAFT.player; }
+	#if MC_VER <= MC_1_12_2
+	public EntityPlayerSP getPlayer() { return MINECRAFT.player; }
+	#else
+	public LocalPlayer getPlayer() { return MINECRAFT.player; }
+	#endif
 	
 	@Override
 	public boolean playerExists() { return MINECRAFT.player != null; }
@@ -184,20 +217,32 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	@Override
 	public DhBlockPos getPlayerBlockPos()
 	{
-		#if MC_VER <= MC_1_12_2 EntityPlayerSP #else LocalPlayer #endif player = this.getPlayer();
+		#if MC_VER <= MC_1_12_2
+		EntityPlayerSP player = this.getPlayer();
+		#else
+		LocalPlayer player = this.getPlayer();
+		#endif
 		if (player == null)
 		{
 			return new DhBlockPos(0, 0, 0);	
 		}
 		
-		BlockPos playerPos = player.#if MC_VER <= MC_1_12_2 getPosition() #else blockPosition() #endif;
+		#if MC_VER <= MC_1_12_2
+		BlockPos playerPos = player.getPosition();
+		#else
+		BlockPos playerPos = player.blockPosition();
+		#endif
 		return new DhBlockPos(playerPos.getX(), playerPos.getY(), playerPos.getZ());
 	}
 	
 	@Override
 	public DhChunkPos getPlayerChunkPos()
 	{
-		#if MC_VER <= MC_1_12_2 EntityPlayerSP #else LocalPlayer #endif player = this.getPlayer();
+		#if MC_VER <= MC_1_12_2
+		EntityPlayerSP player = this.getPlayer();
+		#else
+		LocalPlayer player = this.getPlayer();
+		#endif
 		if (player == null)
 		{
 			return new DhChunkPos(0, 0);
@@ -235,7 +280,11 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	@Nullable
 	public IClientLevelWrapper getWrappedClientLevel(boolean bypassLevelKeyManager)
 	{
-		#if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif level = MINECRAFT.#if MC_VER <= MC_1_12_2 world #else level #endif;
+		#if MC_VER <= MC_1_12_2
+		WorldClient level = MINECRAFT.world;
+		#else
+		ClientLevel level = MINECRAFT.level;
+		#endif
 		if (level == null)
 		{
 			return null;
@@ -256,7 +305,11 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	@Override
 	public void sendChatMessage(String string)
 	{
-		#if MC_VER <= MC_1_12_2 EntityPlayerSP #else LocalPlayer #endif player = this.getPlayer();
+		#if MC_VER <= MC_1_12_2
+		EntityPlayerSP player = this.getPlayer();
+		#else
+		LocalPlayer player = this.getPlayer();
+		#endif
 		if (player == null)
 		{
 			return;
@@ -284,7 +337,11 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	@Override
 	public void sendOverlayMessage(String string)
 	{
-		#if MC_VER <= MC_1_12_2 EntityPlayerSP #else LocalPlayer #endif player = this.getPlayer();
+		#if MC_VER <= MC_1_12_2
+		EntityPlayerSP player = this.getPlayer();
+		#else
+		LocalPlayer player = this.getPlayer();
+		#endif
 		if (player == null)
 		{
 			return;
@@ -395,7 +452,12 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	@Override
 	public IProfilerWrapper getProfiler()
 	{
-		#if MC_VER <= MC_1_12_2 Profiler #else ProfilerFiller #endif profiler;
+		#if MC_VER <= MC_1_12_2
+		Profiler profiler;
+		#else
+		ProfilerFiller profiler;
+		#endif
+		
 		#if MC_VER <= MC_1_12_2
 		profiler = MINECRAFT.profiler;
 		#elif MC_VER < MC_1_21_3
@@ -438,7 +500,14 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	}
 	
 	@Override
-	public void executeOnRenderThread(Runnable runnable) { MINECRAFT.#if MC_VER <= MC_1_12_2 addScheduledTask #else execute #endif(runnable); }
+	public void executeOnRenderThread(Runnable runnable)
+	{
+		#if MC_VER <= MC_1_12_2
+		MINECRAFT.addScheduledTask(runnable); 
+		#else
+		MINECRAFT.execute(runnable); 
+		#endif
+	}
 	
 	@Override
 	public void showDialog(String title, String message, String dialogType, String iconType)
@@ -454,7 +523,14 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	//region
 	
 	@Override
-	public Object getOptionsObject() { return MINECRAFT.#if MC_VER <= MC_1_12_2 gameSettings #else options #endif; }
+	public Object getOptionsObject()
+	{
+		#if MC_VER <= MC_1_12_2
+		return MINECRAFT.gameSettings;
+		#else
+		return MINECRAFT.options;
+		#endif
+	}
 	
 	//endregion
 	
@@ -469,13 +545,24 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	public boolean isDedicatedServer() { return false; }
 	
 	@Override
-	public File getInstallationDirectory() { return MINECRAFT.#if MC_VER <= MC_1_12_2 gameDir #else gameDirectory #endif; }
+	public File getInstallationDirectory()
+	{
+		#if MC_VER <= MC_1_12_2
+		return MINECRAFT.gameDir;
+		#else
+		return MINECRAFT.gameDirectory;
+		#endif
+	}
 	
 	@Override
 	public int getPlayerCount()
 	{
 		// can be null if the server hasn't finished booting up yet
-		if (MINECRAFT.#if MC_VER <= MC_1_12_2 getIntegratedServer() #else getSingleplayerServer() #endif == null)
+		#if MC_VER <= MC_1_12_2
+		if (MINECRAFT.getIntegratedServer() == null)
+		#else
+		if (MINECRAFT.getSingleplayerServer() == null)
+		#endif
 		{
 			return 1;
 		}

@@ -32,10 +32,23 @@ public class ConfigGuiInfo implements IConfigGuiInfo
 	 */
 
 	@Nullable
-	public #if MC_VER <= MC_1_12_2 ITextComponent #else Component #endif errorMessage;
+	#if MC_VER <= MC_1_12_2
+	public ITextComponent errorMessage;
+	#else
+	public Component errorMessage;
+	#endif
 	
-	public BiFunction<#if MC_VER <= MC_1_12_2 GuiTextField #else EditBox #endif,#if MC_VER <= MC_1_12_2 GuiButton #else Button #endif, Predicate<String>> tooltipFunction;
+	#if MC_VER <= MC_1_12_2
+	public BiFunction<GuiTextField, GuiButton, Predicate<String>> tooltipFunction;
+	#else
+	public BiFunction<EditBox, Button , Predicate<String>> tooltipFunction;
+	#endif
+	
 	/** determines which options the button will show */
-	public AbstractMap.SimpleEntry<#if MC_VER <= MC_1_12_2 OnPressed #else Button.OnPress #endif, Function<Object, #if MC_VER <= MC_1_12_2 ITextComponent #else Component #endif>> buttonOptionMap;
+	#if MC_VER <= MC_1_12_2
+	public AbstractMap.SimpleEntry<OnPressed, Function<Object, ITextComponent>> buttonOptionMap;
+	#else
+	public AbstractMap.SimpleEntry<Button.OnPress, Function<Object, Component>> buttonOptionMap;
+	#endif
 	
 }

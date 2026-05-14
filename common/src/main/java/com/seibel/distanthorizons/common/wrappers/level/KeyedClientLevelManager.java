@@ -26,14 +26,18 @@ public class KeyedClientLevelManager implements IKeyedClientLevelManager
 	//=============//
 	// constructor //
 	//=============//
+	//region
 	
 	private KeyedClientLevelManager() { }
+	
+	//endregion
 	
 	
 	
 	//======================//
 	// level override logic //
 	//======================//
+	//region
 	
 	@Override
 	@Nullable
@@ -60,6 +64,9 @@ public class KeyedClientLevelManager implements IKeyedClientLevelManager
 	public boolean isEnabled() { return this.enabled; }
 	@Override
 	public void disable() { this.enabled = false; }
+	
+	//endregion
+	
 	
 	
 }

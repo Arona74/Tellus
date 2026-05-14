@@ -23,10 +23,17 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.List;
 
-public class DhScreen extends #if MC_VER <= MC_1_12_2 GuiScreen #else Screen #endif
+#if MC_VER <= MC_1_12_2
+public class DhScreen extends GuiScreen
+#else
+public class DhScreen extends Screen
+#endif
 {
 	#if MC_VER <= MC_1_12_2
 	protected ITextComponent title;
+	#endif
+	
+	#if MC_VER <= MC_1_12_2
 	protected DhScreen(ITextComponent title)
 	{
 		this.title = title;
@@ -40,7 +47,11 @@ public class DhScreen extends #if MC_VER <= MC_1_12_2 GuiScreen #else Screen #en
 	
 	// addRenderableWidget in 1.17 and over
 	// addButton in 1.16 and below
-	protected #if MC_VER <= MC_1_12_2 GuiButton #else Button #endif addBtn(#if MC_VER <= MC_1_12_2 GuiButton #else Button #endif button)
+	#if MC_VER <= MC_1_12_2
+	protected GuiButton addBtn(GuiButton button)
+	#else
+	protected Button addBtn(Button button)
+	#endif
 	{
 		#if MC_VER <= MC_1_12_2
 		this.buttonList.add(button);
@@ -53,7 +64,6 @@ public class DhScreen extends #if MC_VER <= MC_1_12_2 GuiScreen #else Screen #en
 	}
 	
 	#if MC_VER <= MC_1_12_2
-	
 	@Override
 	protected void actionPerformed(GuiButton button)
 	{

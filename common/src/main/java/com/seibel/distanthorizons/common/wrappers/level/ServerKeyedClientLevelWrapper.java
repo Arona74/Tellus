@@ -21,6 +21,7 @@ public class ServerKeyedClientLevelWrapper extends ClientLevelWrapper implements
 	//=============//
 	// constructor //
 	//=============//
+	//region
 	
 	#if MC_VER <= MC_1_12_2
 	public ServerKeyedClientLevelWrapper(WorldClient level, String serverKey, String serverLevelKey)
@@ -33,19 +34,25 @@ public class ServerKeyedClientLevelWrapper extends ClientLevelWrapper implements
 		this.serverLevelKey = serverLevelKey;
 	}
 	
+	//endregion
 	
-	@Override
-	public String getServerKey() { return this.serverKey; }
+	
 	
 	//======================//
 	// level identification //
 	//======================//
+	//region
+	
+	@Override
+	public String getServerKey() { return this.serverKey; }
 	
 	@Override
 	public String getServerLevelKey() { return this.serverLevelKey; }
 	
 	@Override
 	public String getDhIdentifier() { return this.getServerLevelKey(); }
+	
+	//endregion
 	
 	
 	

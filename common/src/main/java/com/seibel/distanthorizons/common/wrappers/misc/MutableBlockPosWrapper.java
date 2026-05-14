@@ -16,19 +16,27 @@ public class MutableBlockPosWrapper implements IMutableBlockPosWrapper
 	//=============//
 	// constructor //
 	//=============//
+	//region
 	
 	public MutableBlockPosWrapper()
 	{
 		this.pos = new BlockPos.MutableBlockPos(); 
 	}
 	
+	//endregion
+	
 	
 	
 	//===========//
 	// overrides //
 	//===========//
+	//region
 	
 	@Override 
 	public Object getWrappedMcObject() { return this.pos; }
+	
+	//endregion
+	
+	
 	
 }

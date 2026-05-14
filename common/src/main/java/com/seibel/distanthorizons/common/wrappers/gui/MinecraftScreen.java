@@ -45,7 +45,11 @@ public class MinecraftScreen
 	
 	private static class ConfigScreenRenderer extends DhScreen
 	{
-		private final #if MC_VER <= MC_1_12_2 GuiScreen #else Screen #endif parent;
+		#if MC_VER <= MC_1_12_2
+		private final GuiScreen parent;
+		#else
+		private final Screen parent;
+		#endif
 		private ConfigListWidget configListWidget;
 		private AbstractScreen screen;
 		
@@ -60,9 +64,11 @@ public class MinecraftScreen
 		{ return net.minecraft.network.chat.Component.translatable(str, args); }
         #endif
 		
-		protected ConfigScreenRenderer(
-			#if MC_VER <= MC_1_12_2 GuiScreen #else Screen #endif parent, 
-			AbstractScreen screen, String translationName)
+		#if MC_VER <= MC_1_12_2
+		protected ConfigScreenRenderer(GuiScreen parent, AbstractScreen screen, String translationName)
+		#else
+		protected ConfigScreenRenderer(Screen parent, AbstractScreen screen, String translationName)
+		#endif
 		{
 			super(translate(translationName));
 			#if MC_VER <= MC_1_12_2
@@ -89,7 +95,6 @@ public class MinecraftScreen
 			super.init();
 			#endif
 			
-			
 			#if MC_VER <= MC_1_12_2
 			this.screen.width = Display.getWidth();
 			this.screen.height = Display.getHeight();
@@ -102,16 +107,21 @@ public class MinecraftScreen
 			this.screen.scaledHeight = this.height;
 			this.screen.init(); // Init our own config screen
 			
-			this.configListWidget = new ConfigListWidget(#if MC_VER <= MC_1_12_2 this.mc #else this.minecraft #endif, this.width, this.height, 0, 0, 25); // Select the area to tint
+			#if MC_VER <= MC_1_12_2
+			this.configListWidget = new ConfigListWidget(this.mc, this.width, this.height, 0, 0, 25); // Select the area to tint
+			#else
+			this.configListWidget = new ConfigListWidget(this.minecraft, this.width, this.height, 0, 0, 25); // Select the area to tint
+			#endif
 			
-			#if MC_VER > MC_1_12_2
-			#if MC_VER < MC_1_20_6 // no background is rendered in MC 1.20.6+
+			#if MC_VER <= MC_1_12_2
+			#elif MC_VER < MC_1_20_6 // no background is rendered in MC 1.20.6+
 			if (this.minecraft != null && this.minecraft.level != null) // Check if in game
 			{
 				this.configListWidget.setRenderBackground(false); // Disable from rendering
 			}
 			#endif
 			
+			#if MC_VER > MC_1_12_2
 			this.addWidget(this.configListWidget); // Add the tint to the things to be rendered
 			#endif
 		}
@@ -240,7 +250,11 @@ public class MinecraftScreen
 		#endif
 	}
 	
-	public static class ConfigListWidget extends #if MC_VER <= MC_1_12_2 GuiListExtended #else ContainerObjectSelectionList #endif
+	#if MC_VER <= MC_1_12_2
+	public static class ConfigListWidget extends GuiListExtended
+	#else
+	public static class ConfigListWidget extends ContainerObjectSelectionList
+	#endif
 	{
 		public ConfigListWidget(Minecraft minecraftClient, int canvasWidth, int canvasHeight, int topMargin, int botMargin, int itemSpacing)
 		{

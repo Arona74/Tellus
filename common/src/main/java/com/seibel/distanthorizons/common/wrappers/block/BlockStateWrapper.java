@@ -547,6 +547,7 @@ public class BlockStateWrapper implements IBlockStateWrapper
 		{
 			return EDhApiBlockMaterial.LEAVES;
 		}
+		
 		//endregion
 		
 		
@@ -639,7 +640,7 @@ public class BlockStateWrapper implements IBlockStateWrapper
 		#if MC_VER <= MC_1_18_2
 		isCopperSounding = false;
 		#elif MC_VER <= MC_1_20_2
-		isCopperSounding = blockState.getSoundType() == SoundType.COPPER
+		isCopperSounding = blockState.getSoundType() == SoundType.COPPER;
 		#else
 		isCopperSounding
 		    = blockState.getSoundType() == SoundType.COPPER

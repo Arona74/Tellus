@@ -29,8 +29,11 @@ public class GuiHelper
 	public static final Map<GuiButton, OnPressed> HANDLER_BY_BUTTON = new HashMap<>();
 	#endif
 	
-	public static #if MC_VER <= MC_1_12_2 GuiButton #else Button #endif MakeBtn(#if MC_VER <= MC_1_12_2 ITextComponent #else Component #endif base, int posX, int posZ, int width, int height,
-		#if MC_VER <= MC_1_12_2 OnPressed #else Button.OnPress #endif action)
+	#if MC_VER <= MC_1_12_2
+	public static GuiButton MakeBtn(ITextComponent base, int posX, int posZ, int width, int height, OnPressed action)
+	#else
+	public static Button MakeBtn(Component base, int posX, int posZ, int width, int height, Button.OnPress action)
+	#endif
 	{
 		#if MC_VER <= MC_1_12_2
 		GuiButton button = new GuiButton(HANDLER_BY_BUTTON.size(), posX, posZ, width, height, base.getFormattedText());
@@ -43,7 +46,11 @@ public class GuiHelper
         #endif
 	}
 	
-	public static #if MC_VER <= MC_1_12_2 ITextComponent #else MutableComponent #endif TextOrLiteral(String text)
+	#if MC_VER <= MC_1_12_2
+	public static ITextComponent TextOrLiteral(String text)
+	#else
+	public static MutableComponent TextOrLiteral(String text)
+	#endif
 	{
 		#if MC_VER <= MC_1_12_2
 		return new TextComponentString(text);
@@ -54,7 +61,11 @@ public class GuiHelper
         #endif
 	}
 	
-	public static #if MC_VER <= MC_1_12_2 ITextComponent #else MutableComponent #endif TextOrTranslatable(String text)
+	#if MC_VER <= MC_1_12_2
+	public static ITextComponent TextOrTranslatable(String text)
+	#else
+	public static MutableComponent TextOrTranslatable(String text)
+	#endif
 	{
 		#if MC_VER <= MC_1_12_2
 		return new TextComponentString(text);
@@ -65,7 +76,11 @@ public class GuiHelper
         #endif
 	}
 	
-	public static #if MC_VER <= MC_1_12_2 ITextComponent #else MutableComponent #endif Translatable(String text, Object... args)
+	#if MC_VER <= MC_1_12_2
+	public static ITextComponent Translatable(String text, Object... args)
+	#else
+	public static MutableComponent Translatable(String text, Object... args)
+	#endif
 	{
 		#if MC_VER <= MC_1_12_2
 		return new TextComponentTranslation(text, args);
@@ -93,7 +108,11 @@ public class GuiHelper
 	public static void SetY(GuiTextField textField, int y) { textField.y = y; }
 	#endif
 	
-	public static void SetY(#if MC_VER <= MC_1_12_2 GuiButton #else AbstractWidget #endif widget, int y)
+	#if MC_VER <= MC_1_12_2
+	public static void SetY(GuiButton widget, int y)
+	#else
+	public static void SetY(AbstractWidget widget, int y)
+	#endif
 	{
         #if MC_VER < MC_1_19_4
 		widget.y = y;

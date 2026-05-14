@@ -173,7 +173,11 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		{
 			return false;
 		}
-		else if (MC.player.#if MC_VER <= MC_1_12_2 getActivePotionMap() #else getActiveEffectsMap() #endif == null)
+		#if MC_VER <= MC_1_12_2
+		else if (MC.player.getActivePotionMap() == null)
+		#else
+		else if (MC.player.getActiveEffectsMap() == null)
+		#endif
 		{
 			return false;
 		}
