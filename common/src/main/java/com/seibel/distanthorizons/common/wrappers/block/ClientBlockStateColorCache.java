@@ -614,7 +614,7 @@ public class ClientBlockStateColorCache
 	public int getColor(BiomeWrapper biomeWrapper, FullDataSourceV2 fullDataSource, DhBlockPos blockPos)
 	{
 		// only get the tint if the block needs to be tinted
-		int tintColor = INVALID_COLOR;
+		int tintColor = ClientBlockStateColorCache.INVALID_COLOR;
 		
 		if (this.needPostTinting)
 		{
@@ -656,7 +656,7 @@ public class ClientBlockStateColorCache
 					BlockColors blockColors = Minecraft.getMinecraft().getBlockColors();
 					tintColor = blockColors.colorMultiplier(blockState, world, mcPos, this.tintIndex);
 					
-					if (tintColor == -1)
+					if (tintColor == ClientBlockStateColorCache.INVALID_COLOR)
 					{
 						tintColor = blockColors.getColor(blockState, world, mcPos);
 					}
@@ -696,13 +696,13 @@ public class ClientBlockStateColorCache
 							{
 								BlockPos mcPos = McObjectConverter.Convert(blockPos);
 								tintColor = tintSource.colorInWorld(this.blockState, tintOverride, mcPos);
-								if (tintColor == -1)
+								if (tintColor == ClientBlockStateColorCache.INVALID_COLOR)
 								{
 									tintColor = tintSource.colorAsTerrainParticle(this.blockState, tintOverride, mcPos);
 								}
 							}
 							
-							if (tintColor == -1)
+							if (tintColor == ClientBlockStateColorCache.INVALID_COLOR)
 							{
 								// no color found, use the base color
 								tintColor = ClientBlockStateColorCache.INVALID_COLOR;
@@ -746,7 +746,7 @@ public class ClientBlockStateColorCache
 					tintOverride.update(biomeWrapper, this.blockStateWrapper, fullDataSource, this.clientLevelWrapper);
 					
 					tintColor = tintOverride.tryGetBlockTint(new DhBlockPosMutable(blockPos));
-					if (tintColor == AbstractDhTintGetter.INVALID_COLOR)
+					if (tintColor == ClientBlockStateColorCache.INVALID_COLOR)
 					{
 						tintColor = Minecraft.getInstance()
 								.getBlockColors()
@@ -772,7 +772,7 @@ public class ClientBlockStateColorCache
 		
 		
 		int returnColor;
-		if (tintColor != INVALID_COLOR)
+		if (tintColor != ClientBlockStateColorCache.INVALID_COLOR)
 		{
 			returnColor = ColorUtil.multiplyARGBwithRGB(this.baseColor, tintColor);
 		}
