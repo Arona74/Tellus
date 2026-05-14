@@ -696,9 +696,7 @@ public class ClientBlockStateColorCache
 				if (!BLOCK_STATES_THAT_NEED_LEVEL.contains(this.blockState))
 				{
 					try
-					{
-						
-												
+					{					
 						TintWithoutLevelOverrider tintOverride = TintWithoutLevelOverrideGetter.get();
 						tintOverride.update(biomeWrapper, this.blockStateWrapper, fullDataSource, this.clientLevelWrapper);
 						
@@ -708,14 +706,14 @@ public class ClientBlockStateColorCache
 						{
 							// one or more tint values weren't calculated,
 							// we need MC's color resolver
-						#if MC_VER <= MC_1_21_11
-						tintColor = Minecraft.getInstance()
+							#if MC_VER <= MC_1_21_11
+							tintColor = Minecraft.getInstance()
 								.getBlockColors()
 								.getColor(this.blockState,
 										tintOverride, // tintOverride will save the result of this query to speed up future queries
 										McObjectConverter.Convert(blockPos),
 										this.tintIndex);
-						#else
+							#else
 							BlockTintSource tintSource = Minecraft.getInstance()
 								.getBlockColors()
 								.getTintSource(this.blockState, this.tintIndex);
@@ -732,12 +730,6 @@ public class ClientBlockStateColorCache
 								}
 							}
 							
-							if (tintColor == ClientBlockStateColorCache.INVALID_COLOR)
-							{
-								// no color found, use the base color
-								tintColor = ClientBlockStateColorCache.INVALID_COLOR;
-							}
-							
 							// save this color to speed up future queries
 							TintWithoutLevelOverrider.setStaticColor(this.blockStateWrapper, biomeWrapper, tintColor);
 							// try to get the blended color with this new information
@@ -747,18 +739,18 @@ public class ClientBlockStateColorCache
 					}
 					catch (Exception e)
 					{
-					#if MC_VER <= MC_1_21_11
-					// this exception generally occurs if the tint requires other blocks besides itself
-					LOGGER.debug("Unable to use ["+ TintWithoutLevelOverrider.class.getSimpleName()+"] to get the block tint for block: [" + this.blockState + "] and biome: [" + biomeWrapper + "] at pos: " + blockPos + ". Error: [" + e.getMessage() + "]. Attempting to use backup method...", e);
-					BLOCK_STATES_THAT_NEED_LEVEL.add(this.blockState);
-					#else
+						#if MC_VER <= MC_1_21_11
+						// this exception generally occurs if the tint requires other blocks besides itself
+						LOGGER.debug("Unable to use ["+ TintWithoutLevelOverrider.class.getSimpleName()+"] to get the block tint for block: [" + this.blockState + "] and biome: [" + biomeWrapper + "] at pos: " + blockPos + ". Error: [" + e.getMessage() + "]. Attempting to use backup method...", e);
+						BLOCK_STATES_THAT_NEED_LEVEL.add(this.blockState);
+						#else
 						// only display the error once per block/biome type to reduce log spam
 						if (!BROKEN_BLOCK_STATES.contains(this.blockState))
 						{
 							LOGGER.warn("Failed to get block color for block: [" + this.blockState + "] and biome: [" + biomeWrapper + "] at pos: " + blockPos + ". Error: [" + e.getMessage() + "]. Note: future errors for this block/biome will be ignored.", e);
 							BROKEN_BLOCK_STATES.add(this.blockState);
 						}
-					#endif
+						#endif
 					}
 				}
 				#endif
