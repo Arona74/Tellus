@@ -289,7 +289,14 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 	}
 	
 	@Override 
-	public void clearBlockColorCache() { this.blockColorCacheByBlockState.clear(); }
+	public void clearBlockColorCache() 
+	{
+		this.blockColorCacheByBlockState.clear();
+		
+		// this technically only needs to be called once globally, but it's easier
+		// to handle here statically
+		ClientBlockStateColorCache.clearCachedTints();
+	}
 	
 	private IDimensionTypeWrapper dimensionTypeWrapper = null;
 	@Override

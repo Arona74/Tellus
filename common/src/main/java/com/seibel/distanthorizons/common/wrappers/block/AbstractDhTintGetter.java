@@ -345,9 +345,9 @@ public abstract class AbstractDhTintGetter implements BlockAndTintGetter
 	
 	
 	
-	//===========//
-	// set color //
-	//===========//
+	//=================//
+	// static handlers //
+	//=================//
 	//region
 	
 	/** 
@@ -359,6 +359,8 @@ public abstract class AbstractDhTintGetter implements BlockAndTintGetter
 		BlockBiomeWrapperPair pair = BlockBiomeWrapperPair.get(blockStateWrapper, biomeWrapper);
 		COLOR_BY_BLOCK_BIOME_PAIR.put(pair, colorInt);
 	}
+	
+	public static void clear() { COLOR_BY_BLOCK_BIOME_PAIR.clear(); }
 	
 	//endregion
 	

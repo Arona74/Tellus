@@ -828,6 +828,23 @@ public class ClientBlockStateColorCache
 	
 	
 	
+	//=========//
+	// cleanup //
+	//=========//
+	//region
+	
+	public static void clearCachedTints() 
+	{
+		#if MC_VER <= MC_1_12_2
+		#else
+		AbstractDhTintGetter.clear(); 
+		#endif
+	}
+	
+	//endregion
+	
+	
+	
 	//================//
 	// helper classes //
 	//================//
