@@ -570,12 +570,6 @@ class DhConfigScreen extends DhScreen
 			{
 				configEntry.uiSetWithoutSaving(configEntry.getDefaultValue());
 				this.reload = true;
-				
-				#if MC_VER <= MC_1_12_2
-				Objects.requireNonNull(this.mc).displayGuiScreen(ClassicConfigGUI.getScreen(this.parent, this.category));
-				#else
-				Objects.requireNonNull(this.minecraft).setScreen(this.parent);
-				#endif
 			};
 			
 			int resetButtonPosX = this.width
