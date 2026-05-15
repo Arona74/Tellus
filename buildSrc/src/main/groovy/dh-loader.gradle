@@ -131,7 +131,7 @@ if (isNotCommonProject) {
                     'MixinConfigs': "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json",
                     'FMLCorePlugin': 'com.seibel.distanthorizons.cleanroom.DistantHorizonsLoadingPlugin',
                     'FMLCorePluginContainsFMLMod': true,
-                    'FMLAT': "src/main/resources/${gradle.ext.accessWidenerVersion}.distanthorizons_at.cfg"
+                    'FMLAT': "${gradle.ext.accessWidenerVersion}.distanthorizons_at.cfg"
                 )
             }
         }
@@ -188,6 +188,7 @@ if (isNotCommonProject) {
         if (gradle.ext.minecraft_version.equals("1.12.2")) {
             cleanroom {
                 loader gradle.ext.cleanroom_loader_version
+                accessTransformer  project.file("src/main/resources/${gradle.ext.accessWidenerVersion}.distanthorizons_at.cfg")
             }
         } else {
             fabric {

@@ -1,6 +1,5 @@
 package com.seibel.distanthorizons.common.commonMixins;
 
-#if MC_VER > MC_1_12_2
 import com.seibel.distanthorizons.api.enums.config.EDhApiUpdateBranch;
 import com.seibel.distanthorizons.common.wrappers.gui.updater.UpdateModScreen;
 import com.seibel.distanthorizons.core.config.Config;
@@ -13,7 +12,7 @@ import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.wrapperInterfaces.IVersionConstants;
 import net.minecraft.client.Minecraft;
 #if MC_VER <= MC_1_12_2
-
+import net.minecraft.client.gui.GuiMainMenu;
 #else
 import net.minecraft.client.gui.screens.TitleScreen;
 #endif
@@ -23,8 +22,11 @@ public class DhUpdateScreenBase
 {
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
 	
-	private static final Minecraft MC = Minecraft #if MC_VER <= MC_1_12_2 .getMinecraft() #else .getInstance() #endif;
-	
+	#if MC_VER <= MC_1_12_2
+	private static final Minecraft MC = Minecraft.getMinecraft();
+	#else
+	private static final Minecraft MC = Minecraft.getInstance();
+	#endif
 	
 	public static void tryShowUpdateScreenAndRunAutoUpdateStartup(Runnable runnable)
 	{
@@ -73,10 +75,17 @@ public class DhUpdateScreenBase
 			
 			try
 			{
+				#if MC_VER <= MC_1_12_2
+				MC.displayGuiScreen(new UpdateModScreen(
+					new GuiMainMenu(),
+					versionId
+				));
+				#else
 				MC.setScreen(new UpdateModScreen(
 					new TitleScreen(false),
 					versionId
 				));
+				#endif
 			}
 			catch (Exception e)
 			{
@@ -89,4 +98,3 @@ public class DhUpdateScreenBase
 	}
 	
 }
-#endif

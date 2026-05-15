@@ -12,19 +12,15 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import com.seibel.distanthorizons.api.enums.config.DisallowSelectingViaConfigGui;
-import com.seibel.distanthorizons.common.wrappers.gui.DhScreen;
-import com.seibel.distanthorizons.common.wrappers.gui.GuiHelper;
-import com.seibel.distanthorizons.common.wrappers.gui.TexturedButtonWidget;
+import com.seibel.distanthorizons.common.wrappers.gui.*;
 import com.seibel.distanthorizons.common.wrappers.gui.config.ConfigGuiInfo;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftClientWrapper;
 import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.config.ConfigHandler;
 import com.seibel.distanthorizons.core.config.types.*;
 #if MC_VER <= MC_1_12_2
-import com.seibel.distanthorizons.common.wrappers.gui.OnPressed;
-#else
-import com.seibel.distanthorizons.common.wrappers.gui.updater.ChangelogScreen;
 #endif
+import com.seibel.distanthorizons.common.wrappers.gui.updater.ChangelogScreen;
 import com.seibel.distanthorizons.core.config.types.enums.EConfigCommentTextPosition;
 import com.seibel.distanthorizons.core.config.types.enums.EConfigValidity;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
@@ -94,6 +90,10 @@ class DhConfigScreen extends DhScreen
 	private static final String TRANSLATION_PREFIX = ModInfo.ID + ".config.";
 	
 	private static final MinecraftClientWrapper MC_CLIENT = MinecraftClientWrapper.INSTANCE;
+	
+	#if MC_VER <= MC_1_12_2
+	private static final int changelogButton_id = 101;
+	#endif
 	
 	#if MC_VER <= MC_1_12_2
 	private final GuiScreen parent;
@@ -176,13 +176,15 @@ class DhConfigScreen extends DhScreen
 			ConfigHandler.INSTANCE.configFileHandler.loadFromFile();
 		}
 		
-		#if MC_VER > MC_1_12_2
 		// Changelog button
 		if (Config.Client.Advanced.AutoUpdater.enableAutoUpdater.get()
 			// we only have changelogs for stable builds		
 			&& !ModInfo.IS_DEV_BUILD)
 		{
 			this.addBtn(new TexturedButtonWidget(
+				#if MC_VER <= MC_1_12_2
+				changelogButton_id,
+				#endif
 				// Where the button is on the screen
 				this.width - 28, this.height - 28,
 				// Width and height of the button
@@ -200,6 +202,7 @@ class DhConfigScreen extends DhScreen
 				#endif
 				20, 20,
 				// Create the button and tell it where to go
+				#if MC_VER > MC_1_12_2
 				(buttonWidget) -> {
 					ChangelogScreen changelogScreen = new ChangelogScreen(this);
 					if (changelogScreen.usable)
@@ -211,11 +214,15 @@ class DhConfigScreen extends DhScreen
 						LOGGER.warn("Changelog was not able to open");
 					}
 				},
+				#endif
 				// Add a title to the button
+				#if MC_VER <= MC_1_12_2
+				Translatable(ModInfo.ID + ".updater.title").getFormattedText()
+				#else
 				Translatable(ModInfo.ID + ".updater.title")
+				#endif
 			));
 		}
-		#endif
 		
 		
 		// back button
@@ -1004,6 +1011,24 @@ class DhConfigScreen extends DhScreen
 	
 	#if MC_VER <= MC_1_12_2
 	@Override
+	protected void actionPerformed(GuiButton button)
+	{
+		super.actionPerformed(button);
+		if(button.id == changelogButton_id)
+		{
+			ChangelogScreen changelogScreen = new ChangelogScreen(this);
+			if (changelogScreen.usable)
+			{
+				Minecraft.getMinecraft().displayGuiScreen(changelogScreen);
+			}
+			else
+			{
+				LOGGER.warn("Changelog was not able to open");
+			}
+		}
+	}
+	
+	@Override
 	protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws java.io.IOException
 	{
 		super.mouseClicked(mouseX, mouseY, mouseButton);
@@ -1077,7 +1102,9 @@ class DhConfigScreen extends DhScreen
 	#endif
 	{
 		ConfigHandler.INSTANCE.configFileHandler.saveToFile();
-		#if MC_VER > MC_1_12_2
+		#if MC_VER <= MC_1_12_2
+		// Handled by button to avoid recursive loop
+		#else
 		Objects.requireNonNull(this.minecraft).setScreen(this.parent);
 		#endif
 		ClassicConfigGUI.CONFIG_CORE_INTERFACE.onScreenChangeListenerList.forEach((listener) -> listener.run());

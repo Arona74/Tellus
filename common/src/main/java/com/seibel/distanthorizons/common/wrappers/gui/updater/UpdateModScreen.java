@@ -1,5 +1,4 @@
 package com.seibel.distanthorizons.common.wrappers.gui.updater;
-#if MC_VER > MC_1_12_2
 import com.seibel.distanthorizons.api.enums.config.EDhApiUpdateBranch;
 import com.seibel.distanthorizons.common.wrappers.gui.DhScreen;
 import com.seibel.distanthorizons.common.wrappers.gui.TexturedButtonWidget;
@@ -10,10 +9,14 @@ import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.jar.installer.ModrinthGetter;
 import com.seibel.distanthorizons.core.jar.updater.SelfUpdater;
 import com.seibel.distanthorizons.core.logging.DhLogger;
-
+#if MC_VER <= MC_1_12_2
+import net.minecraft.client.gui.GuiScreen;
+#else
 import net.minecraft.client.gui.screens.Screen;
+#endif
 
-#if MC_VER < MC_1_20_1
+#if MC_VER <= MC_1_12_2
+#elif MC_VER < MC_1_20_1
 import com.mojang.blaze3d.vertex.PoseStack;
 #elif MC_VER <= MC_1_21_11
 import net.minecraft.client.gui.GuiGraphics;
@@ -21,7 +24,9 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 #endif
 
-#if MC_VER <= MC_1_21_10
+#if MC_VER <= MC_1_12_2
+import net.minecraft.util.ResourceLocation;
+#elif MC_VER <= MC_1_21_10
 import net.minecraft.resources.ResourceLocation;
 #else
 import net.minecraft.resources.Identifier;
@@ -40,15 +45,26 @@ public class UpdateModScreen extends DhScreen
 {
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
 	
-	
+	#if MC_VER <= MC_1_12_2
+	private GuiScreen parent;
+	#else
 	private Screen parent;
+	#endif
 	private String newVersionID;
 	
 	private String currentVer;
 	private String nextVer;
 	
-	
+	#if MC_VER <= MC_1_12_2
+	private static final int logoButton_id = 100;
+	private static final int changelogButton_id = 101;
+	#endif
+
+	#if MC_VER <= MC_1_12_2
+	public UpdateModScreen(GuiScreen parent, String newVersionID) throws IllegalArgumentException
+	#else
 	public UpdateModScreen(Screen parent, String newVersionID) throws IllegalArgumentException
+	#endif
 	{
 		super(Translatable(ModInfo.ID + ".updater.title"));
 		this.parent = parent;
@@ -76,10 +92,17 @@ public class UpdateModScreen extends DhScreen
 	}
 	
 	@Override
+	#if MC_VER <= MC_1_12_2
+	public void initGui()
+	#else
 	protected void init()
+	#endif
 	{
+		#if MC_VER <= MC_1_12_2
+		super.initGui();
+		#else
 		super.init();
-		
+		#endif
 		
 		try
 		{
@@ -87,6 +110,9 @@ public class UpdateModScreen extends DhScreen
 			
 			// Logo image
 			this.addBtn(new TexturedButtonWidget(
+					#if MC_VER <= MC_1_12_2
+					logoButton_id,
+					#endif
 					// Where the button is on the screen
 					this.width / 2 - 95, this.height / 2 - 110,
 					// Width and height of the button
@@ -105,9 +131,15 @@ public class UpdateModScreen extends DhScreen
 					195, 65,
 					// Create the button and tell it where to go
 					// For now it goes to the client option by default
+					#if MC_VER > MC_1_12_2
 					(buttonWidget) -> LOGGER.info("Nice, you found an Easter egg :)"),
+					#endif
 					// Add a title to the button
+					#if MC_VER <= MC_1_12_2
+					Translatable(ModInfo.ID + ".updater.title").getFormattedText(),
+					#else
 					Translatable(ModInfo.ID + ".updater.title"),
+					#endif
 					// Dont render the background of the button
 					false
 			));
@@ -120,6 +152,9 @@ public class UpdateModScreen extends DhScreen
 		if (!ModInfo.IS_DEV_BUILD)
 		{
 			this.addBtn(new TexturedButtonWidget(
+				#if MC_VER <= MC_1_12_2
+				changelogButton_id,
+				#endif
 				// Where the button is on the screen
 				this.width / 2 - 97, this.height / 2 + 8,
 				// Width and height of the button
@@ -137,9 +172,15 @@ public class UpdateModScreen extends DhScreen
 				#endif
 				20, 20,
 				// Create the button and tell it where to go
+				#if MC_VER > MC_1_12_2
 				(buttonWidget) -> Objects.requireNonNull(this.minecraft).setScreen(new ChangelogScreen(this, this.newVersionID)),
+				#endif
 				// Add a title to the button
+				#if MC_VER <= MC_1_12_2
+				Translatable(ModInfo.ID + ".updater.title").getFormattedText()
+				#else
 				Translatable(ModInfo.ID + ".updater.title")
+				#endif
 			));
 		}
 		
@@ -147,32 +188,50 @@ public class UpdateModScreen extends DhScreen
 		this.addBtn( // Update
 				MakeBtn(Translatable(ModInfo.ID + ".updater.update"), this.width / 2 - 75, this.height / 2 + 8, 150, 20, (btn) -> {
 					SelfUpdater.updateMod();
+					#if MC_VER <= MC_1_12_2
+					Objects.requireNonNull(this.mc).displayGuiScreen(this.parent);
+					#else
 					this.onClose();
+					#endif
 				})
 		);
 		this.addBtn( // Silent update
 				MakeBtn(Translatable(ModInfo.ID + ".updater.silent"), this.width / 2 - 75, this.height / 2 + 30, 150, 20, (btn) -> {
 					Config.Client.Advanced.AutoUpdater.enableSilentUpdates.set(true);
 					SelfUpdater.updateMod();
+					#if MC_VER <= MC_1_12_2
+					Objects.requireNonNull(this.mc).displayGuiScreen(this.parent);
+					#else
 					this.onClose();
+					#endif
 				})
 		);
 		this.addBtn( // Later (not now)
 				MakeBtn(Translatable(ModInfo.ID + ".updater.later"), this.width / 2 + 2, this.height / 2 + 70, 100, 20, (btn) -> {
+					#if MC_VER <= MC_1_12_2
+					Objects.requireNonNull(this.mc).displayGuiScreen(this.parent);
+					#else
 					this.onClose();
+					#endif
 				})
 		);
 		this.addBtn( // Never
 				MakeBtn(Translatable(ModInfo.ID + ".updater.never"), this.width / 2 - 102, this.height / 2 + 70, 100, 20, (btn) -> {
 					Config.Client.Advanced.AutoUpdater.enableAutoUpdater.set(false);
+					#if MC_VER <= MC_1_12_2
+					Objects.requireNonNull(this.mc).displayGuiScreen(this.parent);
+					#else
 					this.onClose();
+					#endif
 				})
 		);
 		
 	}
 	
 	@Override
-    #if MC_VER < MC_1_20_1
+	#if MC_VER <= MC_1_12_2
+	public void drawScreen(int mouseX, int mouseY, float delta)
+	#elif MC_VER < MC_1_20_1
 	public void render(PoseStack matrices, int mouseX, int mouseY, float delta)
     #elif MC_VER <= MC_1_21_11
 	public void render(GuiGraphics matrices, int mouseX, int mouseY, float delta)
@@ -180,7 +239,9 @@ public class UpdateModScreen extends DhScreen
 	public void extractRenderState(GuiGraphicsExtractor matrices, int mouseX, int mouseY, float delta)
     #endif
 	{
-		#if MC_VER < MC_1_20_2
+		#if MC_VER <= MC_1_12_2
+		this.drawDefaultBackground(); // Render background
+		#elif MC_VER < MC_1_20_2
 		this.renderBackground(matrices); // Render background
 		#elif MC_VER < MC_1_21_6
 		this.renderBackground(matrices, mouseX, mouseY, delta); // Render background
@@ -188,14 +249,19 @@ public class UpdateModScreen extends DhScreen
 		// background blur is already being rendered, rendering again causes the game to crash
 		#endif
 		
-		#if MC_VER <= MC_1_21_11
+		#if MC_VER <= MC_1_12_2
+		super.drawScreen(mouseX, mouseY, delta); // Render the buttons
+		#elif MC_VER <= MC_1_21_11
 		super.render(matrices, mouseX, mouseY, delta); // Render the buttons
 		#else
 		super.extractRenderState(matrices, mouseX, mouseY, delta);
 		#endif
 		 
 		// Render the text's
-		this.DhDrawCenteredString(matrices, this.font, 
+		this.DhDrawCenteredString(
+				#if MC_VER > MC_1_12_2	
+				matrices, this.font,
+				#endif
 				Translatable(ModInfo.ID + ".updater.text1"), 
 				this.width / 2, this.height / 2 - 35,
 				#if MC_VER < MC_1_21_6
@@ -204,7 +270,10 @@ public class UpdateModScreen extends DhScreen
 				0xFFFFFFFF // ARGB
 				#endif
 		);
-		this.DhDrawCenteredString(matrices, this.font, 
+		this.DhDrawCenteredString(
+				#if MC_VER > MC_1_12_2	
+				matrices, this.font,
+				#endif
 				Translatable(ModInfo.ID + ".updater.text2", this.currentVer, this.nextVer), 
 				this.width / 2, this.height / 2 - 20, 
 				#if MC_VER < MC_1_21_6
@@ -216,10 +285,18 @@ public class UpdateModScreen extends DhScreen
 	}
 	
 	@Override
+	#if MC_VER <= MC_1_12_2
+	public void onGuiClosed()
+	#else
 	public void onClose()
+	#endif
 	{
-		Objects.requireNonNull(this.minecraft).setScreen(this.parent); // Go to the parent screen
+		// Go to the parent screen
+		#if MC_VER <= MC_1_12_2
+		// Handled by button to avoid recursive loop
+		#else
+		Objects.requireNonNull(this.minecraft).setScreen(this.parent);
+		#endif
 	}
 	
 }
-#endif
