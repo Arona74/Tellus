@@ -38,7 +38,7 @@ public abstract class AbstractPluginPacketSender implements IPluginPacketSender
 			.build();
 	
 	#if MC_VER <= MC_1_12_2
-	public static final String WRAPPER_PACKET_RESOURCE = "channelDH"; // resource_namespace + packet_path > 20 characters
+	public static final String WRAPPER_PACKET_RESOURCE = ModInfo.RESOURCE_NAMESPACE + ModInfo.WRAPPER_PACKET_PATH;
 	#elif MC_VER <= MC_1_20_6
 	public static final ResourceLocation WRAPPER_PACKET_RESOURCE = new ResourceLocation(ModInfo.RESOURCE_NAMESPACE, ModInfo.WRAPPER_PACKET_PATH);
 	#elif  MC_VER <= MC_1_21_10
