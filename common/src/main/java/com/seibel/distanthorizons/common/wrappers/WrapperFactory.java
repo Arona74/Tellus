@@ -254,7 +254,7 @@ public class WrapperFactory implements IWrapperFactory
 		#if MC_VER <= MC_1_12_2
 		World level = (World) objectArray[1];
 		#else
-		World Level = (Level) objectArray[1];
+		Level level = (Level) objectArray[1];
 		#endif
 		
 		//endregion
@@ -423,7 +423,7 @@ public class WrapperFactory implements IWrapperFactory
 		IBlockState blockState = (IBlockState) objectArray[0];
 		return BlockStateWrapper.fromBlockState(blockState, coreLevelWrapper);
 		#else
-		IBlockState BlockState = (BlockState) objectArray[0];
+		BlockState blockState = (BlockState) objectArray[0];
 		return BlockStateWrapper.fromBlockState(blockState, coreLevelWrapper);
 		#endif
 	}

@@ -117,7 +117,7 @@ public class McObjectConverter
 	#if MC_VER <= MC_1_12_2
 	private static final EnumFacing[] mcDirections;
 	#else
-	private static final Direction[] directions;
+	private static final Direction[] mcDirections;
 	#endif
 	
 	private static final EDhDirection[] dhDirections;
