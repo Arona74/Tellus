@@ -18,8 +18,6 @@ import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftClientWrapp
 import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.config.ConfigHandler;
 import com.seibel.distanthorizons.core.config.types.*;
-#if MC_VER <= MC_1_12_2
-#endif
 import com.seibel.distanthorizons.common.wrappers.gui.updater.ChangelogScreen;
 import com.seibel.distanthorizons.core.config.types.enums.EConfigCommentTextPosition;
 import com.seibel.distanthorizons.core.config.types.enums.EConfigValidity;

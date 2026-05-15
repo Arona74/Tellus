@@ -3,7 +3,9 @@
     "package": "com.seibel.distanthorizons.cleanroom.mixins",
     "compatibilityLevel": "JAVA_8",
     "target": "@env(DEFAULT)",
-    "mixins": [],
+    "mixins": [
+        "common.MixinThreadedFileIOBase"
+    ],
     "minVersion": "0.8.7",
     "server": [
         "server.MixinEntityPlayerMP"
