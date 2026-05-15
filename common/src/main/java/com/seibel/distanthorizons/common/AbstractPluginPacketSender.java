@@ -61,14 +61,28 @@ public abstract class AbstractPluginPacketSender implements IPluginPacketSender
 	@Override
 	public final void sendToClient(IServerPlayerWrapper serverPlayer, AbstractNetworkMessage message)
 	{
-		this.sendToClient(#if MC_VER <= MC_1_12_2 (EntityPlayerMP) #else (ServerPlayer) #endif serverPlayer.getWrappedMcObject(), message);
+		#if MC_VER <= MC_1_12_2
+		this.sendToClient((EntityPlayerMP) serverPlayer.getWrappedMcObject(), message);
+		#else
+		this.sendToClient((ServerPlayer) serverPlayer.getWrappedMcObject(), message);
+		#endif
 	}
-	public abstract void sendToClient(#if MC_VER <= MC_1_12_2 EntityPlayerMP #else ServerPlayer #endif serverPlayer, AbstractNetworkMessage message);
+	
+	#if MC_VER <= MC_1_12_2
+	public abstract void sendToClient(EntityPlayerMP serverPlayer, AbstractNetworkMessage message);
+	#else
+	public abstract void sendToClient(ServerPlayer serverPlayer, AbstractNetworkMessage message);
+	#endif
+	
 	
 	@Override
 	public abstract void sendToServer(AbstractNetworkMessage message);
 	
-	public AbstractNetworkMessage decodeMessage(#if MC_VER <= MC_1_12_2 PacketBuffer #else FriendlyByteBuf #endif in)
+	#if MC_VER <= MC_1_12_2
+	public AbstractNetworkMessage decodeMessage(PacketBuffer in)
+	#else
+	public AbstractNetworkMessage decodeMessage(FriendlyByteBuf in)
+	#endif
 	{
 		AbstractNetworkMessage message = null;
 		
@@ -109,7 +123,11 @@ public abstract class AbstractPluginPacketSender implements IPluginPacketSender
 		}
 	}
 	
-	public void encodeMessage(#if MC_VER <= MC_1_12_2 PacketBuffer #else FriendlyByteBuf #endif out, AbstractNetworkMessage message)
+	#if MC_VER <= MC_1_12_2
+	public void encodeMessage(PacketBuffer out, AbstractNetworkMessage message) 
+	#else 
+	public void encodeMessage(FriendlyByteBuf out, AbstractNetworkMessage message)
+	#endif
 	{
 		// This is intentionally unhandled, because errors related to this are unlikely to appear in wild
 		Objects.requireNonNull(message);
