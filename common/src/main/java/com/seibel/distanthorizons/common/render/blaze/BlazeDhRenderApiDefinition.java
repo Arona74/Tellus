@@ -22,6 +22,11 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.render.objects.ILodCont
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.objects.IVertexBufferWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.*;
 
+#if MC_VER <= MC_26_1_2
+#else
+import com.mojang.blaze3d.systems.RenderSystem;
+#endif
+
 public class BlazeDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 {
 	//=========//
@@ -29,7 +34,7 @@ public class BlazeDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 	//=========//
 	//region
 	
-	private final String apiName = "Blaze3D: " + this.getRenderApi();;
+	private final String apiName;
 	public String getApiName() { return this.apiName; }
 	
 	public EDhRenderDepth getRenderDepth()
@@ -41,13 +46,33 @@ public class BlazeDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 		#endif
 	}
 	
-	public EDhRenderApi getRenderApi() 
+	
+	private final EDhRenderApi renderApi;
+	public EDhRenderApi getRenderApi() { return renderApi; }
+	
+	//endregion
+	
+	
+	
+	//=============//
+	// constructor //
+	//=============//
+	//region
+	
+	public BlazeDhRenderApiDefinition()
 	{
 		#if MC_VER <= MC_26_1_2
-		return EDhRenderApi.OPEN_GL;
+		renderApi = EDhRenderApi.OPEN_GL;
 		#else
-		return EDhRenderApi.VULKAN;
+		String backendName = RenderSystem
+			.getDevice()
+			.getDeviceInfo()
+			.backendName();
+		boolean isVulkan = backendName.equalsIgnoreCase("Vulkan");
+		this.renderApi = isVulkan ? EDhRenderApi.VULKAN : EDhRenderApi.OPEN_GL;
 		#endif
+		
+		this.apiName = "Blaze3D: " + this.getRenderApi();
 	}
 	
 	//endregion
