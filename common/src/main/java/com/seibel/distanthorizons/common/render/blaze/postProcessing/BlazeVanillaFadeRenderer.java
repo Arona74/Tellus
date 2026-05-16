@@ -48,10 +48,12 @@ import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
+import com.seibel.distanthorizons.core.render.EDhRenderApi;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.util.RenderUtil;
 import com.seibel.distanthorizons.core.util.math.Mat4f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
+import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhVanillaFadeRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
@@ -70,6 +72,7 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 	public static final DhLogger LOGGER = new DhLoggerBuilder().build(); 
 	
 	private static final IMinecraftRenderWrapper MC_RENDER = SingletonInjector.INSTANCE.get(IMinecraftRenderWrapper.class);
+	private static final AbstractDhRenderApiDefinition RENDER_API_DEF = SingletonInjector.INSTANCE.get(AbstractDhRenderApiDefinition.class);
 	
 	private static final GpuDevice GPU_DEVICE = RenderSystem.getDevice();
 	private static final CommandEncoder COMMAND_ENCODER = GPU_DEVICE.createCommandEncoder();
@@ -177,6 +180,7 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 				.putFloat() // uMaxLevelHeight
 				.putMat4f() // uDhInvMvmProj
 				.putMat4f() // uMcInvMvmProj
+				.putInt() // uIsVulkan
 				.get();
 			
 			
@@ -217,6 +221,7 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 				.putFloat(renderParams.clientLevelWrapper.getMaxHeight()) // uMaxLevelHeight
 				.putMat4f(inverseDhMvmProjMatrix.createJomlMatrix()) // uDhInvMvmProj
 				.putMat4f(inverseMcMvmProjMatrix.createJomlMatrix()) // uMcInvMvmProj
+				.putInt((RENDER_API_DEF.getRenderApi() == EDhRenderApi.VULKAN) ? 1 : 0) // uIsVulkan
 				.get()
 			;
 			

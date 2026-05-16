@@ -5,7 +5,6 @@ public class BlazeDhVertexFormatUtil {}
 
 #else
 	
-import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
 import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
 import com.seibel.distanthorizons.core.config.Config;
@@ -16,6 +15,11 @@ import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.wrapperInterfaces.IVersionConstants;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
 import org.jetbrains.annotations.NotNull;
+
+#if MC_VER <= MC_26_1_2
+#else
+import com.mojang.blaze3d.GpuFormat;
+#endif
 
 /**
  * @see LodQuadBuilder

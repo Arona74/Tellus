@@ -37,11 +37,13 @@ import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
+import com.seibel.distanthorizons.core.render.EDhRenderApi;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.util.LodUtil;
 import com.seibel.distanthorizons.core.util.math.Mat4f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
+import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhFogRenderer;
 
 import java.awt.*;
@@ -77,6 +79,7 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 	
 	private static final IMinecraftClientWrapper MC = SingletonInjector.INSTANCE.get(IMinecraftClientWrapper.class);
 	private static final IMinecraftRenderWrapper MC_RENDER = SingletonInjector.INSTANCE.get(IMinecraftRenderWrapper.class);
+	private static final AbstractDhRenderApiDefinition RENDER_API_DEF = SingletonInjector.INSTANCE.get(AbstractDhRenderApiDefinition.class);
 	
 	private static final GpuDevice GPU_DEVICE = RenderSystem.getDevice();
 	private static final CommandEncoder COMMAND_ENCODER = GPU_DEVICE.createCommandEncoder();
@@ -218,6 +221,8 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 				
 				.putMat4f() // uInvMvmProj
 				
+				.putInt() // uIsVulkan
+				
 				.get();
 			
 			
@@ -311,6 +316,8 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 				.putFloat((float)MC_RENDER.getCameraExactPosition().y) // uCameraBlockYPos
 				
 				.putMat4f(inverseMvmProjMatrix.createJomlMatrix()) // uInvMvmProj
+				
+				.putInt((RENDER_API_DEF.getRenderApi() == EDhRenderApi.VULKAN) ? 1 : 0) // uIsVulkan
 				
 				.get()
 			;

@@ -25,6 +25,9 @@ public class BlazeDhApplyRenderer {}
 #else
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.buffers.Std140Builder;
+import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.CommandEncoder;
@@ -34,15 +37,23 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.*;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
+import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
+import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
+import com.seibel.distanthorizons.core.render.EDhRenderApi;
+import com.seibel.distanthorizons.core.util.RenderUtil;
+import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import com.seibel.distanthorizons.coreapi.ModInfo;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
@@ -57,12 +68,16 @@ import java.util.OptionalInt;
  */
 public class BlazeDhApplyRenderer
 {
-	public static final DhLogger LOGGER = new DhLoggerBuilder().build(); 
+	public static final DhLogger LOGGER = new DhLoggerBuilder().build();
+	
+	private static final AbstractDhRenderApiDefinition RENDER_API_DEF = SingletonInjector.INSTANCE.get(AbstractDhRenderApiDefinition.class);
 	
 	private static final GpuDevice GPU_DEVICE = RenderSystem.getDevice();
 	private static final CommandEncoder COMMAND_ENCODER = GPU_DEVICE.createCommandEncoder();
 	
 	private RenderPipeline pipeline;
+	
+	private GpuBuffer fragUniformBuffer;
 	
 	protected GpuBuffer vboGpuBuffer;
 	
@@ -179,6 +194,8 @@ public class BlazeDhApplyRenderer
 				pipelineBuilder.withUniformBuffer(uniformName);
 			}
 			
+			pipelineBuilder.withUniformBuffer("baseFragUniformBlock");
+			
 			pipelineBuilder.withSampler("uSourceColorTexture");
 			pipelineBuilder.withSampler("uSourceDepthTexture");
 			
@@ -225,6 +242,25 @@ public class BlazeDhApplyRenderer
 		
 		this.dummyDepthTextureWrapper.tryCreateOrResize();
 		
+		
+		{
+			int uniformBufferSize = new Std140SizeCalculator()
+				.putInt() // uIsVulkan
+				.get();
+			
+			ByteBuffer buffer = ByteBuffer.allocateDirect(uniformBufferSize);
+			buffer.order(ByteOrder.nativeOrder());
+			buffer = Std140Builder.intoBuffer(buffer)
+				.putInt((RENDER_API_DEF.getRenderApi() == EDhRenderApi.VULKAN) ? 1 : 0) // uIsVulkan
+				.get()
+			;
+			
+			this.fragUniformBuffer = BlazeUniformUtil.createBuffer("baseFragUniformBlock", uniformBufferSize, this.fragUniformBuffer);
+			GpuBufferSlice bufferSlice = new GpuBufferSlice(this.fragUniformBuffer, 0, uniformBufferSize);
+			
+			COMMAND_ENCODER.writeToBuffer(bufferSlice, buffer);
+		}
+		
 		try (RenderPass renderPass = COMMAND_ENCODER.createRenderPass(
 			this::getIdentifierName,
 			this.destinationColorTextureViewWrapper.textureView,
@@ -246,6 +282,8 @@ public class BlazeDhApplyRenderer
 				
 				renderPass.setUniform(uniformName, uniformBuffer);
 			}
+			
+			renderPass.setUniform("baseFragUniformBlock", this.fragUniformBuffer);
 			
 			renderPass.setVertexBuffer(0, this.vboGpuBuffer);
 			renderPass.setPipeline(this.pipeline);

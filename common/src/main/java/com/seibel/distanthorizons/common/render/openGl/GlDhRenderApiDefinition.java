@@ -10,6 +10,7 @@ import com.seibel.distanthorizons.common.render.openGl.postProcessing.fog.GlDhFo
 import com.seibel.distanthorizons.common.render.openGl.postProcessing.ssao.GlDhSSAORenderer;
 import com.seibel.distanthorizons.common.render.openGl.terrain.GlDhTerrainShaderProgram;
 import com.seibel.distanthorizons.common.render.openGl.test.GlTestTriangleRenderer;
+import com.seibel.distanthorizons.core.render.EDhRenderApi;
 import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.renderer.AbstractDebugWireframeRenderer;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
@@ -33,6 +34,8 @@ public class GlDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 		// to that breaking Iris shaders
 		return EDhRenderDepth.FORWARD_Z; 
 	}
+	
+	public EDhRenderApi getRenderApi() { return EDhRenderApi.OPEN_GL; }
 	
 	//endregion
 	
