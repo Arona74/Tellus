@@ -91,8 +91,16 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 		
 		
 		
-		RenderPipelineBuilderWrapper pipelineBuilder = new RenderPipelineBuilderWrapper();
+		RenderPipelineBuilderWrapper opaquePipelineBuilder = new RenderPipelineBuilderWrapper();
+		RenderPipelineBuilderWrapper translucentPipelineBuilder = new RenderPipelineBuilderWrapper();
+		
+		// apply shared options to both pipelines
+		for (int i = 0; i < 2; i++)
 		{
+			RenderPipelineBuilderWrapper pipelineBuilder = (i == 0) 
+				? opaquePipelineBuilder 
+				: translucentPipelineBuilder;
+			
 			pipelineBuilder.withFaceCulling(true);
 			pipelineBuilder.withDepthWrite(true);
 			if (RENDER_API_DEF.getRenderDepth() == EDhRenderDepth.FORWARD_Z)
@@ -105,7 +113,6 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 			}
 			pipelineBuilder.withColorWrite(true);
 			pipelineBuilder.withPolygonMode(RenderPipelineBuilderWrapper.EDhPolygonMode.FILL);
-			pipelineBuilder.withName("terrain");
 			
 			pipelineBuilder.withSampler("uLightMap");
 			
@@ -132,15 +139,17 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 		
 		// opaque
 		{
-			pipelineBuilder.withoutBlend();
-			this.opaquePipeline = pipelineBuilder.build();
+			opaquePipelineBuilder.withName("opaque_terrain");
+			opaquePipelineBuilder.withoutBlend();
+			this.opaquePipeline = opaquePipelineBuilder.build();
 		}
 		
 		// transparent
 		{
+			translucentPipelineBuilder.withName("transparent_terrain");
 			// TRANSLUCENT = new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA, SourceFactor.ONE, DestFactor.ONE_MINUS_SRC_ALPHA);
-			pipelineBuilder.withBlend(BlendFunction.TRANSLUCENT);
-			this.transparentPipeline = pipelineBuilder.build();
+			translucentPipelineBuilder.withBlend(BlendFunction.TRANSLUCENT);
+			this.transparentPipeline = translucentPipelineBuilder.build();
 		}
 		
 		this.init = true;
