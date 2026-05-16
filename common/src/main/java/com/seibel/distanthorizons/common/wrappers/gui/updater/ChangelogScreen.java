@@ -287,7 +287,7 @@ public class ChangelogScreen extends DhScreen
 		#if MC_VER <= MC_1_12_2
 		// Handled by button to avoid recursive loop
 		#else
-		DhScreenUtil.showScreen(this.parent);
+		DhScreenUtil.setScreen(this.parent);
 		#endif
 	}
 	

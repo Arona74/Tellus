@@ -238,7 +238,7 @@ public class MinecraftScreen
 		#endif
 		{
 			this.screen.onClose(); // Close our screen
-			DhScreenUtil.showScreen(this.parent); // Goto the parent screen
+			DhScreenUtil.setScreen(this.parent); // Goto the parent screen
 		}
 		
 		#if MC_VER > MC_1_12_2

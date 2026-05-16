@@ -87,7 +87,7 @@ public class DhUpdateScreenBase
 						versionId
 					));
 					#else
-					DhScreenUtil.showScreen(new UpdateModScreen(
+					DhScreenUtil.setScreen(new UpdateModScreen(
 						new TitleScreen(false),
 						versionId
 					));

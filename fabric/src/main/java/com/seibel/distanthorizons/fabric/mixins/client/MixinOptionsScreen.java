@@ -35,7 +35,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 #if MC_VER >= MC_1_20_6
@@ -148,7 +147,7 @@ public class MixinOptionsScreen extends Screen
 				20, ICON_TEXTURE, 20, 40,
 				// Create the button and tell it where to go
 				// For now it goes to the client option by default
-				(buttonWidget) -> DhScreenUtil.showScreen(GetConfigScreen.getScreen(this)),
+				(buttonWidget) -> DhScreenUtil.setScreen(GetConfigScreen.getScreen(this)),
 				// Add a title to the button
                 #if MC_VER < MC_1_19_2
 				new TranslatableComponent(ModInfo.ID + ".title"));

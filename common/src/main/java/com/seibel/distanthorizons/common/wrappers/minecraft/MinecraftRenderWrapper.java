@@ -217,7 +217,6 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		Vec3 projectedView = camera.position();
 		#endif
 		return new Vec3d(projectedView.x, projectedView.y, projectedView.z);
-		#endif
 	}
 	
 	@Override

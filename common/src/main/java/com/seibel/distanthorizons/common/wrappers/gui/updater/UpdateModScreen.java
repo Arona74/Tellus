@@ -35,8 +35,6 @@ import net.minecraft.resources.Identifier;
 
 import static com.seibel.distanthorizons.common.wrappers.gui.GuiHelper.*;
 
-import java.util.*;
-
 /**
  * The screen that pops up if the mod has an update.
  *
@@ -174,7 +172,7 @@ public class UpdateModScreen extends DhScreen
 				20, 20,
 				// Create the button and tell it where to go
 				#if MC_VER > MC_1_12_2
-				(buttonWidget) -> DhScreenUtil.showScreen(new ChangelogScreen(this, this.newVersionID)),
+				(buttonWidget) -> DhScreenUtil.setScreen(new ChangelogScreen(this, this.newVersionID)),
 				#endif
 				// Add a title to the button
 				#if MC_VER <= MC_1_12_2
@@ -296,7 +294,7 @@ public class UpdateModScreen extends DhScreen
 		#if MC_VER <= MC_1_12_2
 		// Handled by button to avoid recursive loop
 		#else
-		DhScreenUtil.showScreen(this.parent); // Go to the parent screen
+		DhScreenUtil.setScreen(this.parent); // Go to the parent screen
 		#endif
 	}
 	
