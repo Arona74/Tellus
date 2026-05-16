@@ -19,7 +19,7 @@ public class TestCustomColorEvent extends DhApiBlockColorOverrideEvent
 	
 	
 	@Override 
-	public void blockStateWrapperCreated(DhApiEventParam<EventParam> event)
+	public void onBlockColorOverridden(DhApiEventParam<EventParam> event)
 	{
 		EventParam eventParam = event.value;
 		
