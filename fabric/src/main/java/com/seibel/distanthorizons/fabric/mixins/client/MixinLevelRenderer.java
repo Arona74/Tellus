@@ -94,8 +94,11 @@ import com.seibel.distanthorizons.core.logging.DhLogger;
 @Mixin(LevelRenderer.class)
 public class MixinLevelRenderer
 {
+	#if MC_VER <= MC_26_1_2
     @Shadow
     private ClientLevel level;
+    #else
+	#endif
 	
 	@Unique
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
@@ -220,11 +223,13 @@ public class MixinLevelRenderer
 	#if MC_VER <= MC_1_21_11
 	#else
 	
+	#if MC_VER <= MC_26_1_2
 	@Inject(at = @At("HEAD"), method = "prepareChunkRenders")
 	private void prepareChunkRenders(final Matrix4fc modelViewMatrix, CallbackInfoReturnable<ChunkSectionsToRender> callback)
 	{
 		ClientApi.RENDER_STATE.clientLevelWrapper = ClientLevelWrapper.getWrapperIfDifferent(ClientApi.RENDER_STATE.clientLevelWrapper, this.level);
 	}
+	
 	
 	@Inject(at = @At("HEAD"), method = "renderLevel")
 	public void renderLevel(
@@ -240,6 +245,9 @@ public class MixinLevelRenderer
 		ClientApi.RENDER_STATE.partialTickTime = MinecraftRenderWrapper.INSTANCE.getPartialTickTime();
 		
 	}
+	
+    #else
+	#endif
 	
 	#endif
 	//endregion

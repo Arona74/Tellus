@@ -43,6 +43,13 @@ public class MinecraftScreen
 		return new ConfigScreenRenderer(parent, screen, translationName);
 	}
 	
+	
+	
+	//=========//
+	// screens //
+	//=========//
+	//region
+	
 	private static class ConfigScreenRenderer extends DhScreen
 	{
 		#if MC_VER <= MC_1_12_2
@@ -231,11 +238,7 @@ public class MinecraftScreen
 		#endif
 		{
 			this.screen.onClose(); // Close our screen
-			#if MC_VER <= MC_1_12_2
-			Objects.requireNonNull(this.mc).displayGuiScreen(this.parent); // Goto the parent screen
-			#else
-			Objects.requireNonNull(this.minecraft).setScreen(this.parent); // Goto the parent screen
-			#endif
+			DhScreenUtil.showScreen(this.parent); // Goto the parent screen
 		}
 		
 		#if MC_VER > MC_1_12_2
@@ -279,5 +282,9 @@ public class MinecraftScreen
 		}
 		#endif
 	}
+	
+	//endregion
+	
+	
 	
 }

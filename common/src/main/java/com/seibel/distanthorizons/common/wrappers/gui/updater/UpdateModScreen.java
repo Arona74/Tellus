@@ -1,6 +1,7 @@
 package com.seibel.distanthorizons.common.wrappers.gui.updater;
 import com.seibel.distanthorizons.api.enums.config.EDhApiUpdateBranch;
 import com.seibel.distanthorizons.common.wrappers.gui.DhScreen;
+import com.seibel.distanthorizons.common.wrappers.gui.DhScreenUtil;
 import com.seibel.distanthorizons.common.wrappers.gui.TexturedButtonWidget;
 import com.seibel.distanthorizons.core.jar.ModJarInfo;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
@@ -173,7 +174,7 @@ public class UpdateModScreen extends DhScreen
 				20, 20,
 				// Create the button and tell it where to go
 				#if MC_VER > MC_1_12_2
-				(buttonWidget) -> Objects.requireNonNull(this.minecraft).setScreen(new ChangelogScreen(this, this.newVersionID)),
+				(buttonWidget) -> DhScreenUtil.showScreen(new ChangelogScreen(this, this.newVersionID)),
 				#endif
 				// Add a title to the button
 				#if MC_VER <= MC_1_12_2
@@ -295,7 +296,7 @@ public class UpdateModScreen extends DhScreen
 		#if MC_VER <= MC_1_12_2
 		// Handled by button to avoid recursive loop
 		#else
-		Objects.requireNonNull(this.minecraft).setScreen(this.parent);
+		DhScreenUtil.showScreen(this.parent); // Go to the parent screen
 		#endif
 	}
 	

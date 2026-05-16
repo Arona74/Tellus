@@ -72,8 +72,11 @@ public class MixinVanillaFogCommon
 		#elif MC_VER <= MC_1_21_10
 		Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
 		Entity entity = camera.getEntity();
-		#else
+		#elif MC_VER <= MC_26_1_2
 		Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+		Entity entity = camera.entity();	
+		#else
+		Camera camera = Minecraft.getInstance().gameRenderer.mainCamera();
 		Entity entity = camera.entity();	
 		#endif
 		

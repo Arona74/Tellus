@@ -1,6 +1,6 @@
 package com.seibel.distanthorizons.common.wrappers.gui.updater;
 import com.seibel.distanthorizons.common.wrappers.gui.DhScreen;
-import com.seibel.distanthorizons.common.wrappers.gui.classicConfig.ClassicConfigGUI;
+import com.seibel.distanthorizons.common.wrappers.gui.DhScreenUtil;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.wrapperInterfaces.IVersionConstants;
@@ -275,10 +275,11 @@ public class ChangelogScreen extends DhScreen
 		#endif
 	}
 	
-	@Override
 	#if MC_VER <= MC_1_12_2
+	@Override
 	public void onGuiClosed()
 	#else
+	@Override
 	public void onClose()
 	#endif
 	{
@@ -286,7 +287,7 @@ public class ChangelogScreen extends DhScreen
 		#if MC_VER <= MC_1_12_2
 		// Handled by button to avoid recursive loop
 		#else
-		Objects.requireNonNull(this.minecraft).setScreen(this.parent);
+		DhScreenUtil.showScreen(this.parent);
 		#endif
 	}
 	

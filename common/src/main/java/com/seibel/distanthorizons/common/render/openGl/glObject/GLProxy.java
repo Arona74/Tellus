@@ -126,6 +126,8 @@ public class GLProxy
 	
 	private GLProxy() throws IllegalStateException
 	{
+		// TODO vulkan complain if created when MC is running on vulkan
+		
 		// this must be created on minecraft's render context to work correctly
 		if (GLFW.glfwGetCurrentContext() == 0L)
 		{

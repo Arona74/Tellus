@@ -112,9 +112,10 @@ public class MixinLightTexture
 		GlTexture glTexture = (GlTexture) this.texture;
 		this.renderWrapper.setLightmapId(glTexture.glId(), clientLevel);
 		#else
-		// both options are available since the renderer can be changed to either Blaze3D or OpenGL
-		GlTexture glTexture = (GlTexture) this.texture;
-		this.renderWrapper.setLightmapId(glTexture.glId(), clientLevel);
+		// TODO vulkan
+		//// both options are available since the renderer can be changed to either Blaze3D or OpenGL
+		//GlTexture glTexture = (GlTexture) this.texture;
+		//this.renderWrapper.setLightmapId(glTexture.glId(), clientLevel);
 		
 		this.renderWrapper.setLightmapGpuTexture(this.texture, clientLevel);
 		#endif

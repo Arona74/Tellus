@@ -3,6 +3,7 @@ plugins {
     id 'io.github.pacifistmc.forgix' version '2.+'
 }
 
+if (false) // TODO vulkan don't run if there is only one mod loader
 forgix {
     
     // add the mod loaders to the end of the jar

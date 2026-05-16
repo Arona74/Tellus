@@ -1,6 +1,7 @@
 package com.seibel.distanthorizons.common.commonMixins;
 
 import com.seibel.distanthorizons.api.enums.config.EDhApiUpdateBranch;
+import com.seibel.distanthorizons.common.wrappers.gui.DhScreenUtil;
 import com.seibel.distanthorizons.common.wrappers.gui.updater.UpdateModScreen;
 import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
@@ -81,12 +82,12 @@ public class DhUpdateScreenBase
 				try
 				{
 					#if MC_VER <= MC_1_12_2
-					MC.displayGuiScreen(new UpdateModScreen(
-						new GuiMainMenu(),
+					DhScreenUtil.showScreen(new UpdateModScreen(
+						new TitleScreen(false),
 						versionId
 					));
 					#else
-					MC.setScreen(new UpdateModScreen(
+					DhScreenUtil.showScreen(new UpdateModScreen(
 						new TitleScreen(false),
 						versionId
 					));

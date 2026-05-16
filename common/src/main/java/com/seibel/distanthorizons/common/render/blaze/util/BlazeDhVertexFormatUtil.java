@@ -5,6 +5,7 @@ public class BlazeDhVertexFormatUtil {}
 
 #else
 	
+import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
 import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
 import com.seibel.distanthorizons.core.config.Config;
@@ -70,7 +71,7 @@ public class BlazeDhVertexFormatUtil
 				IRIS_NORMAL = VertexFormatElement.register(/*id*/29, /*index*/0, VertexFormatElement.Type.BYTE, VertexFormatElement.Usage.GENERIC, /*count*/ 1);
 				
 				FLOAT_XYZ_POS = VertexFormatElement.register(/*id*/30, /*index*/0, VertexFormatElement.Type.FLOAT, VertexFormatElement.Usage.POSITION, /*count*/ 3);
-				#else
+				#elif MC_VER <= MC_26_1_2
 				SCREEN_POS = VertexFormatElement.register(/*id*/22, /*index*/0, VertexFormatElement.Type.FLOAT, false, /*count*/ 2);
 				RGBA_FLOAT_COLOR = VertexFormatElement.register(/*id*/23, /*index*/0, VertexFormatElement.Type.FLOAT, false, /*count*/ 4);
 				
@@ -83,6 +84,20 @@ public class BlazeDhVertexFormatUtil
 				IRIS_NORMAL = VertexFormatElement.register(/*id*/29, /*index*/0, VertexFormatElement.Type.BYTE, false, /*count*/ 1);
 				
 				FLOAT_XYZ_POS = VertexFormatElement.register(/*id*/30, /*index*/0, VertexFormatElement.Type.FLOAT, false, /*count*/ 3);
+				#else
+				
+				SCREEN_POS = VertexFormatElement.register(/*id*/22, /*index*/0, GpuFormat.RG32_FLOAT); // 2 floats
+				RGBA_FLOAT_COLOR = VertexFormatElement.register(/*id*/23, /*index*/0, GpuFormat.RGBA32_FLOAT); // 4 floats
+				
+				SHORT_XYZ_POS = VertexFormatElement.register(/*id*/24, /*index*/0, GpuFormat.RGB16_UINT); // 3 ushorts
+				BYTE_PAD = VertexFormatElement.register(/*id*/25, /*index*/0, GpuFormat.R8_UINT); // 1 byte
+				
+				META = VertexFormatElement.register(/*id*/26, /*index*/0, GpuFormat.R16_UINT); // 1 ushort
+				RGBA_UBYTE_COLOR = VertexFormatElement.register(/*id*/27, /*index*/0, GpuFormat.RGBA8_UNORM); // 4 ubytes
+				IRIS_MATERIAL = VertexFormatElement.register(/*id*/28, /*index*/0, GpuFormat.R8_UINT); // 1 byte
+				IRIS_NORMAL = VertexFormatElement.register(/*id*/29, /*index*/0, GpuFormat.R8_UINT); // 1 byte
+				
+				FLOAT_XYZ_POS = VertexFormatElement.register(/*id*/30, /*index*/0, GpuFormat.RGB32_FLOAT); // 3 floats
 				#endif
 			}
 			catch (Exception e)
