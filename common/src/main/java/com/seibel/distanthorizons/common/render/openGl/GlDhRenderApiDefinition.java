@@ -10,6 +10,7 @@ import com.seibel.distanthorizons.common.render.openGl.postProcessing.fog.GlDhFo
 import com.seibel.distanthorizons.common.render.openGl.postProcessing.ssao.GlDhSSAORenderer;
 import com.seibel.distanthorizons.common.render.openGl.terrain.GlDhTerrainShaderProgram;
 import com.seibel.distanthorizons.common.render.openGl.test.GlTestTriangleRenderer;
+import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.renderer.AbstractDebugWireframeRenderer;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.objects.IDhGenericObjectVertexBufferContainer;
@@ -25,6 +26,13 @@ public class GlDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 	//region
 	
 	public String getApiName() { return "OpenGL"; }
+	
+	public EDhRenderDepth getRenderDepth() 
+	{
+		// reversed Z shouldn't be supported on OpenGL due
+		// to that breaking Iris shaders
+		return EDhRenderDepth.FORWARD_Z; 
+	}
 	
 	//endregion
 	

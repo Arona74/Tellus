@@ -6,7 +6,6 @@ public class RenderPipelineBuilderWrapper {}
 
 #else
 
-import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.pipeline.*;
 import com.mojang.blaze3d.platform.PolygonMode;
 import com.mojang.blaze3d.shaders.UniformType;
@@ -254,6 +253,9 @@ public class RenderPipelineBuilderWrapper
 				case LESS:
 					compareOp = CompareOp.LESS_THAN;
 					break;
+				case GREATER:
+					compareOp = CompareOp.GREATER_THAN;
+					break;
 				
 				default:
 					throw new UnsupportedOperationException("No depth test defined for type ["+this.depthTest+"].");
@@ -378,6 +380,7 @@ public class RenderPipelineBuilderWrapper
 	public enum EDhDepthTest
 	{
 		NONE,
+		GREATER,
 		LESS;
 	}
 	

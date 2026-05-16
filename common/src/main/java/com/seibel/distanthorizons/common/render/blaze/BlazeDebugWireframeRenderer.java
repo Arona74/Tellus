@@ -42,11 +42,13 @@ import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBui
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
+import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.renderer.AbstractDebugWireframeRenderer;
 import com.seibel.distanthorizons.core.util.math.Mat4f;
 import com.seibel.distanthorizons.core.util.math.Vec3d;
 import com.seibel.distanthorizons.core.util.math.Vec3f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
+import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.system.MemoryUtil;
 
@@ -64,6 +66,7 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
 	
 	private static final IMinecraftRenderWrapper MC_RENDER = SingletonInjector.INSTANCE.get(IMinecraftRenderWrapper.class);
+	private static final AbstractDhRenderApiDefinition RENDER_API_DEF = SingletonInjector.INSTANCE.get(AbstractDhRenderApiDefinition.class);
 	
 	public static BlazeDebugWireframeRenderer INSTANCE = new BlazeDebugWireframeRenderer();
 	
@@ -143,7 +146,14 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 		{
 			pipelineBuilder.withFaceCulling(false);
 			pipelineBuilder.withDepthWrite(true);
-			pipelineBuilder.withDepthTest(RenderPipelineBuilderWrapper.EDhDepthTest.LESS);
+			if (RENDER_API_DEF.getRenderDepth() == EDhRenderDepth.FORWARD_Z)
+			{
+				pipelineBuilder.withDepthTest(RenderPipelineBuilderWrapper.EDhDepthTest.LESS);
+			}
+			else
+			{
+				pipelineBuilder.withDepthTest(RenderPipelineBuilderWrapper.EDhDepthTest.GREATER);
+			}
 			pipelineBuilder.withColorWrite(true);
 			pipelineBuilder.withoutBlend();
 			pipelineBuilder.withPolygonMode(RenderPipelineBuilderWrapper.EDhPolygonMode.WIREFRAME);

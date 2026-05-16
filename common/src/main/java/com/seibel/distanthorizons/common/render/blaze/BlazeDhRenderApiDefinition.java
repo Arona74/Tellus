@@ -13,6 +13,7 @@ import com.seibel.distanthorizons.common.render.blaze.postProcessing.BlazeVanill
 import com.seibel.distanthorizons.common.render.blaze.test.BlazeDhTestTriangleRenderer;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.buffer.BlazeVertexBufferWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeLodUniformBufferWrapper;
+import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.renderer.AbstractDebugWireframeRenderer;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.objects.IDhGenericObjectVertexBufferContainer;
@@ -28,6 +29,15 @@ public class BlazeDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 	//region
 	
 	public String getApiName() { return "Blaze3D"; }
+	
+	public EDhRenderDepth getRenderDepth()
+	{
+		#if MC_VER <= MC_26_1_2
+		return EDhRenderDepth.FORWARD_Z;
+		#else
+		return EDhRenderDepth.REVERSE_Z;
+		#endif
+	}
 	
 	//endregion
 	
