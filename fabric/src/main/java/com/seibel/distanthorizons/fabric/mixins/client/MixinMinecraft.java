@@ -87,18 +87,25 @@ public abstract class MixinMinecraft
 	}
 	#endif
 	
-	// TODO vulkan
-	//#if MC_VER >= MC_1_20_2
-	//@Redirect(
-	//		method = "Lnet/minecraft/client/Minecraft;onGameLoadFinished(Lnet/minecraft/client/Minecraft$GameLoadCookie;)V",
-	//		at = @At(value = "INVOKE", target = "Ljava/lang/Runnable;run()V")
-	//)
-	//private void buildInitialScreens(Runnable runnable)
-	//{
-	//	DhUpdateScreenBase.tryShowUpdateScreenAndRunAutoUpdateStartup(runnable);
-	//	runnable.run();
-	//}
-	//#endif
+	#if MC_VER >= MC_1_20_2
+	#if MC_VER <= MC_26_1_2
+	@Redirect(
+			method = "Lnet/minecraft/client/Minecraft;onGameLoadFinished(Lnet/minecraft/client/Minecraft$GameLoadCookie;)V",
+			at = @At(value = "INVOKE", target = "Ljava/lang/Runnable;run()V")
+	)
+	private void buildInitialScreens(Runnable runnable)
+	#else
+	@Redirect(
+		method = "Lnet/minecraft/client/Minecraft;onGameLoadFinished(Lnet/minecraft/client/GameLoadCookie;)V",
+		at = @At(value = "INVOKE", target = "Ljava/lang/Runnable;run()V")
+	)
+	private void buildInitialScreens(Runnable runnable)
+	#endif
+	{
+		DhUpdateScreenBase.tryShowUpdateScreenAndRunAutoUpdateStartup(runnable);
+		runnable.run();
+	}
+	#endif
 	
 	@Inject(at = @At("HEAD"), method = "updateLevelInEngines")
 	public void updateLevelInEngines(ClientLevel level, CallbackInfo ci)
