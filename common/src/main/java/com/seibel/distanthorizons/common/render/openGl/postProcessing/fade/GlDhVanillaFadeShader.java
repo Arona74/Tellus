@@ -185,7 +185,7 @@ public class GlDhVanillaFadeShader extends GlAbstractShaderRenderer
 		GLMC.disableBlend();
 		
 		GLMC.glActiveTexture(GL32.GL_TEXTURE0);
-		GLMC.glBindTexture(MC_RENDER.getDepthTextureId());
+		GLMC.glBindTexture(MC_RENDER.getGlDepthTextureId());
 		GL32.glUniform1i(this.uMcDepthTexture, 0);
 		
 		GLMC.glActiveTexture(GL32.GL_TEXTURE1);
@@ -193,7 +193,7 @@ public class GlDhVanillaFadeShader extends GlAbstractShaderRenderer
 		GL32.glUniform1i(this.uDhDepthTexture, 1);
 		
 		GLMC.glActiveTexture(GL32.GL_TEXTURE2);
-		GLMC.glBindTexture(MC_RENDER.getColorTextureId());
+		GLMC.glBindTexture(MC_RENDER.getGlColorTextureId());
 		GL32.glUniform1i(this.uCombinedMcDhColorTexture, 2);
 		
 		GLMC.glActiveTexture(GL32.GL_TEXTURE3);

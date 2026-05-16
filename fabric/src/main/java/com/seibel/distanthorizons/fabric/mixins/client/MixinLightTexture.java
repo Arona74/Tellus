@@ -111,14 +111,26 @@ public class MixinLightTexture
 		#elif MC_VER <= MC_1_21_10
 		GlTexture glTexture = (GlTexture) this.texture;
 		this.renderWrapper.setLightmapId(glTexture.glId(), clientLevel);
-		#else
-		// TODO vulkan
-		//// both options are available since the renderer can be changed to either Blaze3D or OpenGL
-		//GlTexture glTexture = (GlTexture) this.texture;
-		//this.renderWrapper.setLightmapId(glTexture.glId(), clientLevel);
+		#elif MC_VER <= MC_26_1_2
+		// both options are available since the renderer can be changed to either Blaze3D or OpenGL
+		GlTexture glTexture = (GlTexture) this.texture;
+		this.renderWrapper.setLightmapId(glTexture.glId(), clientLevel);
 		
+		this.renderWrapper.setLightmapGpuTexture(this.texture, clientLevel);
+		#else
+		
+		// this will only be used when using native GL rendering
+		if (this.texture instanceof GlTexture)
+		{
+			GlTexture glTexture = (GlTexture) this.texture;
+			this.renderWrapper.setLightmapId(glTexture.glId(), clientLevel);
+		}
+		
+		// this will be used for Blaze3D OpenGL and Vulkan
 		this.renderWrapper.setLightmapGpuTexture(this.texture, clientLevel);
 		#endif
 	}
+	
+	
 	
 }

@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.NativeImage;
 #endif
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.seibel.distanthorizons.api.enums.config.EDhApiLodShading;
 import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
@@ -35,6 +36,7 @@ import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.dependencyInjection.ModAccessorInjector;
 import com.seibel.distanthorizons.core.enums.EDhDirection;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
+import com.seibel.distanthorizons.core.render.EDhRenderApi;
 import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import com.seibel.distanthorizons.core.wrapperInterfaces.misc.ILightMapWrapper;
 
@@ -435,6 +437,30 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		#endif
 	}
 	
+	private EDhRenderApi renderApi = null;
+	@Override
+	public EDhRenderApi getMcRenderingApi()
+	{
+		if (this.renderApi != null)
+		{
+			return this.renderApi;
+		}
+		
+		
+		#if MC_VER <= MC_26_1_2
+		this.renderApi = EDhRenderApi.OPEN_GL;
+		#else
+		String backendName = RenderSystem
+			.getDevice()
+			.getDeviceInfo()
+			.backendName();
+		boolean isVulkan = backendName.equalsIgnoreCase("Vulkan");
+		this.renderApi = isVulkan ? EDhRenderApi.VULKAN : EDhRenderApi.OPEN_GL;
+		return this.renderApi;
+		#endif
+	}
+	
+	
 	@Override
 	public int getTargetFramebuffer()
 	{
@@ -459,7 +485,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	public void clearTargetFrameBuffer() { this.finalLevelFrameBufferId = -1; }
 	
 	@Override
-	public int getDepthTextureId()
+	public int getGlDepthTextureId()
 	{
 		#if MC_VER <= MC_1_12_2
 		//1.12.2 is using renderbuffer instead of framebuffer for depth texture
@@ -491,9 +517,8 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		}
 		#endif
 	}
-	// TODO vulkan deprecate(?) and add method to get color texture
 	@Override
-	public int getColorTextureId() 
+	public int getGlColorTextureId() 
 	{
 		#if MC_VER <= MC_1_12_2
 		return MC.getFramebuffer().framebufferTexture;

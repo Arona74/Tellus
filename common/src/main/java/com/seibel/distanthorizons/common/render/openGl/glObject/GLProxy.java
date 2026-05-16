@@ -29,9 +29,12 @@ import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.jar.EPlatform;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
+import com.seibel.distanthorizons.core.render.EDhRenderApi;
 import com.seibel.distanthorizons.core.util.objects.GLMessages.*;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
+import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftSharedWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IIrisAccessor;
+import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import com.seibel.distanthorizons.coreapi.ModInfo;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
@@ -51,6 +54,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GLProxy
 {
 	private static final IIrisAccessor IRIS_ACCESSOR = ModAccessorInjector.INSTANCE.get(IIrisAccessor.class);
+	private static final IMinecraftClientWrapper MC_CLIENT = SingletonInjector.INSTANCE.get(IMinecraftClientWrapper.class);
+	private static final AbstractDhRenderApiDefinition RENDER_API_DEF = SingletonInjector.INSTANCE.get(AbstractDhRenderApiDefinition.class);
+	
 	
 	public static final DhLogger LOGGER;
 	static
@@ -126,15 +132,22 @@ public class GLProxy
 	
 	private GLProxy() throws IllegalStateException
 	{
-		// TODO vulkan complain if created when MC is running on vulkan
+		if (RENDER_API_DEF.getRenderApi() != EDhRenderApi.OPEN_GL)
+		{
+			throw new IllegalStateException("[" + GLProxy.class.getSimpleName() + "] was created with the wrong Rendering API ["+RENDER_API_DEF.getRenderApi()+"]!"); 
+		}
+		
 		
 		// this must be created on minecraft's render context to work correctly
 		if (GLFW.glfwGetCurrentContext() == 0L)
 		{
-			throw new IllegalStateException(GLProxy.class.getSimpleName() + " was created outside the render thread!");
+			String message = "[" + GLProxy.class.getSimpleName() + "] was created outside the render thread!";
+			IllegalStateException exception = new IllegalStateException(message);
+			MC_CLIENT.crashMinecraft(message, exception);
+			throw exception;
 		}
 		
-		LOGGER.info("Creating " + GLProxy.class.getSimpleName() + "... If this is the last message you see there must have been an OpenGL error.");
+		LOGGER.info("Creating [" + GLProxy.class.getSimpleName() + "]... If this is the last message you see there must have been an OpenGL error.");
 		LOGGER.info("Lod Render OpenGL version [" + GL32.glGetString(GL32.GL_VERSION) + "].");
 		
 		

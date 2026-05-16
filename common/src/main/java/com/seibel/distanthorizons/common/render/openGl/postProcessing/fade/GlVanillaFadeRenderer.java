@@ -108,7 +108,7 @@ public class GlVanillaFadeRenderer implements IDhVanillaFadeRenderer
 		}
 		else
 		{
-			GL32.glFramebufferTexture2D(GL32.GL_FRAMEBUFFER, GL32.GL_COLOR_ATTACHMENT0, GL32.GL_TEXTURE_2D, MC_RENDER.getColorTextureId(), 0);
+			GL32.glFramebufferTexture2D(GL32.GL_FRAMEBUFFER, GL32.GL_COLOR_ATTACHMENT0, GL32.GL_TEXTURE_2D, MC_RENDER.getGlColorTextureId(), 0);
 		}
 	}
 	

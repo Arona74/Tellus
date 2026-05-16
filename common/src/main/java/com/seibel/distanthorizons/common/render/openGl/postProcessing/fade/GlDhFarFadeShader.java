@@ -153,7 +153,7 @@ public class GlDhFarFadeShader extends GlAbstractShaderRenderer
 		GL32.glUniform1i(this.uDhDepthTexture, 0);
 		
 		GLMC.glActiveTexture(GL32.GL_TEXTURE1);
-		GLMC.glBindTexture(MC_RENDER.getColorTextureId());
+		GLMC.glBindTexture(MC_RENDER.getGlColorTextureId());
 		GL32.glUniform1i(this.uMcColorTexture, 1);
 		
 		GLMC.glActiveTexture(GL32.GL_TEXTURE2);

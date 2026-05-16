@@ -13,6 +13,7 @@ import com.seibel.distanthorizons.common.render.blaze.postProcessing.BlazeVanill
 import com.seibel.distanthorizons.common.render.blaze.test.BlazeDhTestTriangleRenderer;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.buffer.BlazeVertexBufferWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeLodUniformBufferWrapper;
+import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.render.EDhRenderApi;
 import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.renderer.AbstractDebugWireframeRenderer;
@@ -64,12 +65,8 @@ public class BlazeDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 		#if MC_VER <= MC_26_1_2
 		renderApi = EDhRenderApi.OPEN_GL;
 		#else
-		String backendName = RenderSystem
-			.getDevice()
-			.getDeviceInfo()
-			.backendName();
-		boolean isVulkan = backendName.equalsIgnoreCase("Vulkan");
-		this.renderApi = isVulkan ? EDhRenderApi.VULKAN : EDhRenderApi.OPEN_GL;
+		// use the same rendering API as Minecraft
+		this.renderApi = MinecraftRenderWrapper.INSTANCE.getMcRenderingApi();
 		#endif
 		
 		this.apiName = "Blaze3D: " + this.getRenderApi();

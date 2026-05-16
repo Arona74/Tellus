@@ -132,7 +132,7 @@ public class GlDhApplyShader extends GlAbstractShaderRenderer
 	}
 	private void renderToMcTexture()
 	{
-		int targetColorTextureId = MC_RENDER.getColorTextureId();
+		int targetColorTextureId = MC_RENDER.getGlColorTextureId();
 		if (targetColorTextureId == -1)
 		{
 			return;
