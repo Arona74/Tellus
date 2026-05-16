@@ -9,6 +9,7 @@ import com.seibel.distanthorizons.core.jar.installer.ModrinthGetter;
 import com.seibel.distanthorizons.core.jar.updater.SelfUpdater;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
+import com.seibel.distanthorizons.core.render.RenderThreadTaskHandler;
 import com.seibel.distanthorizons.core.wrapperInterfaces.IVersionConstants;
 import net.minecraft.client.Minecraft;
 #if MC_VER <= MC_1_12_2
@@ -73,26 +74,31 @@ public class DhUpdateScreenBase
 			}
 			
 			
-			try
+			// running on the render thread is required since setting the MC screen may trigger
+			// before its allowed, silently failing
+			RenderThreadTaskHandler.INSTANCE.queueRunningOnRenderThread("Update Screen", () -> 
 			{
-				#if MC_VER <= MC_1_12_2
-				MC.displayGuiScreen(new UpdateModScreen(
-					new GuiMainMenu(),
-					versionId
-				));
-				#else
-				MC.setScreen(new UpdateModScreen(
-					new TitleScreen(false),
-					versionId
-				));
-				#endif
-			}
-			catch (Exception e)
-			{
-				// info instead of error since this can be ignored and probably just means
-				// there isn't a new DH version available
-				LOGGER.info("Unable to show DH update screen, reason: ["+e.getMessage()+"].");
-			}
+				try
+				{
+					#if MC_VER <= MC_1_12_2
+					MC.displayGuiScreen(new UpdateModScreen(
+						new GuiMainMenu(),
+						versionId
+					));
+					#else
+					MC.setScreen(new UpdateModScreen(
+						new TitleScreen(false),
+						versionId
+					));
+					#endif
+				}
+				catch (Exception e)
+				{
+					// info instead of error since this can be ignored and probably just means
+					// there isn't a new DH version available
+					LOGGER.error("Unable to show DH update screen, reason: ["+e.getMessage()+"].");
+				}
+			});
 		};
 		runnable.run();
 	}
