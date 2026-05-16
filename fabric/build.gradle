@@ -17,8 +17,11 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
 
     // Fabric API (bundled as jar-in-jar so users don't need to install it separately)
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
-    include "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+    modImplementation ("net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}")
+    include ("net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}") {
+        // including the gametest API can cause issues for other mods if included in our jar
+        exclude module: "fabric-gametest-api-v1"
+    }
 
     // Mod Menu
     addMod("com.terraformersmc:modmenu:${rootProject.modmenu_version}", rootProject.enable_mod_menu)
