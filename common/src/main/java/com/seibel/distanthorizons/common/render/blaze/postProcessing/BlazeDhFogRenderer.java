@@ -38,6 +38,7 @@ import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.render.EDhRenderApi;
+import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.util.LodUtil;
 import com.seibel.distanthorizons.core.util.math.Mat4f;
@@ -221,7 +222,7 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 				
 				.putMat4f() // uInvMvmProj
 				
-				.putInt() // uIsVulkan
+				.putInt() // uIsReverseZDepth
 				
 				.get();
 			
@@ -317,7 +318,7 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 				
 				.putMat4f(inverseMvmProjMatrix.createJomlMatrix()) // uInvMvmProj
 				
-				.putInt((RENDER_API_DEF.getRenderApi() == EDhRenderApi.VULKAN) ? 1 : 0) // uIsVulkan
+				.putInt((RENDER_API_DEF.getRenderDepth() == EDhRenderDepth.REVERSE_Z) ? 1 : 0) // uIsReverseZDepth
 				
 				.get()
 			;

@@ -49,6 +49,7 @@ import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.render.EDhRenderApi;
+import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.util.RenderUtil;
 import com.seibel.distanthorizons.core.util.math.Mat4f;
@@ -180,7 +181,7 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 				.putFloat() // uMaxLevelHeight
 				.putMat4f() // uDhInvMvmProj
 				.putMat4f() // uMcInvMvmProj
-				.putInt() // uIsVulkan
+				.putInt() // uIsReverseZDepth
 				.get();
 			
 			
@@ -221,7 +222,7 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 				.putFloat(renderParams.clientLevelWrapper.getMaxHeight()) // uMaxLevelHeight
 				.putMat4f(inverseDhMvmProjMatrix.createJomlMatrix()) // uDhInvMvmProj
 				.putMat4f(inverseMcMvmProjMatrix.createJomlMatrix()) // uMcInvMvmProj
-				.putInt((RENDER_API_DEF.getRenderApi() == EDhRenderApi.VULKAN) ? 1 : 0) // uIsVulkan
+				.putInt((RENDER_API_DEF.getRenderDepth() == EDhRenderDepth.REVERSE_Z) ? 1 : 0) // uIsReverseZDepth
 				.get()
 			;
 			
