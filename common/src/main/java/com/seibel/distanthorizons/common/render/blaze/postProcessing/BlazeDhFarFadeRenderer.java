@@ -124,7 +124,7 @@ public class BlazeDhFarFadeRenderer implements IDhFarFadeRenderer
 		this.pipeline = pipelineBuilder.build();
 		
 		
-		this.vboGpuBuffer = BlazePostProcessUtil.createAndUploadScreenVertexData("McFadeRenderer");
+		this.vboGpuBuffer = BlazePostProcessUtil.createAndUploadScreenVertexData("DhFarFadeRenderer");
 	}
 	
 	//endregion
