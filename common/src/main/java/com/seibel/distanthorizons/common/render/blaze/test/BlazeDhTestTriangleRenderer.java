@@ -176,7 +176,7 @@ public class BlazeDhTestTriangleRenderer implements IDhTestTriangleRenderer
 			this.mcDepthTextureViewWrapper))
 		{
 			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer);
-			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.setPipeline(this.pipeline);
 			renderPassWrapper.draw(3);
 		}
 	}

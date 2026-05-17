@@ -274,13 +274,13 @@ public class BlazeDhApplyRenderer
 					throw new IllegalStateException("Missing uniform ["+uniformName+"], please set the uniform before rendering.");	
 				}
 				
-				renderPassWrapper.renderPass.setUniform(uniformName, uniformBuffer);
+				renderPassWrapper.setUniform(uniformName, uniformBuffer);
 			}
 			
-			renderPassWrapper.renderPass.setUniform("baseFragUniformBlock", this.fragUniformBuffer);
+			renderPassWrapper.setUniform("baseFragUniformBlock", this.fragUniformBuffer);
 			
 			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer);
-			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.setPipeline(this.pipeline);
 			
 			renderPassWrapper.draw(4);
 		}

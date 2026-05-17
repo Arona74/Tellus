@@ -317,9 +317,9 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 			BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper))
 		{
 			// Bind instance data //
-			renderPassWrapper.renderPass.setUniform("uniformBlock", this.uniformBuffer);
+			renderPassWrapper.setUniform("uniformBlock", this.uniformBuffer);
 			
-			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.setPipeline(this.pipeline);
 			renderPassWrapper.setIndexBuffer(this.boxIndexBuffer);
 			
 			renderPassWrapper.setVertexBuffer(this.boxVertexBuffer);

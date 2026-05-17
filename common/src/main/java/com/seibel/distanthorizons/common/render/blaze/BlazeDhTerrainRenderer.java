@@ -307,11 +307,11 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 					renderPassWrapper.bindTexture("uLightMap", lightmapTextureViewWrapper);
 					
 					// set pipeline
-					renderPassWrapper.renderPass.setPipeline(opaquePass ? this.opaquePipeline : this.transparentPipeline);
+					renderPassWrapper.setPipeline(opaquePass ? this.opaquePipeline : this.transparentPipeline);
 					
 					// shared uniforms
-					renderPassWrapper.renderPass.setUniform("fragUniformBlock", this.fragUniformBuffer);
-					renderPassWrapper.renderPass.setUniform("vertSharedUniformBlock", this.vertSharedUniformBuffer);
+					renderPassWrapper.setUniform("fragUniformBlock", this.fragUniformBuffer);
+					renderPassWrapper.setUniform("vertSharedUniformBlock", this.vertSharedUniformBuffer);
 					
 					
 					
@@ -335,7 +335,7 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 							}
 						}
 						
-						renderPassWrapper.renderPass.setUniform("vertUniqueUniformBlock", uniformWrapper.gpuBuffer);
+						renderPassWrapper.setUniform("vertUniqueUniformBlock", uniformWrapper.gpuBuffer);
 						
 						
 						

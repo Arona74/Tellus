@@ -1,6 +1,7 @@
 package com.seibel.distanthorizons.common.render.blaze.wrappers;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderPass;
@@ -28,7 +29,7 @@ public class RenderPassWrapper implements AutoCloseable
 	private static final CommandEncoder COMMAND_ENCODER = GPU_DEVICE.createCommandEncoder();
 	
 	
-	public final RenderPass renderPass;
+	private final RenderPass renderPass;
 	
 	
 	
@@ -95,6 +96,10 @@ public class RenderPassWrapper implements AutoCloseable
 		this.renderPass.setIndexBuffer(buffer, IndexType.INT);
 		#endif
 	}
+	
+	public void setUniform(String uniformName, GpuBuffer uniformBuffer) { this.renderPass.setUniform(uniformName, uniformBuffer); }
+	
+	public void setPipeline(RenderPipeline pipeline) { this.renderPass.setPipeline(pipeline); }
 	
 	//endregion
 	

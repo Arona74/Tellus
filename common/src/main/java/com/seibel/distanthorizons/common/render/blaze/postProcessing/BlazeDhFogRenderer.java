@@ -361,10 +361,10 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 		{
 			renderPassWrapper.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper);
 			
-			renderPassWrapper.renderPass.setUniform("fragUniformBlock", this.fragUniformBuffer);
+			renderPassWrapper.setUniform("fragUniformBlock", this.fragUniformBuffer);
 			
 			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer); // vertex buffer can only be "0" lol
-			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.setPipeline(this.pipeline);
 			
 			renderPassWrapper.draw(/*indexCount*/ 4);
 		}

@@ -253,11 +253,11 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 			renderPassWrapper.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper);
 			renderPassWrapper.bindTexture("uDhColorTexture", BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper);
 			
-			renderPassWrapper.renderPass.setUniform("fragUniformBlock", this.fragUniformBuffer);
+			renderPassWrapper.setUniform("fragUniformBlock", this.fragUniformBuffer);
 			
 			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer);
 			
-			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.setPipeline(this.pipeline);
 			renderPassWrapper.draw(/*indexCount*/ 4);
 		}
 	}

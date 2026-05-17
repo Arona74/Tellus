@@ -130,7 +130,7 @@ public class BlazeDhCopyRenderer
 			
 			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer); // vertex buffer can only be "0" lol
 			
-			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.setPipeline(this.pipeline);
 			renderPassWrapper.draw(4);
 		}
 	}

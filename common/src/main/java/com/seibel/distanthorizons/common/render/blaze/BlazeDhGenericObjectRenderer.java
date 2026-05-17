@@ -567,10 +567,10 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 			// Bind instance data //
 			
 			
-			renderPassWrapper.renderPass.setUniform("vertUniformBlock", this.vertUniformBuffer);
+			renderPassWrapper.setUniform("vertUniformBlock", this.vertUniformBuffer);
 			
 			// set pipeline
-			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.setPipeline(this.pipeline);
 			renderPassWrapper.setIndexBuffer(container.indexGpuBuffer);
 			
 			renderPassWrapper.setVertexBuffer(container.vboGpuBuffer);
