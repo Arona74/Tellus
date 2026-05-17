@@ -293,7 +293,7 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 			renderPassWrapper.draw(4);
 		}
 	}
-	private String getRenderPassName() { return "distantHorizons:McSsaoRenderer"; }
+	private String getRenderPassName() { return "distantHorizons:SsaoRenderer"; }
 	
 	
 	//endregion

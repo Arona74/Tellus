@@ -32,12 +32,13 @@ import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.*;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.BlazeVertexFormatBuilder;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
@@ -45,10 +46,7 @@ import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeText
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
-import com.seibel.distanthorizons.core.render.EDhRenderApi;
 import com.seibel.distanthorizons.core.render.EDhRenderDepth;
-import com.seibel.distanthorizons.core.util.RenderUtil;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import com.seibel.distanthorizons.coreapi.ModInfo;
 import org.jetbrains.annotations.Nullable;
@@ -56,8 +54,6 @@ import org.jetbrains.annotations.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
 
 /**
  * Copies the given color texture
@@ -200,7 +196,7 @@ public class BlazeDhApplyRenderer
 			pipelineBuilder.withSampler("uSourceColorTexture");
 			pipelineBuilder.withSampler("uSourceDepthTexture");
 			
-			VertexFormat vertexFormat = VertexFormat.builder()
+			VertexFormat vertexFormat = new BlazeVertexFormatBuilder()
 				.add("vPosition", BlazeDhVertexFormatUtil.SCREEN_POS)
 				.build();
 			pipelineBuilder.withVertexFormat(vertexFormat);
@@ -208,7 +204,6 @@ public class BlazeDhApplyRenderer
 		}
 		this.pipeline = pipelineBuilder.build();
 	}
-	
 	
 	//endregion
 	
@@ -262,15 +257,13 @@ public class BlazeDhApplyRenderer
 			COMMAND_ENCODER.writeToBuffer(bufferSlice, buffer);
 		}
 		
-		try (RenderPass renderPass = COMMAND_ENCODER.createRenderPass(
+		try (RenderPassWrapper renderPassWrapper = new RenderPassWrapper(
 			this::getIdentifierName,
-			this.destinationColorTextureViewWrapper.textureView,
-			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			this.dummyDepthTextureWrapper.textureView,
-			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
+			this.destinationColorTextureViewWrapper,
+			this.dummyDepthTextureWrapper))
 		{
-			renderPass.bindTexture("uSourceColorTexture", this.sourceColorTextureViewWrapper.textureView, this.sourceColorTextureViewWrapper.textureSampler);
-			renderPass.bindTexture("uSourceDepthTexture", this.sourceDepthTextureViewWrapper.textureView, this.sourceDepthTextureViewWrapper.textureSampler);
+			renderPassWrapper.bindTexture("uSourceColorTexture", this.sourceColorTextureViewWrapper);
+			renderPassWrapper.bindTexture("uSourceDepthTexture", this.sourceDepthTextureViewWrapper);
 			
 			for (int i = 0; i < this.uniformNames.length; i++)
 			{
@@ -281,15 +274,15 @@ public class BlazeDhApplyRenderer
 					throw new IllegalStateException("Missing uniform ["+uniformName+"], please set the uniform before rendering.");	
 				}
 				
-				renderPass.setUniform(uniformName, uniformBuffer);
+				renderPassWrapper.renderPass.setUniform(uniformName, uniformBuffer);
 			}
 			
-			renderPass.setUniform("baseFragUniformBlock", this.fragUniformBuffer);
+			renderPassWrapper.renderPass.setUniform("baseFragUniformBlock", this.fragUniformBuffer);
 			
-			renderPass.setVertexBuffer(0, this.vboGpuBuffer);
-			renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer);
+			renderPassWrapper.renderPass.setPipeline(this.pipeline);
 			
-			renderPass.draw(/*indexStart*/ 0, /*indexCount*/ 4);
+			renderPassWrapper.draw(4);
 		}
 		
 		

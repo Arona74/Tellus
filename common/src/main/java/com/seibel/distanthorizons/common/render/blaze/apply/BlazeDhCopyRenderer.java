@@ -28,18 +28,15 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.*;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.IDhBlazeTexture;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
-
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
 
 /**
  * Blindly copies one texture into another.
@@ -103,7 +100,7 @@ public class BlazeDhCopyRenderer
 		this.pipeline = pipelineBuilder.build();
 		
 		
-		this.vboGpuBuffer = BlazePostProcessUtil.createAndUploadScreenVertexData("McCopyRenderer");
+		this.vboGpuBuffer = BlazePostProcessUtil.createAndUploadScreenVertexData("CopyRenderer");
 		
 	}
 	
@@ -117,48 +114,28 @@ public class BlazeDhCopyRenderer
 	//region
 	
 	public void render(
-		BlazeTextureWrapper sourceColorTextureWrapper,
-		BlazeTextureViewWrapper destinationColorTextureWrapper)
-	{
-		this.render(
-			sourceColorTextureWrapper.textureView, sourceColorTextureWrapper.textureSampler,
-			destinationColorTextureWrapper.textureView);
-	}
-	public void render(
-		BlazeTextureWrapper sourceColorTextureWrapper,
-		BlazeTextureWrapper destinationColorTextureWrapper)
-	{
-		this.render(
-			sourceColorTextureWrapper.textureView, sourceColorTextureWrapper.textureSampler,
-			destinationColorTextureWrapper.textureView);
-	}
-	
-	private void render(
-		GpuTextureView sourceTextureView,
-		GpuSampler sourceTextureSampler,
-		GpuTextureView destinationTextureView)
+		IDhBlazeTexture sourceColorTextureWrapper,
+		IDhBlazeTexture destinationColorTextureWrapper)
 	{
 		this.tryInit();
 		
 		this.dummyDepthTextureWrapper.tryCreateOrResize();
 		
-		try (RenderPass renderPass = COMMAND_ENCODER.createRenderPass(
+		try (RenderPassWrapper renderPassWrapper = new RenderPassWrapper(
 			this::getRenderPassName,
-			destinationTextureView,
-			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			this.dummyDepthTextureWrapper.textureView,
-			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
+			destinationColorTextureWrapper,
+			this.dummyDepthTextureWrapper))
 		{
-			renderPass.bindTexture("uCopyTexture", sourceTextureView, sourceTextureSampler);
+			renderPassWrapper.bindTexture("uCopyTexture", sourceColorTextureWrapper);
 			
-			renderPass.setVertexBuffer(0, this.vboGpuBuffer); // vertex buffer can only be "0" lol
+			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer); // vertex buffer can only be "0" lol
 			
-			renderPass.setPipeline(this.pipeline);
-			renderPass.draw(/*indexStart*/ 0, /*indexCount*/ 4);
+			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.draw(4);
 		}
 	}
 	
-	private String getRenderPassName() { return "distantHorizons:McCopyRenderer"; }
+	private String getRenderPassName() { return "distantHorizons:CopyRenderer"; }
 	
 	//endregion
 	

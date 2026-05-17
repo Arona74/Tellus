@@ -48,6 +48,8 @@ import com.seibel.distanthorizons.api.objects.render.DhApiRenderableBox;
 import com.seibel.distanthorizons.api.objects.render.DhApiRenderableBoxGroupShading;
 import com.seibel.distanthorizons.common.render.blaze.objects.BlazeGenericObjectVertexContainer;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.BlazeVertexFormatBuilder;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
@@ -166,7 +168,7 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 			
 			pipelineBuilder.withUniformBuffer("vertUniformBlock");
 			
-			VertexFormat vertexFormat = VertexFormat.builder()
+			VertexFormat vertexFormat = new BlazeVertexFormatBuilder()
 				.add("vPosition", BlazeDhVertexFormatUtil.FLOAT_XYZ_POS)
 				.add("aColor", BlazeDhVertexFormatUtil.RGBA_UBYTE_COLOR)
 				.add("aMaterial", BlazeDhVertexFormatUtil.IRIS_MATERIAL)
@@ -530,7 +532,7 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 			//endregion
 		}
 	}
-	private String getRenderPassName() { return "distantHorizons:McGenericObjectRenderer"; }
+	private String getRenderPassName() { return "distantHorizons:GenericObjectRenderer"; }
 	
 	//endregion
 	
@@ -546,12 +548,10 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 		RenderableBoxGroup boxGroup,
 		IProfilerWrapper profiler)
 	{
-		try (RenderPass renderPass = COMMAND_ENCODER.createRenderPass(
+		try (RenderPassWrapper renderPassWrapper = new RenderPassWrapper(
 			this::getRenderPassName,
-			BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper.textureView,
-			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.textureView,
-			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
+			BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper,
+			BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper))
 		{
 			
 			// update instance data //
@@ -560,30 +560,26 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 			
 			LightMapWrapper lightMapWrapper = (LightMapWrapper) renderEventParam.lightmap;
 			BlazeTextureViewWrapper lightmapTextureViewWrapper = lightMapWrapper.getTextureViewWrapper();
-			renderPass.bindTexture("uLightMap", lightmapTextureViewWrapper.textureView, lightmapTextureViewWrapper.textureSampler);
+			renderPassWrapper.bindTexture("uLightMap", lightmapTextureViewWrapper);
 			
 			
 			
 			// Bind instance data //
 			
 			
-			renderPass.setUniform("vertUniformBlock", this.vertUniformBuffer);
+			renderPassWrapper.renderPass.setUniform("vertUniformBlock", this.vertUniformBuffer);
 			
 			// set pipeline
-			renderPass.setPipeline(this.pipeline);
-			renderPass.setIndexBuffer(container.indexGpuBuffer, VertexFormat.IndexType.INT);
+			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.setIndexBuffer(container.indexGpuBuffer);
 			
-			renderPass.setVertexBuffer(0, container.vboGpuBuffer);
+			renderPassWrapper.setVertexBuffer(container.vboGpuBuffer);
 			
 			// Draw instanced
 			if (container.uploadedBoxCount > 0)
 			{
-				renderPass.drawIndexed(
-					/*indexStart*/ 0,
-					/*firstIndex*/0,
-					/*indexCount*/container.uploadedBoxCount * 36, // 36 = 6 faces * 6 verticies per face
-					/*instanceCount*/1);
-				
+				// 36 = 6 faces * 6 verticies per face
+				renderPassWrapper.drawIndexed(container.uploadedBoxCount * 36);
 			}
 		}
 	}

@@ -38,6 +38,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.BlazeVertexFormatBuilder;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
@@ -165,7 +167,7 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 			pipelineBuilder.withUniformBuffer("uniformBlock");
 			
 			
-			VertexFormat vertexFormat = VertexFormat.builder()
+			VertexFormat vertexFormat = new BlazeVertexFormatBuilder()
 				.add("vPosition", BlazeDhVertexFormatUtil.FLOAT_XYZ_POS)
 				.build();
 			pipelineBuilder.withVertexFormat(vertexFormat);
@@ -191,7 +193,7 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 			int usage = GpuBuffer.USAGE_COPY_DST 
 				| GpuBuffer.USAGE_VERTEX;
 			int size = BOX_VERTICES.length * Float.BYTES;
-			this.boxVertexBuffer = GPU_DEVICE.createBuffer(() -> "distantHorizons:McDebugWireframeBox", usage, size);
+			this.boxVertexBuffer = GPU_DEVICE.createBuffer(() -> "distantHorizons:DebugWireframeBox", usage, size);
 			
 			{
 				int length = BOX_VERTICES.length * Float.BYTES;
@@ -309,29 +311,23 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 		
 		// render //
 		
-		try (RenderPass renderPass = commandEncoder.createRenderPass(
+		try (RenderPassWrapper renderPassWrapper = new RenderPassWrapper(
 			this::getRenderPassName,
-			BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper.textureView, 
-			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.textureView, 
-			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
+			BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper, 
+			BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper))
 		{
 			// Bind instance data //
-			renderPass.setUniform("uniformBlock", this.uniformBuffer);
-
-			renderPass.setPipeline(this.pipeline);
-			renderPass.setIndexBuffer(this.boxIndexBuffer, VertexFormat.IndexType.INT);
-
-			renderPass.setVertexBuffer(0, this.boxVertexBuffer);
-
-			renderPass.drawIndexed(
-				/*indexStart*/ 0,
-				/*firstIndex*/0,
-				/*indexCount*/BOX_OUTLINE_INDICES.length,
-				/*instanceCount*/1);
+			renderPassWrapper.renderPass.setUniform("uniformBlock", this.uniformBuffer);
+			
+			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.setIndexBuffer(this.boxIndexBuffer);
+			
+			renderPassWrapper.setVertexBuffer(this.boxVertexBuffer);
+			
+			renderPassWrapper.drawIndexed(BOX_OUTLINE_INDICES.length);
 		}
 	}
-	private String getRenderPassName() { return "distantHorizons:McDebugRenderer"; }
+	private String getRenderPassName() { return "distantHorizons:DebugRenderer"; }
 	
 	//endregion
 	

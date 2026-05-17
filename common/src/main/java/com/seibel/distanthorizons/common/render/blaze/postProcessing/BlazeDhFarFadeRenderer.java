@@ -37,6 +37,7 @@ import com.seibel.distanthorizons.common.render.blaze.BlazeDhMetaRenderer;
 import com.seibel.distanthorizons.common.render.blaze.apply.BlazeDhCopyRenderer;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
@@ -212,29 +213,27 @@ public class BlazeDhFarFadeRenderer implements IDhFarFadeRenderer
 	
 	private void renderFadeToTexture()
 	{
-		try (RenderPass renderPass = COMMAND_ENCODER.createRenderPass(
+		try (RenderPassWrapper renderPassWrapper = new RenderPassWrapper(
 			this::getRenderPassName,
-			this.dhFadeColorTextureWrapper.textureView, 
-			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			this.dhFadeDepthTextureWrapper.textureView, 
-			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
+			this.dhFadeColorTextureWrapper, 
+			this.dhFadeDepthTextureWrapper))
 		{
 			// MC texture
-			renderPass.bindTexture("uMcColorTexture", this.mcColorTextureViewWrapper.textureView, this.mcColorTextureViewWrapper.textureSampler);
+			renderPassWrapper.bindTexture("uMcColorTexture", this.mcColorTextureViewWrapper);
 			
 			// DH textures
-			renderPass.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.textureView, BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.textureSampler);
-			renderPass.bindTexture("uDhColorTexture", BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper.textureView, BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper.textureSampler);
+			renderPassWrapper.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper);
+			renderPassWrapper.bindTexture("uDhColorTexture", BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper);
 			
-			renderPass.setUniform("fragUniformBlock", this.fragUniformBuffer);
+			renderPassWrapper.renderPass.setUniform("fragUniformBlock", this.fragUniformBuffer);
 			
-			renderPass.setVertexBuffer(0, this.vboGpuBuffer); // vertex buffer can only be "0" lol
-			renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer);
+			renderPassWrapper.renderPass.setPipeline(this.pipeline);
 			
-			renderPass.draw(/*indexStart*/ 0, /*indexCount*/ 4);
+			renderPassWrapper.draw(4);
 		}
 	}
-	private String getRenderPassName() { return "distantHorizons:McFadeRenderer"; }
+	private String getRenderPassName() { return "distantHorizons:DhFarFadeRenderer"; }
 	
 	
 	//endregion

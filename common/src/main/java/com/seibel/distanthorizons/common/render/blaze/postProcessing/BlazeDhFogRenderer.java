@@ -156,7 +156,7 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 		this.pipeline = pipelineBuilder.build();
 		
 		
-		this.vboGpuBuffer = BlazePostProcessUtil.createAndUploadScreenVertexData("McFogRenderer");
+		this.vboGpuBuffer = BlazePostProcessUtil.createAndUploadScreenVertexData("FogRenderer");
 	}
 	
 	//endregion
@@ -369,7 +369,7 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 			renderPassWrapper.draw(/*indexCount*/ 4);
 		}
 	}
-	private String getRenderPassName() { return "distantHorizons:McFogRenderer"; }
+	private String getRenderPassName() { return "distantHorizons:FogRenderer"; }
 	
 	
 	//endregion

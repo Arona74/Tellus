@@ -143,7 +143,7 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 		this.pipeline = pipelineBuilder.build();
 		
 		
-		this.vboGpuBuffer = BlazePostProcessUtil.createAndUploadScreenVertexData("McFadeRenderer");
+		this.vboGpuBuffer = BlazePostProcessUtil.createAndUploadScreenVertexData("VanillaFadeRenderer");
 	}
 	
 	//endregion
@@ -261,7 +261,7 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 			renderPassWrapper.draw(/*indexCount*/ 4);
 		}
 	}
-	private String getRenderPassName() { return "distantHorizons:McFadeRenderer"; }
+	private String getRenderPassName() { return "distantHorizons:VanillaFadeRenderer"; }
 	
 	//endregion
 	
