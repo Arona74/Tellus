@@ -456,8 +456,8 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 			.backendName();
 		boolean isVulkan = backendName.equalsIgnoreCase("Vulkan");
 		this.renderApi = isVulkan ? EDhRenderApi.VULKAN : EDhRenderApi.OPEN_GL;
-		return this.renderApi;
 		#endif
+		return this.renderApi;
 	}
 	
 	

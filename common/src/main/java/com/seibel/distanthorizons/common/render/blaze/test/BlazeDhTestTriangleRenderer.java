@@ -35,6 +35,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.*;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.BlazeVertexFormatBuilder;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftRenderWrapper;
@@ -107,7 +109,7 @@ public class BlazeDhTestTriangleRenderer implements IDhTestTriangleRenderer
 			pipelineBuilder.withVertexShader("test/blaze/vert");
 			pipelineBuilder.withFragmentShader("test/blaze/frag");
 			
-			VertexFormat vertexFormat = VertexFormat.builder()
+			VertexFormat vertexFormat = new BlazeVertexFormatBuilder()
 				.add("vPosition", BlazeDhVertexFormatUtil.SCREEN_POS)
 				.add("vColor", BlazeDhVertexFormatUtil.RGBA_FLOAT_COLOR)
 				.build();
@@ -168,16 +170,14 @@ public class BlazeDhTestTriangleRenderer implements IDhTestTriangleRenderer
 		this.mcColorTextureViewWrapper.tryWrap(MinecraftRenderWrapper.INSTANCE.getRenderTarget().getColorTexture());
 		this.mcDepthTextureViewWrapper.tryWrap(MinecraftRenderWrapper.INSTANCE.getRenderTarget().getDepthTexture());
 		
-		try (RenderPass renderPass = COMMAND_ENCODER.createRenderPass(
+		try (RenderPassWrapper renderPassWrapper = new RenderPassWrapper(
 			this::getRenderPassName,
-			this.mcColorTextureViewWrapper.textureView,
-			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			this.mcDepthTextureViewWrapper.textureView, 
-			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
+			this.mcColorTextureViewWrapper,
+			this.mcDepthTextureViewWrapper))
 		{
-			renderPass.setVertexBuffer(0, this.vboGpuBuffer);
-			renderPass.setPipeline(this.pipeline);
-			renderPass.draw(/*indexStart*/ 0, /*indexCount*/ 3);
+			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer);
+			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.draw(3);
 		}
 	}
 	private String getRenderPassName() { return "distantHorizons:DhTestRenderer"; }

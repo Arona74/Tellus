@@ -11,6 +11,7 @@ import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.BlazeVertexFormatBuilder;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -67,7 +68,7 @@ public class BlazePostProcessUtil
 	
 	public static VertexFormat createVertexFormat()
 	{
-		VertexFormat vertexFormat = VertexFormat.builder()
+		VertexFormat vertexFormat = new BlazeVertexFormatBuilder()
 			.add("vPosition", BlazeDhVertexFormatUtil.SCREEN_POS)
 			.build();
 		return vertexFormat;

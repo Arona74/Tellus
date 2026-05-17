@@ -22,9 +22,10 @@ import com.mojang.blaze3d.textures.*;
 
 #else
 import com.mojang.blaze3d.GpuFormat;
+import org.joml.Vector4f;
 #endif
 
-public class BlazeTextureWrapper
+public class BlazeTextureWrapper implements IDhBlazeTexture
 {
 	public static final DhLogger LOGGER = new DhLoggerBuilder().build();
 	
@@ -42,8 +43,13 @@ public class BlazeTextureWrapper
 	#endif
 	
 	public GpuTexture texture = null;
-	public GpuTextureView textureView = null;
-	public GpuSampler textureSampler = null;
+	
+	private GpuTextureView textureView = null;
+	public GpuTextureView getTextureView() { return this.textureView; }
+	
+	private GpuSampler textureSampler = null;
+	public GpuSampler getTextureSampler() { return this.textureSampler; }
+	
 	
 	private int width = -1;
 	private int height = -1;
@@ -185,7 +191,18 @@ public class BlazeTextureWrapper
 	{
 		if (this.texture != null)
 		{
+			#if MC_VER <= MC_26_1_2
 			COMMAND_ENCODER.clearColorTexture(this.texture, clearArgbColor);
+			#else
+			Vector4f clearColor = new Vector4f(
+				// color values should be between 0.0 and 1.0
+				ColorUtil.getRed(clearArgbColor) / 255.0f,
+				ColorUtil.getGreen(clearArgbColor) / 255.0f,
+				ColorUtil.getBlue(clearArgbColor) / 255.0f,
+				ColorUtil.getAlpha(clearArgbColor) / 255.0f
+			);
+			COMMAND_ENCODER.clearColorTexture(this.texture, clearColor);
+			#endif
 		}
 	}
 	

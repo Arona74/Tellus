@@ -40,6 +40,7 @@ import com.seibel.distanthorizons.common.render.blaze.BlazeDhMetaRenderer;
 import com.seibel.distanthorizons.common.render.blaze.apply.BlazeDhCopyRenderer;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
@@ -79,6 +80,7 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 	private static final CommandEncoder COMMAND_ENCODER = GPU_DEVICE.createCommandEncoder();
 	
 	public static final BlazeVanillaFadeRenderer INSTANCE = new BlazeVanillaFadeRenderer();
+	
 	
 	private RenderPipeline pipeline;
 	private boolean init = false;
@@ -240,25 +242,23 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 	
 	private void renderFadeToTexture()
 	{
-		try (RenderPass renderPass = COMMAND_ENCODER.createRenderPass(
+		try (RenderPassWrapper renderPassWrapper = new RenderPassWrapper(
 			this::getRenderPassName,
-			this.fadeColorTextureWrapper.textureView,
-			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			this.fadeDepthTextureWrapper.textureView, 
-			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
+			this.fadeColorTextureWrapper,
+			this.fadeDepthTextureWrapper))
 		{
-			renderPass.bindTexture("uMcDepthTexture", this.mcDepthTextureWrapper.textureView, this.mcDepthTextureWrapper.textureSampler);
-			renderPass.bindTexture("uCombinedMcDhColorTexture", this.mcColorTextureWrapper.textureView, this.mcColorTextureWrapper.textureSampler);
+			renderPassWrapper.bindTexture("uMcDepthTexture", this.mcDepthTextureWrapper);
+			renderPassWrapper.bindTexture("uCombinedMcDhColorTexture", this.mcColorTextureWrapper);
 			
-			renderPass.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.textureView, BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.textureSampler);
-			renderPass.bindTexture("uDhColorTexture", BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper.textureView, BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper.textureSampler);
+			renderPassWrapper.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper);
+			renderPassWrapper.bindTexture("uDhColorTexture", BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper);
 			
-			renderPass.setUniform("fragUniformBlock", this.fragUniformBuffer);
+			renderPassWrapper.renderPass.setUniform("fragUniformBlock", this.fragUniformBuffer);
 			
-			renderPass.setVertexBuffer(0, this.vboGpuBuffer); // vertex buffer can only be "0" lol
+			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer);
 			
-			renderPass.setPipeline(this.pipeline);
-			renderPass.draw(/*indexStart*/ 0, /*indexCount*/ 4);
+			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.draw(/*indexCount*/ 4);
 		}
 	}
 	private String getRenderPassName() { return "distantHorizons:McFadeRenderer"; }

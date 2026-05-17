@@ -157,8 +157,10 @@ public class MinecraftGLWrapper
 		GL32.glEnable(GL32.GL_BLEND);
 		#if MC_VER <= MC_1_12_2
 		GlStateManager.enableBlend();
-		#else
+		#elif MC_VER <= MC_26_1_2
 		GlStateManager._enableBlend();
+		#else
+		GlStateManager._enableBlend(0);
 		#endif
 	}
 	/** @see GL32#GL_BLEND */
@@ -167,8 +169,10 @@ public class MinecraftGLWrapper
 		GL32.glDisable(GL32.GL_BLEND);
 		#if MC_VER <= MC_1_12_2
 		GlStateManager.disableBlend();
+		#elif MC_VER <= MC_26_1_2
+		GlStateManager._disableBlend();
 		#else
-		GlStateManager._disableBlend(); 
+		GlStateManager._disableBlend(0); 
 		#endif
 	}
 	

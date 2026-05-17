@@ -14,8 +14,12 @@ import net.minecraft.resources.Identifier;
 
 #if MC_VER <= MC_1_21_11
 import com.mojang.blaze3d.platform.DepthTestFunction;
+#elif MC_VER <= MC_26_1_2
+import com.mojang.blaze3d.platform.CompareOp;
 #else
 import com.mojang.blaze3d.platform.CompareOp;
+import com.mojang.blaze3d.GpuFormat;
+import com.mojang.blaze3d.PrimitiveTopology;
 #endif
 
 import java.io.IOException;
@@ -262,12 +266,22 @@ public class RenderPipelineBuilderWrapper
 			}
 			this.blazePipelineBuilder.withDepthStencilState(new DepthStencilState(compareOp, this.writeDepth));
 			
+			#if MC_VER <= MC_26_1_2
 			this.blazePipelineBuilder.withColorTargetState(
 				new ColorTargetState(
 					Optional.ofNullable(this.blendFunction), 
 					this.writeColor ? ColorTargetState.WRITE_ALL : ColorTargetState.WRITE_NONE
 				)
 			);
+			#else
+			this.blazePipelineBuilder.withColorTargetState(
+				new ColorTargetState(
+					Optional.ofNullable(this.blendFunction),
+					GpuFormat.RGBA8_UNORM,
+					this.writeColor ? ColorTargetState.WRITE_ALL : ColorTargetState.WRITE_NONE
+				)
+			);
+			#endif
 			
 			#endif
 		}
@@ -275,6 +289,7 @@ public class RenderPipelineBuilderWrapper
 		
 		// vertex format
 		{
+			#if MC_VER <= MC_26_1_2
 			VertexFormat.Mode blazeVertexMode;
 			switch (this.vertexMode)
 			{
@@ -293,6 +308,29 @@ public class RenderPipelineBuilderWrapper
 			}
 			
 			this.blazePipelineBuilder.withVertexFormat(vertexFormat, blazeVertexMode);
+			#else
+			
+			PrimitiveTopology primitiveTopology;
+			switch (this.vertexMode)
+			{
+				case TRIANGLES:
+					primitiveTopology = PrimitiveTopology.TRIANGLES;
+					break;
+				case TRIANGLE_FAN:
+					primitiveTopology = PrimitiveTopology.TRIANGLE_FAN;
+					break;
+				case LINES:
+					primitiveTopology = PrimitiveTopology.DEBUG_LINES;
+					break;
+				
+				default:
+					throw new UnsupportedOperationException("No PrimitiveTopology defined for type ["+this.vertexMode+"].");
+			}
+			
+			this.blazePipelineBuilder.withVertexBinding(0, vertexFormat);
+			this.blazePipelineBuilder.withPrimitiveTopology(primitiveTopology);
+			
+			#endif
 		}
 		
 		

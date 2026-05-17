@@ -26,6 +26,7 @@ public class BlazeDhSsaoRenderer {}
 
 import com.seibel.distanthorizons.common.render.blaze.BlazeDhMetaRenderer;
 import com.seibel.distanthorizons.common.render.blaze.apply.BlazeDhApplyRenderer;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
@@ -277,21 +278,19 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 	
 	private void renderSsaoToTexture()
 	{
-		try (RenderPass renderPass = COMMAND_ENCODER.createRenderPass(
+		try (RenderPassWrapper renderPassWrapper = new RenderPassWrapper(
 			this::getRenderPassName,
-			this.ssaoColorTextureWrapper.textureView,
-			/*optionalClearColorAsInt*/ OptionalInt.empty(),
-			this.ssaoDepthTextureWrapper.textureView,
-			/*optionalDepthValueAsDouble*/ OptionalDouble.empty()))
+			this.ssaoColorTextureWrapper,
+			this.ssaoDepthTextureWrapper))
 		{
-			renderPass.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.textureView, BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.textureSampler);
+			renderPassWrapper.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper);
 			
-			renderPass.setUniform("fragUniformBlock", this.fragUniformBuffer);
+			renderPassWrapper.renderPass.setUniform("fragUniformBlock", this.fragUniformBuffer);
 			
-			renderPass.setVertexBuffer(0, this.vboGpuBuffer); // vertex buffer can only be "0" lol
+			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer);
 			
-			renderPass.setPipeline(this.pipeline);
-			renderPass.draw(/*indexStart*/ 0, /*indexCount*/ 4);
+			renderPassWrapper.renderPass.setPipeline(this.pipeline);
+			renderPassWrapper.draw(4);
 		}
 	}
 	private String getRenderPassName() { return "distantHorizons:McSsaoRenderer"; }

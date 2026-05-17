@@ -14,7 +14,7 @@ import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 
 import java.util.OptionalDouble;
 
-public class BlazeTextureViewWrapper
+public class BlazeTextureViewWrapper implements IDhBlazeTexture
 {
 	public static final DhLogger LOGGER = new DhLoggerBuilder().build();
 	
@@ -22,8 +22,11 @@ public class BlazeTextureViewWrapper
 	private static final CommandEncoder COMMAND_ENCODER = GPU_DEVICE.createCommandEncoder();
 	
 	
-	public GpuTextureView textureView = null;
-	public GpuSampler textureSampler = null;
+	private GpuTextureView textureView = null;
+	public GpuTextureView getTextureView() { return this.textureView; }
+	
+	private GpuSampler textureSampler = null;
+	public GpuSampler getTextureSampler() { return this.textureSampler; }
 	
 	
 	
