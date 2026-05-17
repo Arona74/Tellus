@@ -16,8 +16,14 @@ public class LangWrapper implements ILangWrapper
 	{
 		#if MC_VER <= MC_1_12_2
 		return I18n.hasKey(str);
-		#else
+		#elif MC_VER <= MC_26_1_2
 		return I18n.exists(str);
+		#else
+		String translated = getLang(str);
+		return translated != null 
+			// if this isn't translatable it will generally return
+			// the same string as was passed in
+			&& !translated.equalsIgnoreCase(str);
 		#endif
 	}
 	
