@@ -309,8 +309,18 @@ public class ClientBlockStateColorCache
 				for (int i = 0; i < COLOR_RESOLUTION_DIRECTION_ORDER.length; i++)
 				{
 					direction = COLOR_RESOLUTION_DIRECTION_ORDER[i];
-					quads = this.getQuadsForDirection(direction);
-					if (quads != null && !quads.isEmpty()
+					try
+					{
+						quads = this.getQuadsForDirection(direction);
+					}
+					catch (Exception ignore)
+					{
+						// failing to get quads can happen in the block is invalid
+						// (i.e. AIR is somehow passed in)
+					}
+					
+					if (quads != null 
+						&& !quads.isEmpty()
 						&& !(
 							#if MC_VER <= MC_1_12_2
 							this.blockState.getBlock() instanceof BlockRotatedPillar
@@ -328,7 +338,15 @@ public class ClientBlockStateColorCache
 				
 				if (quads == null || quads.isEmpty())
 				{
-					quads = this.getUnculledQuads();
+					try
+					{
+						quads = this.getUnculledQuads();
+					}
+					catch (Exception ignore)
+					{
+						// failing to get quads can happen in the block is invalid
+						// (i.e. AIR is somehow passed in)
+					}
 				}
 				
 				if (quads != null 
@@ -406,6 +424,23 @@ public class ClientBlockStateColorCache
 			
 			this.isColorResolved = true;
 		}
+		catch (Exception resolveError)
+		{
+			LOGGER.warn("Failed to get color for block ["+this.blockStateWrapper.getSerialString()+"], error: ["+resolveError.getMessage()+"]. Attempting to use particle icon color...", resolveError);
+			
+			this.needPostTinting = true;
+			this.tintIndex = 0;
+			
+			try
+			{
+				this.baseColor = this.getParticleIconColor();
+			}
+			catch (Exception getParticleIconError)
+			{
+				LOGGER.warn("Failed to get particle icon color for block ["+this.blockStateWrapper.getSerialString()+"], error: ["+getParticleIconError.getMessage()+"], block will render as hot pink.", getParticleIconError);
+				this.baseColor = ColorUtil.HOT_PINK;
+			}
+		}
 		finally
 		{
 			RESOLVE_LOCK.unlock();
@@ -413,12 +448,16 @@ public class ClientBlockStateColorCache
 	}
 	
 	@Nullable
-	private List<BakedQuad> getUnculledQuads() { return this.getQuadsForDirection(null); }
+	private List<BakedQuad> getUnculledQuads() throws Exception { return this.getQuadsForDirection(null); }
+	/** 
+	 * throws Exception is to document that rarely MC will throw errors if this method
+	 * is called on the wrong block (even though in that case it should just return null).
+	 */
 	@Nullable
 	#if MC_VER <= MC_1_12_2
-	private List<BakedQuad> getQuadsForDirection(@Nullable EnumFacing direction)
+	private List<BakedQuad> getQuadsForDirection(@Nullable EnumFacing direction) throws Exception
 	#else
-	private List<BakedQuad> getQuadsForDirection(@Nullable Direction direction)
+	private List<BakedQuad> getQuadsForDirection(@Nullable Direction direction) throws Exception
 	#endif
 	{
 		#if MC_VER <= MC_1_12_2
@@ -621,6 +660,15 @@ public class ClientBlockStateColorCache
 	
 	private int getParticleIconColor()
 	{
+		// Air can be null which will cause issues below,
+		// just use a static color, it shouldn't be rendered anyway.
+		// This is just to capture a rare bug state where we attempt
+		// to get air's color.
+		if (BlockStateWrapper.isAir(this.blockState))
+		{
+			return ColorUtil.INVISIBLE;
+		}
+		
 		return calculateColorFromTexture(
 			#if MC_VER <= MC_1_12_2
 			Minecraft.getMinecraft().getBlockRendererDispatcher().getBlockModelShapes().getTexture(this.blockState),
