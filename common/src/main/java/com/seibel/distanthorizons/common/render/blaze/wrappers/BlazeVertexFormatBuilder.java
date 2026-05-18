@@ -1,5 +1,9 @@
 package com.seibel.distanthorizons.common.render.blaze.wrappers;
 
+#if MC_VER <= MC_1_21_10
+public class BlazeVertexFormatBuilder {}
+#else
+
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
@@ -51,3 +55,4 @@ public class BlazeVertexFormatBuilder
 	
 	
 }
+#endif

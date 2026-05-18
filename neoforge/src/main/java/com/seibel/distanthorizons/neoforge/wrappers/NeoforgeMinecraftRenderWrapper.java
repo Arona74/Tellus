@@ -23,7 +23,7 @@ public class NeoforgeMinecraftRenderWrapper extends MinecraftRenderWrapper
 	
 	
 	@Override
-	public int getDepthTextureId()
+	public int getGlDepthTextureId()
 	{
 		#if MC_VER < MC_1_21_9
 		// no special handling required,
@@ -50,7 +50,7 @@ public class NeoforgeMinecraftRenderWrapper extends MinecraftRenderWrapper
 	}
 	
 	@Override
-	public int getColorTextureId()
+	public int getGlColorTextureId()
 	{
 		#if MC_VER < MC_1_21_9
 		// no special handling required,

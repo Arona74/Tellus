@@ -1,5 +1,9 @@
 package com.seibel.distanthorizons.common.render.blaze.wrappers;
 
+#if MC_VER <= MC_1_21_10
+public class RenderPassWrapper {}
+#else
+
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.CommandEncoder;
@@ -155,3 +159,4 @@ public class RenderPassWrapper implements AutoCloseable
 	
 	
 }
+#endif

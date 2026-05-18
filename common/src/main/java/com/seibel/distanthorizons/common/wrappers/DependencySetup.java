@@ -102,7 +102,7 @@ public class DependencySetup
 			renderingApiEnum = versionConstants.getDefaultRenderingApi();
 		}
 		
-		LOGGER.info("Setting DH Rendering API to: ["+renderingApiEnum+"].");
+		LOGGER.info("Setting DH Rendering API to: ["+renderingApiEnum+"]...");
 		
 		
 		
@@ -151,6 +151,7 @@ public class DependencySetup
 		
 		
 		renderDefinition.bindRenderers();
+		LOGGER.info("DH Rendering successfully bound to: ["+renderDefinition.getApiName()+"]...");
 	}
 	
 	
