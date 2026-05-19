@@ -689,7 +689,9 @@ public class ClientBlockStateColorCache
 	//===============//
 	//region
 	
-	public int getColor(BiomeWrapper biomeWrapper, FullDataSourceV2 fullDataSource, DhBlockPos blockPos)
+	public int getColor(
+		BiomeWrapper biomeWrapper, FullDataSourceV2 fullDataSource, DhBlockPos blockPos,
+		boolean allowApiOverride)
 	{
 		// only get the tint if the block needs to be tinted
 		int tintColor = ClientBlockStateColorCache.INVALID_COLOR;
@@ -853,14 +855,17 @@ public class ClientBlockStateColorCache
 		}
 		
 		
-		// only fire an API event if needed
-		// (this is done to reduce GC pressure and speed up color getting)
-		if (this.blockStateWrapper.allowApiColorOverride())
+		// only fire the API event if allowed
+		// (done to prevent infinite loops if called during by another color resolution event)
+		if (allowApiOverride
+			// if the API event is requested
+			// (this is done to reduce GC pressure and speed up color getting)
+			&& this.blockStateWrapper.allowApiColorOverride())
 		{
 			DhApiBlockColorOverrideEvent.EventParam eventParam = ColorOverrideEventParamGetter.get();
 			eventParam.update(
-				this.clientLevelWrapper,
-				this.blockStateWrapper, returnColor,
+				this.clientLevelWrapper, fullDataSource,
+				this.blockStateWrapper, biomeWrapper, returnColor,
 				blockPos.getX(), blockPos.getY(), blockPos.getZ()
 			);
 			ApiEventInjector.INSTANCE.fireAllEvents(DhApiBlockColorOverrideEvent.class, eventParam);

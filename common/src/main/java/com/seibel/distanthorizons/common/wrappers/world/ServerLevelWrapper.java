@@ -19,6 +19,7 @@
 
 package com.seibel.distanthorizons.common.wrappers.world;
 
+import java.awt.*;
 import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
@@ -26,21 +27,30 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import com.seibel.distanthorizons.api.enums.worldGeneration.EDhApiLevelType;
+import com.seibel.distanthorizons.api.interfaces.block.IDhApiBiomeWrapper;
+import com.seibel.distanthorizons.api.interfaces.block.IDhApiBlockStateWrapper;
 import com.seibel.distanthorizons.api.interfaces.render.IDhApiCustomRenderRegister;
+import com.seibel.distanthorizons.api.objects.DhApiResult;
+import com.seibel.distanthorizons.api.objects.data.IDhApiFullDataSource;
 import com.seibel.distanthorizons.common.wrappers.chunk.ChunkWrapper;
 import com.seibel.distanthorizons.core.api.internal.SharedApi;
 import com.seibel.distanthorizons.core.config.Config;
+import com.seibel.distanthorizons.core.dataObjects.fullData.sources.FullDataSourceV2;
 import com.seibel.distanthorizons.core.level.IDhLevel;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.network.messages.base.LevelInitMessage;
 import com.seibel.distanthorizons.core.pos.DhChunkPos;
+import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPosMutable;
 import com.seibel.distanthorizons.core.world.EWorldEnvironment;
+import com.seibel.distanthorizons.core.wrapperInterfaces.block.IBlockStateWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.chunk.IChunkWrapper;
 
+import com.seibel.distanthorizons.core.wrapperInterfaces.world.IBiomeWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IServerLevelWrapper;
 #if MC_VER <= MC_1_12_2
 import net.minecraft.world.WorldServer;
 #else
+import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.ChunkAccess;
@@ -80,6 +90,7 @@ public class ServerLevelWrapper implements IServerLevelWrapper
 	//==============//
 	// constructors //
 	//==============//
+	//region
 	
 	public static ServerLevelWrapper getWrapper(#if MC_VER <= MC_1_12_2 WorldServer #else ServerLevel #endif level) 
 	{
@@ -104,11 +115,14 @@ public class ServerLevelWrapper implements IServerLevelWrapper
 		this.KeyedLevelDimensionName = this.createKeyedLevelDimensionName();
 	}
 	
+	//endregion
+	
 	
 	
 	//==================//
 	// instance methods //
 	//==================//
+	//region
 	
 	@Override
 	public File getMcSaveFolder() 
@@ -293,14 +307,28 @@ public class ServerLevelWrapper implements IServerLevelWrapper
 		return this.dhLevel.getSaveStructure().getSaveFolder(this);
 	}
 	
+	@Override
+	public DhApiResult<Color> getBlockColorPreApi(
+		IDhApiBlockStateWrapper blockStateWrapper,
+		IDhApiBiomeWrapper biomeWrapper,
+		int blockWorldPosX, int blockWorldPosY, int blockWorldPosZ,
+		IDhApiFullDataSource dataSource)
+	{ return DhApiResult.createFail("["+ServerLevelWrapper.class.getSimpleName()+"]'s cannot get block colors, please use a ["+ClientLevelWrapper.class.getSimpleName()+"] instead."); }
+	
+	//endregion
 	
 	
 	
 	//================//
 	// base overrides //
 	//================//
+	//region
 	
 	@Override
 	public String toString() { return "Wrapped{" + this.level.toString() + "@" + this.getDhIdentifier() + "}"; }
+	
+	//endregion
+	
+	
 	
 }

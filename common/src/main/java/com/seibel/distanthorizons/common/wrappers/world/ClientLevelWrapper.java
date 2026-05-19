@@ -1,21 +1,22 @@
 package com.seibel.distanthorizons.common.wrappers.world;
 
 import com.seibel.distanthorizons.api.enums.worldGeneration.EDhApiLevelType;
+import com.seibel.distanthorizons.api.interfaces.block.IDhApiBiomeWrapper;
+import com.seibel.distanthorizons.api.interfaces.block.IDhApiBlockStateWrapper;
 import com.seibel.distanthorizons.api.interfaces.render.IDhApiCustomRenderRegister;
+import com.seibel.distanthorizons.api.objects.DhApiResult;
+import com.seibel.distanthorizons.api.objects.data.IDhApiFullDataSource;
 import com.seibel.distanthorizons.common.wrappers.block.BiomeWrapper;
 import com.seibel.distanthorizons.common.wrappers.block.BlockStateWrapper;
 import com.seibel.distanthorizons.common.wrappers.block.ClientBlockStateColorCache;
-import com.seibel.distanthorizons.common.wrappers.chunk.ChunkWrapper;
-import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftClientWrapper;
 import com.seibel.distanthorizons.core.dataObjects.fullData.sources.FullDataSourceV2;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.level.*;
 import com.seibel.distanthorizons.core.level.IServerKeyedClientLevel;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPos;
-import com.seibel.distanthorizons.core.pos.DhChunkPos;
+import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPosMutable;
 import com.seibel.distanthorizons.core.wrapperInterfaces.block.IBlockStateWrapper;
-import com.seibel.distanthorizons.core.wrapperInterfaces.chunk.IChunkWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IBiomeWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IDimensionTypeWrapper;
@@ -32,7 +33,6 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.ChunkAccess;
 #endif
 import com.seibel.distanthorizons.core.logging.DhLogger;
 
@@ -53,7 +53,6 @@ import java.util.function.Function;
 #elif MC_VER <= MC_1_20_4
 import net.minecraft.world.level.chunk.ChunkStatus;
 #else
-import net.minecraft.world.level.chunk.status.ChunkStatus;
 #endif
 
 #if MC_VER <= MC_1_12_2
@@ -87,6 +86,10 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 	#else
 	private static final Minecraft MINECRAFT = Minecraft.getInstance();
 	#endif
+	
+	private static final ThreadLocal<DhBlockPosMutable> MUTABLE_BLOCK_POS_THREAD_LOCAL = ThreadLocal.withInitial(DhBlockPosMutable::new);
+	
+	
 	
 	#if MC_VER <= MC_1_12_2
 	private final WorldClient level;
@@ -255,7 +258,9 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 	//region
 	
 	@Override
-	public int getBlockColor(DhBlockPos blockPos, IBiomeWrapper biome, FullDataSourceV2 fullDataSource, IBlockStateWrapper blockWrapper)
+	public int getBlockColor(
+		DhBlockPos blockWorldPos, IBiomeWrapper biome, FullDataSourceV2 fullDataSource, IBlockStateWrapper blockWrapper, 
+		boolean allowApiOverride)
 	{
 		ClientBlockStateColorCache blockColorCache = this.blockColorCacheByBlockState.get(((BlockStateWrapper) blockWrapper).blockState);
 		if (blockColorCache == null)
@@ -265,7 +270,7 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 					this.createCachedBlockColorCacheFunc);
 		}
 		
-		return blockColorCache.getColor((BiomeWrapper) biome, fullDataSource, blockPos);
+		return blockColorCache.getColor((BiomeWrapper) biome, fullDataSource, blockWorldPos, allowApiOverride);
 	}
 	
 	@Override
@@ -453,6 +458,45 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 		}
 		
 		return this.dhLevel.getSaveStructure().getSaveFolder(this);
+	}
+	
+	@Override
+	public DhApiResult<Color> getBlockColorPreApi(
+		IDhApiBlockStateWrapper blockStateWrapper,
+		IDhApiBiomeWrapper biomeWrapper,
+		int blockWorldPosX, int blockWorldPosY, int blockWorldPosZ,
+		IDhApiFullDataSource dataSource)
+	{
+		// cast to core objects //
+		//region
+		
+		if(!(blockStateWrapper instanceof IBlockStateWrapper coreBlockStateWrapper))
+		{
+			return DhApiResult.createFail("Unable to cast ["+blockStateWrapper.getClass()+"] to ["+IBlockStateWrapper.class+"]");
+		}
+		
+		if(!(biomeWrapper instanceof IBiomeWrapper coreBiomeWrapper))
+		{
+			return DhApiResult.createFail("Unable to cast ["+biomeWrapper.getClass()+"] to ["+IBiomeWrapper.class+"]");
+		}
+		
+		if(!(dataSource instanceof FullDataSourceV2 coreDataSource))
+		{
+			return DhApiResult.createFail("Unable to cast ["+dataSource.getClass()+"] to ["+FullDataSourceV2.class+"]");
+		}
+		
+		//endregion
+		
+		
+		
+		// use a mutable thread local to reduce allocations slightly
+		DhBlockPosMutable blockWorldPos = MUTABLE_BLOCK_POS_THREAD_LOCAL.get();
+		blockWorldPos.setX(blockWorldPosX);
+		blockWorldPos.setY(blockWorldPosY);
+		blockWorldPos.setZ(blockWorldPosZ);
+		
+		int color = this.getBlockColor(blockWorldPos, coreBiomeWrapper, coreDataSource, coreBlockStateWrapper, false);
+		return DhApiResult.createSuccess(ColorUtil.toColorObjARGB(color));
 	}
 	
 	//endregion

@@ -1,13 +1,19 @@
 package com.seibel.distanthorizons.fabric.testing;
 
+import com.seibel.distanthorizons.api.DhApi;
+import com.seibel.distanthorizons.api.enums.worldGeneration.EDhApiLevelType;
+import com.seibel.distanthorizons.api.interfaces.block.IDhApiBlockStateWrapper;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBlockColorOverrideEvent;
 import com.seibel.distanthorizons.api.methods.events.sharedParameterObjects.DhApiEventParam;
+import com.seibel.distanthorizons.api.objects.DhApiResult;
+import com.seibel.distanthorizons.common.wrappers.WrapperFactory;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.util.LodUtil;
 import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 
 import java.awt.*;
+import java.io.IOException;
 
 /**
  * @see TestBlockWrapperCreatedEvent
@@ -26,7 +32,8 @@ public class TestCustomColorEvent extends DhApiBlockColorOverrideEvent
 		//randomDatapointColors(eventParam);
 		//randomPerBlockColors(eventParam);
 		//blackWhitePositionStripe(eventParam);
-		positionRainbow(eventParam);
+		useWaterTint(eventParam);
+		//positionRainbow(eventParam);
 	}
 	
 	/** each datapoint has a random color */
@@ -56,6 +63,36 @@ public class TestCustomColorEvent extends DhApiBlockColorOverrideEvent
 		int g = Math.abs((eventParam.getBlockStateWrapper().hashCode() << 4) % 255);
 		int b = Math.abs((eventParam.getBlockStateWrapper().hashCode() << 8) % 255);
 		eventParam.setColor(r,g,b);
+	}
+	
+	/** every block will be rendered using water's color */
+	private void useWaterTint(EventParam eventParam)
+	{
+		IDhApiBlockStateWrapper blockWrapper;
+		try
+		{
+			String blockNamespace = "minecraft:water"; // everything is a shade of blue (except swamps)
+			//String blockNamespace = "minecraft:oak_leaves"; // alternative example using oak leaves (everything is a shade of green)
+			blockWrapper = DhApi.Delayed.wrapperFactory.getDefaultBlockStateWrapper(blockNamespace, eventParam.getLevelWrapper());
+		}
+		catch (IOException e)
+		{
+			blockWrapper = eventParam.getBlockStateWrapper();
+		}
+		
+		DhApiResult<Color> result = eventParam.getLevelWrapper().getBlockColorPreApi(
+			blockWrapper,
+			eventParam.getBiomeWrapper(),
+			eventParam.getBlockPosX(), eventParam.getBlockPosY(), eventParam.getBlockPosZ(),
+			eventParam.getDataSource()
+		);
+		if (!result.success)
+		{
+			// shouldn't happen, but just in case
+			return;
+		}
+		
+		eventParam.setColor(result.payload.getRed(), result.payload.getGreen(), result.payload.getBlue());
 	}
 	
 	private void blackWhitePositionStripe(EventParam eventParam)
