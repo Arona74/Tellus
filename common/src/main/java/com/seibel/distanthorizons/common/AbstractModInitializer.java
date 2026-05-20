@@ -1,8 +1,6 @@
 package com.seibel.distanthorizons.common;
 
-import com.seibel.distanthorizons.api.enums.config.EDhApiMcRenderingFadeMode;
-import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
-import com.seibel.distanthorizons.api.enums.worldGeneration.EDhApiDistantGeneratorMode;
+import com.seibel.distanthorizons.api.enums.config.EDhApiRenderingEngine;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiAfterDhInitEvent;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeDhInitEvent;
 import com.seibel.distanthorizons.common.commands.CommandInitializer;
@@ -387,17 +385,17 @@ public abstract class AbstractModInitializer
 		if (iris != null)
 		{
 			// get the currently selected rendering API
-			EDhApiRenderApi renderApi = Config.Client.Advanced.Graphics.Experimental.renderingApi.get();
-			if (renderApi == EDhApiRenderApi.AUTO)
+			EDhApiRenderingEngine renderApi = Config.Client.Advanced.Graphics.Experimental.renderingEngine.get();
+			if (renderApi == EDhApiRenderingEngine.AUTO)
 			{
 				IVersionConstants versionConstants = SingletonInjector.INSTANCE.get(IVersionConstants.class);
-				renderApi = versionConstants.getDefaultRenderingApi();
+				renderApi = versionConstants.getDefaultRenderingEngine();
 			}
 			
 			// Iris only supports native OpenGL
-			if (renderApi != EDhApiRenderApi.OPEN_GL)
+			if (renderApi != EDhApiRenderingEngine.OPEN_GL)
 			{
-				String irisUnsupportedMessage = "Iris doesn't support DH when using the ["+EDhApiRenderApi.BLAZE_3D+"] rendering API, this will need to be fixed on Iris end. As a temporary fix please change the rendering API to ["+EDhApiRenderApi.OPEN_GL+"] in the DH config file.";
+				String irisUnsupportedMessage = "Iris doesn't support DH when using the ["+ EDhApiRenderingEngine.BLAZE_3D+"] rendering engine, this will need to be fixed on Iris end. As a temporary fix please change the rendering engine to ["+ EDhApiRenderingEngine.OPEN_GL+"] in the DH config file.";
 				LOGGER.fatal(irisUnsupportedMessage);
 				NativeDialogUtil.showDialog(ModInfo.READABLE_NAME, irisUnsupportedMessage, "ok", "error");
 				

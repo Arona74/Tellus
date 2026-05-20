@@ -20,7 +20,6 @@
 package com.seibel.distanthorizons.common.wrappers.minecraft;
 
 import java.awt.Color;
-import java.lang.invoke.MethodHandles;
 import java.util.concurrent.ConcurrentHashMap;
 
 #if MC_VER > MC_1_12_2
@@ -29,7 +28,6 @@ import com.mojang.blaze3d.platform.NativeImage;
 #endif
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.seibel.distanthorizons.api.enums.config.EDhApiLodShading;
-import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
 import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
 import com.seibel.distanthorizons.core.config.Config;
@@ -37,6 +35,7 @@ import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.dependencyInjection.ModAccessorInjector;
 import com.seibel.distanthorizons.core.enums.EDhDirection;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
+import com.seibel.distanthorizons.api.enums.config.EDhApiRenderingApi;
 import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import com.seibel.distanthorizons.core.wrapperInterfaces.misc.ILightMapWrapper;
 
@@ -55,7 +54,6 @@ import org.joml.Vector3f;
 #else
 #endif
 
-import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.AbstractOptifineAccessor;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IDimensionTypeWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.ILevelWrapper;
@@ -437,9 +435,9 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		#endif
 	}
 	
-	private EDhApiRenderApi renderApi = null;
+	private EDhApiRenderingApi renderApi = null;
 	@Override
-	public EDhApiRenderApi getMcRenderingApi()
+	public EDhApiRenderingApi getMcRenderingApi()
 	{
 		if (this.renderApi != null)
 		{
@@ -455,7 +453,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 			.getDeviceInfo()
 			.backendName();
 		boolean isVulkan = backendName.equalsIgnoreCase("Vulkan");
-		this.renderApi = isVulkan ? EDhApiRenderApi.VULKAN : EDhApiRenderApi.OPEN_GL;
+		this.renderApi = isVulkan ? EDhApiRenderingApi.VULKAN : EDhApiRenderingApi.OPEN_GL;
 		#endif
 		return this.renderApi;
 	}

@@ -19,11 +19,12 @@
 
 package com.seibel.distanthorizons.common.wrappers;
 
-import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
+import com.seibel.distanthorizons.api.enums.config.EDhApiRenderingEngine;
 import com.seibel.distanthorizons.api.interfaces.render.IDhApiCustomRenderObjectFactory;
 import com.seibel.distanthorizons.common.render.blaze.BlazeDhRenderApiDefinition;
 import com.seibel.distanthorizons.common.render.openGl.GlDhRenderApiDefinition;
 import com.seibel.distanthorizons.core.config.Config;
+import com.seibel.distanthorizons.api.enums.config.EDhApiRenderingApi;
 import com.seibel.distanthorizons.core.render.renderer.GenericRenderObjectFactory;
 import com.seibel.distanthorizons.common.wrappers.gui.classicConfig.ClassicConfigGUI;
 import com.seibel.distanthorizons.common.wrappers.gui.LangWrapper;
@@ -94,11 +95,11 @@ public class DependencySetup
 		
 		
 		
-		EDhApiRenderApi renderingApiEnum = Config.Client.Advanced.Graphics.Experimental.renderingApi.get();
-		if (renderingApiEnum == EDhApiRenderApi.AUTO)
+		EDhApiRenderingEngine renderingApiEnum = Config.Client.Advanced.Graphics.Experimental.renderingEngine.get();
+		if (renderingApiEnum == EDhApiRenderingEngine.AUTO)
 		{
 			IVersionConstants versionConstants = SingletonInjector.INSTANCE.get(IVersionConstants.class);
-			renderingApiEnum = versionConstants.getDefaultRenderingApi();
+			renderingApiEnum = versionConstants.getDefaultRenderingEngine();
 		}
 		
 		LOGGER.info("Setting DH Rendering API to: ["+renderingApiEnum+"]...");
@@ -107,12 +108,12 @@ public class DependencySetup
 		
 		boolean validApi;
 		AbstractDhRenderApiDefinition renderDefinition;
-		if (renderingApiEnum == EDhApiRenderApi.OPEN_GL)
+		if (renderingApiEnum == EDhApiRenderingEngine.OPEN_GL)
 		{
 			validApi = true;
 			renderDefinition = new GlDhRenderApiDefinition();
 		}
-		else if (renderingApiEnum == EDhApiRenderApi.BLAZE_3D)
+		else if (renderingApiEnum == EDhApiRenderingEngine.BLAZE_3D)
 		{
 			#if MC_VER <= MC_1_21_10
 			validApi = false;
@@ -133,14 +134,14 @@ public class DependencySetup
 		// crash if an invalid API is set
 		if (!validApi)
 		{
-			String message = "["+renderingApiEnum+"] is not supported on this version of Minecraft, reverting to ["+EDhApiRenderApi.AUTO+"].";
+			String message = "["+renderingApiEnum+"] is not supported on this version of Minecraft, reverting to ["+ EDhApiRenderingEngine.AUTO+"].";
 			LOGGER.fatal(message);
-			Config.Client.Advanced.Graphics.Experimental.renderingApi.set(EDhApiRenderApi.AUTO);
+			Config.Client.Advanced.Graphics.Experimental.renderingEngine.set(EDhApiRenderingEngine.AUTO);
 			throw new IllegalStateException(message);
 		}
 		
 		// crash if the rendering API set doesn't match Minecraft's
-		EDhApiRenderApi mcRenderApi = MinecraftRenderWrapper.INSTANCE.getMcRenderingApi();
+		EDhApiRenderingApi mcRenderApi = MinecraftRenderWrapper.INSTANCE.getMcRenderingApi();
 		if (mcRenderApi != renderDefinition.getRenderApi())
 		{
 			String message = "["+renderDefinition.getApiName()+"] cannot be used due to it's API ["+renderDefinition.getRenderApi().name()+"] not matching what Minecraft is currently set to use. Please either change Minecraft's rendering API or Distant Horizons'.";

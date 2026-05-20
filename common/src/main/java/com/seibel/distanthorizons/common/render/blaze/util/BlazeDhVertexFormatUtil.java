@@ -6,7 +6,7 @@ public class BlazeDhVertexFormatUtil {}
 #else
 
 import com.mojang.blaze3d.vertex.VertexFormatElement;
-import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
+import com.seibel.distanthorizons.api.enums.config.EDhApiRenderingEngine;
 import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.dataObjects.render.bufferBuilding.LodQuadBuilder;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
@@ -48,14 +48,14 @@ public class BlazeDhVertexFormatUtil
 	
 	static
 	{
-		EDhApiRenderApi renderingApi = Config.Client.Advanced.Graphics.Experimental.renderingApi.get();
-		if (renderingApi == EDhApiRenderApi.AUTO)
+		EDhApiRenderingEngine renderingApi = Config.Client.Advanced.Graphics.Experimental.renderingEngine.get();
+		if (renderingApi == EDhApiRenderingEngine.AUTO)
 		{
 			IVersionConstants versionConstants = SingletonInjector.INSTANCE.get(IVersionConstants.class);
-			renderingApi = versionConstants.getDefaultRenderingApi();
+			renderingApi = versionConstants.getDefaultRenderingEngine();
 		}
 		
-		boolean register = (renderingApi == EDhApiRenderApi.BLAZE_3D);
+		boolean register = (renderingApi == EDhApiRenderingEngine.BLAZE_3D);
 		if (register)
 		{
 			LOGGER.debug("Attempting to register ["+VertexFormatElement.class.getSimpleName()+"]...");

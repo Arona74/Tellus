@@ -19,7 +19,7 @@
 
 package com.seibel.distanthorizons.common.wrappers;
 
-import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
+import com.seibel.distanthorizons.api.enums.config.EDhApiRenderingEngine;
 import com.seibel.distanthorizons.core.wrapperInterfaces.IVersionConstants;
 
 public class VersionConstants implements IVersionConstants
@@ -107,12 +107,12 @@ public class VersionConstants implements IVersionConstants
 	}
 	
 	@Override
-	public EDhApiRenderApi getDefaultRenderingApi()
+	public EDhApiRenderingEngine getDefaultRenderingEngine()
 	{
 		#if MC_VER <= MC_1_21_11
-			return EDhApiRenderApi.OPEN_GL;
+		return EDhApiRenderApi.OPEN_GL;
 		#else
-			return EDhApiRenderApi.BLAZE_3D;
+		return EDhApiRenderingEngine.BLAZE_3D;
 		#endif
 	}
 	

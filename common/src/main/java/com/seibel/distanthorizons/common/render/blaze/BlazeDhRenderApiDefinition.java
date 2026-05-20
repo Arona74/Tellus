@@ -5,7 +5,8 @@ public class BlazeDhRenderApiDefinition {}
 
 #else
 
-import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
+import com.seibel.distanthorizons.api.enums.config.EDhApiRenderingApi;
+import com.seibel.distanthorizons.api.enums.config.EDhApiRenderingEngine;
 import com.seibel.distanthorizons.common.render.blaze.objects.BlazeGenericObjectVertexContainer;
 import com.seibel.distanthorizons.common.render.blaze.postProcessing.BlazeDhFarFadeRenderer;
 import com.seibel.distanthorizons.common.render.blaze.postProcessing.BlazeDhFogRenderer;
@@ -25,7 +26,6 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.*;
 
 #if MC_VER <= MC_26_1_2
 #else
-import com.mojang.blaze3d.systems.RenderSystem;
 #endif
 
 public class BlazeDhRenderApiDefinition extends AbstractDhRenderApiDefinition
@@ -48,8 +48,8 @@ public class BlazeDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 	}
 	
 	
-	private final EDhApiRenderApi renderApi;
-	public EDhApiRenderApi getRenderApi() { return renderApi; }
+	private final EDhApiRenderingApi renderApi;
+	public EDhApiRenderingApi getRenderApi() { return renderApi; }
 	public boolean isNativeRenderer() { return false; }
 	
 	//endregion
