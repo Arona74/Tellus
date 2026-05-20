@@ -64,7 +64,7 @@ public class BlazeDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 	public BlazeDhRenderApiDefinition()
 	{
 		#if MC_VER <= MC_26_1_2
-		renderApi = EDhApiRenderApi.OPEN_GL;
+		renderApi = EDhApiRenderingApi.OPEN_GL;
 		#else
 		// use the same rendering API as Minecraft
 		this.renderApi = MinecraftRenderWrapper.INSTANCE.getMcRenderingApi();
