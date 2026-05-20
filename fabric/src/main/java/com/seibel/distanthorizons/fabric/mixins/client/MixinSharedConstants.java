@@ -24,18 +24,19 @@ public abstract class MixinSharedConstants
 	@Mutable
 	@Shadow @Final public static boolean IS_RUNNING_IN_IDE;
 	
+	@Unique
+	private static final DhLogger DH_LOGGER = new DhLoggerBuilder().name("SharedConstants").build();
+	
+	
 	@Inject(method = "<clinit>", at = @At("TAIL"))
 	private static void setIsRunningInIde(CallbackInfo ci) 
 	{
-		DhLogger logger = new DhLoggerBuilder().name("SharedConstants").build();
-		
 		// setting IS_RUNNING_IN_IDE to true enables
 		// additional validation on Mojang's side which
 		// helps catch errors when developing for Blaze3D
 		
-		boolean irisPresent;
+		boolean brokenIrisVersionPresent = false;
 		#if MC_VER <= MC_1_21_11
-		IS_RUNNING_IN_IDE = ModInfo.IS_DEV_BUILD;
 		#else
 		try
 		{
@@ -44,17 +45,28 @@ public abstract class MixinSharedConstants
 			// Blaze3D validation is enabled (which is enabled by if
 			// IS_RUNNING_IN_IDE is true)
 			ModInfo.class.getClassLoader().loadClass("net.irisshaders.iris.api.v0.IrisApi");
-			irisPresent = true;
+			brokenIrisVersionPresent = true;
 		}
-		catch (ClassNotFoundException ignore)
-		{
-			irisPresent = false;
-		}
-		
-		IS_RUNNING_IN_IDE = ModInfo.IS_DEV_BUILD && !irisPresent;
+		catch (ClassNotFoundException ignore) { }
 		#endif
 		
-		logger.info("Setting Minecraft's SharedConstants.IS_RUNNING_IN_IDE to ["+IS_RUNNING_IN_IDE+"]");
+		boolean wilderWildPresent = false;
+		try
+		{
+			// Wilder Wild will refuse to launch if 
+			// "IS_RUNNING_IN_IDE" is true
+			// not sure why
+			ModInfo.class.getClassLoader().loadClass("net.frozenblock.wilderwild.WilderWild");
+			wilderWildPresent = true;
+		}
+		catch (ClassNotFoundException ignore) { }
+		
+		
+		
+		IS_RUNNING_IN_IDE = ModInfo.IS_DEV_BUILD 
+			&& !brokenIrisVersionPresent
+			&& !wilderWildPresent;
+		DH_LOGGER.info("DH is setting Minecraft's SharedConstants.IS_RUNNING_IN_IDE to ["+IS_RUNNING_IN_IDE+"]");
 	}
 	
 }
