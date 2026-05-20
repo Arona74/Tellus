@@ -261,7 +261,7 @@ public class UpdateModScreen extends DhScreen
 				#if MC_VER > MC_1_12_2	
 				matrices, this.font,
 				#endif
-				Translatable(ModInfo.ID + ".updater.text1"), 
+				Translatable(ModInfo.ID + ".updater.updateAvailable"), 
 				this.width / 2, this.height / 2 - 35,
 				#if MC_VER < MC_1_21_6
 				0xFFFFFF // RGB
@@ -273,7 +273,7 @@ public class UpdateModScreen extends DhScreen
 				#if MC_VER > MC_1_12_2	
 				matrices, this.font,
 				#endif
-				Translatable(ModInfo.ID + ".updater.text2", this.currentVer, this.nextVer), 
+				Translatable(ModInfo.ID + ".updater.updateConfirmation", this.currentVer, this.nextVer), 
 				this.width / 2, this.height / 2 - 20, 
 				#if MC_VER < MC_1_21_6
 				0x52FD52 // RGB
