@@ -94,7 +94,7 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 	public final int size;
 	
 	private final DhChunkPos firstPos;
-	private final List<ChunkAccess> cache;
+	private final List<ChunkAccess> chunkCacheList;
 	private final Long2ObjectOpenHashMap<ChunkAccess> chunkMap = new Long2ObjectOpenHashMap<ChunkAccess>();
 	
 	/** 
@@ -158,7 +158,7 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 		this.generator = generator;
 		this.lightEngine = lightEngine;
 		this.writeRadius = writeRadius;
-		this.cache = chunkList;
+		this.chunkCacheList = chunkList;
 		this.size = Mth.floor(Math.sqrt(chunkList.size()));
 	}
 	
@@ -294,6 +294,24 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 	{
 		int chunkX = SectionPos.blockToSectionCoord(blockPos.getX());
 		int chunkZ = SectionPos.blockToSectionCoord(blockPos.getZ());
+		
+		// No one should be trying to a block pos 1 million blocks
+		// above or below the world height.
+		// If that happens that likely means a mod is assuming DH populated the
+		// world/chunk in a certain way and that assumption isn't being met.
+		if (blockPos.getY() < -1_000_000
+			|| blockPos.getY() > 1_000_000)
+		{
+			// Throwing an exception here is done to break out of potential
+			// infinite loops where a mod attempts to walk down the level to find a specific block type.
+			// Example from WilderWild:
+			// https://github.com/FrozenBlock/WilderWild/blob/1eaaaa2179d837aac6ece002ff795eed665cd7b7/src/main/java/net/frozenblock/wilderwild/worldgen/impl/feature/SnowBlanketFeature.java#L95
+			throw new ArrayIndexOutOfBoundsException(
+				"Attempted to getBlockState outside the DH defined Y bounds [-1_000_000, 1_000_000]: ["+blockPos+"]. " +
+					"This is likely a mod compatibility issue, " +
+					"there is no reason to try getting a block this far outside the world during world gen.");
+		}
+		
 		return this.getChunk(chunkX, chunkZ).getBlockState(blockPos);
 	}
 	
@@ -366,8 +384,14 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 	 */
 	private ChunkAccess getChunkAccess(int chunkX, int chunkZ, ChunkStatus chunkStatus, boolean returnNonNull)
 	{
-		ChunkAccess chunk = this.superHasChunk(chunkX, chunkZ) ? this.superGetChunk(chunkX, chunkZ) : null;
-		if (chunk != null && ChunkWrapper.getStatus(chunk).isOrAfter(chunkStatus))
+		ChunkAccess chunk = null;
+		if (this.dhHasChunk(chunkX, chunkZ))
+		{
+			chunk = this.dhGetChunk(chunkX, chunkZ);
+		}
+		
+		if (chunk != null 
+			&& ChunkWrapper.getStatus(chunk).isOrAfter(chunkStatus))
 		{
 			return chunk;
 		}
@@ -417,7 +441,7 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 	}
 	
 	/** Use this instead of super.hasChunk() to bypass C2ME concurrency checks */
-	public boolean superHasChunk(int x, int z)
+	public boolean dhHasChunk(int x, int z)
 	{
 		int xOffset = x - this.firstPos.getX();
 		int zOffset = z - this.firstPos.getZ();
@@ -426,11 +450,11 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 	}
 	
 	/** Use this instead of super.getChunk() to bypass C2ME concurrency checks */
-	private ChunkAccess superGetChunk(int x, int z)
+	private ChunkAccess dhGetChunk(int x, int z)
 	{
 		int xOffset = x - this.firstPos.getX();
 		int zOffset = z - this.firstPos.getZ();
-		return this.cache.get(xOffset + zOffset * this.size);
+		return this.chunkCacheList.get(xOffset + zOffset * this.size);
 	}
 	
 	
