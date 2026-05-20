@@ -484,7 +484,11 @@ if (isNotCommonProject) {
             "META-INF/neoforge.mods.toml",
         ]
 
-        def compatible_forgemc_versions = "${rootProject.compatible_minecraft_versions}".replaceAll("\"", "").replaceAll("]", ",)")
+        // incoming format: `["26.2.0","26.2-alpha.9"]`
+        // outgoing format: `[26.2.0],[26.2-alpha.9]`
+        def compatible_forgemc_versions = "${rootProject.compatible_minecraft_versions}"
+            .replaceAll("\",\"", "],[")
+            .replaceAll("\"", "")
 
         // Quilt contributors
         def quilt_contributors = []

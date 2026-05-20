@@ -446,7 +446,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		
 		
 		#if MC_VER <= MC_26_1_2
-		this.renderApi = EDhApiRenderApi.OPEN_GL;
+		this.renderApi = EDhApiRenderingApi.OPEN_GL;
 		#else
 		String backendName = RenderSystem
 			.getDevice()
