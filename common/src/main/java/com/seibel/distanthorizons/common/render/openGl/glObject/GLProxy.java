@@ -22,6 +22,7 @@ package com.seibel.distanthorizons.common.render.openGl.glObject;
 import com.seibel.distanthorizons.api.enums.config.EDhApiGLErrorHandlingMode;
 import com.seibel.distanthorizons.api.enums.config.EDhApiGpuUploadMethod;
 import com.seibel.distanthorizons.api.enums.config.EDhApiLoggerLevel;
+import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
 import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.config.types.ConfigEntry;
 import com.seibel.distanthorizons.core.dependencyInjection.ModAccessorInjector;
@@ -29,7 +30,6 @@ import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.jar.EPlatform;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
-import com.seibel.distanthorizons.core.render.EDhRenderApi;
 import com.seibel.distanthorizons.core.util.objects.GLMessages.*;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftSharedWrapper;
@@ -132,7 +132,7 @@ public class GLProxy
 	
 	private GLProxy() throws IllegalStateException
 	{
-		if (RENDER_API_DEF.getRenderApi() != EDhRenderApi.OPEN_GL)
+		if (RENDER_API_DEF.getRenderApi() != EDhApiRenderApi.OPEN_GL)
 		{
 			throw new IllegalStateException("[" + GLProxy.class.getSimpleName() + "] was created with the wrong Rendering API ["+RENDER_API_DEF.getRenderApi()+"]!"); 
 		}

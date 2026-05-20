@@ -24,7 +24,6 @@ import com.seibel.distanthorizons.api.interfaces.render.IDhApiCustomRenderObject
 import com.seibel.distanthorizons.common.render.blaze.BlazeDhRenderApiDefinition;
 import com.seibel.distanthorizons.common.render.openGl.GlDhRenderApiDefinition;
 import com.seibel.distanthorizons.core.config.Config;
-import com.seibel.distanthorizons.core.render.EDhRenderApi;
 import com.seibel.distanthorizons.core.render.renderer.GenericRenderObjectFactory;
 import com.seibel.distanthorizons.common.wrappers.gui.classicConfig.ClassicConfigGUI;
 import com.seibel.distanthorizons.common.wrappers.gui.LangWrapper;
@@ -141,7 +140,7 @@ public class DependencySetup
 		}
 		
 		// crash if the rendering API set doesn't match Minecraft's
-		EDhRenderApi mcRenderApi = MinecraftRenderWrapper.INSTANCE.getMcRenderingApi();
+		EDhApiRenderApi mcRenderApi = MinecraftRenderWrapper.INSTANCE.getMcRenderingApi();
 		if (mcRenderApi != renderDefinition.getRenderApi())
 		{
 			String message = "["+renderDefinition.getApiName()+"] cannot be used due to it's API ["+renderDefinition.getRenderApi().name()+"] not matching what Minecraft is currently set to use. Please either change Minecraft's rendering API or Distant Horizons'.";

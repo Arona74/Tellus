@@ -29,6 +29,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 #endif
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.seibel.distanthorizons.api.enums.config.EDhApiLodShading;
+import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
 import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
 import com.seibel.distanthorizons.core.config.Config;
@@ -36,7 +37,6 @@ import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.dependencyInjection.ModAccessorInjector;
 import com.seibel.distanthorizons.core.enums.EDhDirection;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
-import com.seibel.distanthorizons.core.render.EDhRenderApi;
 import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import com.seibel.distanthorizons.core.wrapperInterfaces.misc.ILightMapWrapper;
 
@@ -437,9 +437,9 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		#endif
 	}
 	
-	private EDhRenderApi renderApi = null;
+	private EDhApiRenderApi renderApi = null;
 	@Override
-	public EDhRenderApi getMcRenderingApi()
+	public EDhApiRenderApi getMcRenderingApi()
 	{
 		if (this.renderApi != null)
 		{
@@ -448,14 +448,14 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		
 		
 		#if MC_VER <= MC_26_1_2
-		this.renderApi = EDhRenderApi.OPEN_GL;
+		this.renderApi = EDhApiRenderApi.OPEN_GL;
 		#else
 		String backendName = RenderSystem
 			.getDevice()
 			.getDeviceInfo()
 			.backendName();
 		boolean isVulkan = backendName.equalsIgnoreCase("Vulkan");
-		this.renderApi = isVulkan ? EDhRenderApi.VULKAN : EDhRenderApi.OPEN_GL;
+		this.renderApi = isVulkan ? EDhApiRenderApi.VULKAN : EDhApiRenderApi.OPEN_GL;
 		#endif
 		return this.renderApi;
 	}

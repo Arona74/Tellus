@@ -1,5 +1,6 @@
 package com.seibel.distanthorizons.common.render.openGl;
 
+import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
 import com.seibel.distanthorizons.common.render.openGl.generic.GlGenericObjectRenderer;
 import com.seibel.distanthorizons.common.render.openGl.generic.GlGenericObjectVertexContainer;
 import com.seibel.distanthorizons.common.render.openGl.glObject.GlDummyUniformData;
@@ -10,7 +11,6 @@ import com.seibel.distanthorizons.common.render.openGl.postProcessing.fog.GlDhFo
 import com.seibel.distanthorizons.common.render.openGl.postProcessing.ssao.GlDhSSAORenderer;
 import com.seibel.distanthorizons.common.render.openGl.terrain.GlDhTerrainShaderProgram;
 import com.seibel.distanthorizons.common.render.openGl.test.GlTestTriangleRenderer;
-import com.seibel.distanthorizons.core.render.EDhRenderApi;
 import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.renderer.AbstractDebugWireframeRenderer;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
@@ -35,7 +35,8 @@ public class GlDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 		return EDhRenderDepth.FORWARD_Z; 
 	}
 	
-	public EDhRenderApi getRenderApi() { return EDhRenderApi.OPEN_GL; }
+	public EDhApiRenderApi getRenderApi() { return EDhApiRenderApi.OPEN_GL; }
+	public boolean isNativeRenderer() { return true; }
 	
 	//endregion
 	

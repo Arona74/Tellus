@@ -5,6 +5,7 @@ public class BlazeDhRenderApiDefinition {}
 
 #else
 
+import com.seibel.distanthorizons.api.enums.config.EDhApiRenderApi;
 import com.seibel.distanthorizons.common.render.blaze.objects.BlazeGenericObjectVertexContainer;
 import com.seibel.distanthorizons.common.render.blaze.postProcessing.BlazeDhFarFadeRenderer;
 import com.seibel.distanthorizons.common.render.blaze.postProcessing.BlazeDhFogRenderer;
@@ -14,7 +15,6 @@ import com.seibel.distanthorizons.common.render.blaze.test.BlazeDhTestTriangleRe
 import com.seibel.distanthorizons.common.render.blaze.wrappers.buffer.BlazeVertexBufferWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeLodUniformBufferWrapper;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftRenderWrapper;
-import com.seibel.distanthorizons.core.render.EDhRenderApi;
 import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.renderer.AbstractDebugWireframeRenderer;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
@@ -48,8 +48,9 @@ public class BlazeDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 	}
 	
 	
-	private final EDhRenderApi renderApi;
-	public EDhRenderApi getRenderApi() { return renderApi; }
+	private final EDhApiRenderApi renderApi;
+	public EDhApiRenderApi getRenderApi() { return renderApi; }
+	public boolean isNativeRenderer() { return false; }
 	
 	//endregion
 	
@@ -63,7 +64,7 @@ public class BlazeDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 	public BlazeDhRenderApiDefinition()
 	{
 		#if MC_VER <= MC_26_1_2
-		renderApi = EDhRenderApi.OPEN_GL;
+		renderApi = EDhApiRenderApi.OPEN_GL;
 		#else
 		// use the same rendering API as Minecraft
 		this.renderApi = MinecraftRenderWrapper.INSTANCE.getMcRenderingApi();
