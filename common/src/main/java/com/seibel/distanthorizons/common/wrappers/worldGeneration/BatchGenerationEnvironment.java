@@ -56,6 +56,7 @@ import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 import com.seibel.distanthorizons.coreapi.ModInfo;
+import net.minecraft.world.level.levelgen.Heightmap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -672,12 +673,16 @@ public final class BatchGenerationEnvironment implements IBatchGeneratorEnvironm
 				return;
 			}
 			
-//			throwIfThreadInterrupted();
-//			// caves can generally be ignored since they aren't generally visible from far away
-//			if (step == EDhApiWorldGenerationStep.CARVERS)
-//			{
-//				return;
-//			}
+			// carvers heightmaps are needed by some world gen mods,
+			// otherwise unexpected issues may occur
+			// (like trying to use an empty heightmap and walking out the bottom of
+			// the world looking for a valid snow location).
+			throwIfThreadInterrupted();
+			for (ChunkWrapper chunkWrapper : chunkWrappersToGenerate)
+			{
+				ChunkAccess chunk = chunkWrapper.getChunk();
+				Heightmap.primeHeightmaps(chunk, ChunkStatus.CARVERS.heightmapsAfter());
+			}
 
 			throwIfThreadInterrupted();
 			this.stepFeatures.generateGroup(genEvent.threadedParam, region, GetCutoutFrom(chunkWrappersToGenerate, EDhApiWorldGenerationStep.FEATURES));
