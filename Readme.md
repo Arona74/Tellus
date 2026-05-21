@@ -12,6 +12,11 @@ Below is a video demonstrating the system:
 
 <a href="https://youtu.be/SxQdbtjGEsc" target="_blank">![Distant Horizons - Alpha 2.0](https://i.ytimg.com/vi/SxQdbtjGEsc/hqdefault.jpg)</a>
 
+## Translations
+
+[![Crowdin](https://badges.crowdin.net/distant-horizons/localized.svg)](https://crowdin.com/project/distant-horizons)\
+Crowdin Project: [Distant Horizons](https://crowdin.com/project/distant-horizons)\
+Guidelines: [translations.md](translations.md)
 <br>
 
 ## Source Code Installation

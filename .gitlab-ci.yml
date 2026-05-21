@@ -4,6 +4,7 @@ image: eclipse-temurin:25
 
 # all stages need to be defined here
 stages:
+  - translations
   - build
   - api
   - pages
@@ -32,6 +33,9 @@ variables:
 
 build:
   stage: build
+  needs:
+    - job: translations
+      artifacts: true
   parallel:
     matrix:
       - MC_VER: [
@@ -102,3 +106,17 @@ pages:
       - public
   allow_failure: false
   extends: .build_java
+
+translations:
+  stage: translations
+  needs: []
+  image: crowdin/cli:latest
+  script:
+    - if [ "$CI_COMMIT_BEFORE_SHA" = "0000000000000000000000000000000000000000" ] || git diff --name-only "$CI_COMMIT_BEFORE_SHA" "$CI_COMMIT_SHA" -- coreSubProjects/core/src/main/resources/assets/distanthorizons/lang | grep -q .; then crowdin upload sources; fi
+    - crowdin download --export-only-approved --skip-untranslated-files
+    - for f in coreSubProjects/core/src/main/resources/assets/distanthorizons/lang/*.json; do [ -e "$f" ] || continue; sed -i 's/\\\\n/\\n/g' "$f"; n="$(basename "$f" | tr '[:upper:]' '[:lower:]')"; [ "$(basename "$f")" = "$n" ] || mv "$f" "$(dirname "$f")/$n"; done
+  artifacts:
+    paths:
+      - coreSubProjects/core/src/main/resources/assets/distanthorizons/lang/**
+    expire_in: 1 day
+    when: always
