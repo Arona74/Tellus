@@ -4,7 +4,9 @@ Thanks for your interest in contributing to Distant Horizons!
 
 Check out the [Core Wiki](https://gitlab.com/jeseibel/distant-horizons-core/-/wikis/home) for a rough overview of Distant Horizon's project structure.
 
+## Translations
 
+See [translations.md](translations.md) for the Crowdin workflow.
 
 ## Submitting a merge request
 
