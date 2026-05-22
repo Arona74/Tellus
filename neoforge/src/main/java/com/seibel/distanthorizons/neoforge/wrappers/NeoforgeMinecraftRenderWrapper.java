@@ -28,7 +28,7 @@ public class NeoforgeMinecraftRenderWrapper extends MinecraftRenderWrapper
 		#if MC_VER < MC_1_21_9
 		// no special handling required,
 		// both neo/fabric uses the same back end objects
-		return super.getDepthTextureId();
+		return super.getGlDepthTextureId();
 		#else
 		try
 		{
@@ -55,7 +55,7 @@ public class NeoforgeMinecraftRenderWrapper extends MinecraftRenderWrapper
 		#if MC_VER < MC_1_21_9
 		// no special handling required,
 		// both neo/fabric uses the same back end objects
-		return super.getColorTextureId();
+		return super.getGlColorTextureId();
 		#else
 		try
 		{

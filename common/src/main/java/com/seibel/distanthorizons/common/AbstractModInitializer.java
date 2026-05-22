@@ -419,11 +419,11 @@ public abstract class AbstractModInitializer
 	{
 		
 		#if MC_VER <= MC_1_12_2
-		Config.Client.Advanced.Graphics.Experimental.renderingApi.setMcVersionOverrideValue(EDhApiRenderApi.OPEN_GL);
+		Config.Client.Advanced.Graphics.Experimental.renderingEngine.setMcVersionOverrideValue(EDhApiRenderingEngine.OPEN_GL);
 		Config.Client.Advanced.Graphics.Quality.vanillaFadeMode.setMcVersionOverrideValue(EDhApiMcRenderingFadeMode.NONE);
 		Config.Common.WorldGenerator.distantGeneratorMode.setMcVersionOverrideValue(EDhApiDistantGeneratorMode.INTERNAL_SERVER);
 		#elif MC_VER <= MC_1_21_10
-		Config.Client.Advanced.Graphics.Experimental.renderingApi.setMcVersionOverrideValue(EDhApiRenderApi.OPEN_GL);
+		Config.Client.Advanced.Graphics.Experimental.renderingEngine.setMcVersionOverrideValue(EDhApiRenderingEngine.OPEN_GL);
 		#else
 		#endif
 	}

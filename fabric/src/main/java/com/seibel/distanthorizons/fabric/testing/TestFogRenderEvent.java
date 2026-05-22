@@ -31,7 +31,7 @@ public class TestFogRenderEvent extends DhApiBeforeFogRenderEvent
 		this.lastUpdateTime = currentTime;
 		
 		this.lastFar += INCREMENT_PER_SECOND * deltaSeconds;
-		if (this.lastFar >= originalParms.getFarFogMaxThickness())
+		if (this.lastFar >= originalParms.getFarFogEndPercent())
 		{
 			this.lastFar = 0.0f;
 		}

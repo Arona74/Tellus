@@ -110,7 +110,7 @@ public class VersionConstants implements IVersionConstants
 	public EDhApiRenderingEngine getDefaultRenderingEngine()
 	{
 		#if MC_VER <= MC_1_21_11
-		return EDhApiRenderApi.OPEN_GL;
+		return EDhApiRenderingEngine.OPEN_GL;
 		#else
 		return EDhApiRenderingEngine.BLAZE_3D;
 		#endif
