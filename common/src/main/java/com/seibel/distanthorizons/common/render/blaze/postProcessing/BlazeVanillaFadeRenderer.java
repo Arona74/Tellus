@@ -25,25 +25,18 @@ public class BlazeVanillaFadeRenderer {}
 #else
 	
 import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.buffers.Std140Builder;
-import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.PolygonMode;
-import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.BlazeDhMetaRenderer;
 import com.seibel.distanthorizons.common.render.blaze.apply.BlazeDhCopyRenderer;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
-import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeUniformBufferWrapper;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
@@ -56,13 +49,6 @@ import com.seibel.distanthorizons.core.util.math.Mat4f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhVanillaFadeRenderer;
-import net.minecraft.client.Minecraft;
-import net.minecraft.resources.Identifier;
-
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
 
 /**
  * Fades the vanilla chunks
@@ -84,7 +70,7 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 	private RenderPipeline pipeline;
 	private boolean init = false;
 	
-	private GpuBuffer fragUniformBuffer;
+	private final BlazeUniformBufferWrapper fragUniformBufferWrapper = new BlazeUniformBufferWrapper("fragUniformBlock");
 	
 	private GpuBuffer vboGpuBuffer;
 	
@@ -175,17 +161,6 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 		
 		
 		{
-			int uniformBufferSize = new Std140SizeCalculator()
-				.putInt() // uOnlyRenderLods
-				.putFloat() // uStartFadeBlockDistance
-				.putFloat() // uEndFadeBlockDistance
-				.putFloat() // uMaxLevelHeight
-				.putMat4f() // uDhInvMvmProj
-				.putMat4f() // uMcInvMvmProj
-				.putInt() // uIsReverseZDepth
-				.get();
-			
-			
 			// create data //
 			
 			float dhNearClipDistance = RenderUtil.getNearClipPlaneInBlocks();
@@ -213,24 +188,16 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 			
 			
 			// upload data //
-			
-			ByteBuffer buffer = ByteBuffer.allocateDirect(uniformBufferSize);
-			buffer.order(ByteOrder.nativeOrder());
-			buffer = Std140Builder.intoBuffer(buffer)
+			this.fragUniformBufferWrapper
 				.putInt(Config.Client.Advanced.Debugging.lodOnlyMode.get() ? 1 : 0) // uOnlyRenderLods
 				.putFloat(fadeStartDistance) // uStartFadeBlockDistance
 				.putFloat(fadeEndDistance) // uEndFadeBlockDistance
 				.putFloat(renderParams.clientLevelWrapper.getMaxHeight()) // uMaxLevelHeight
-				.putMat4f(inverseDhMvmProjMatrix.createJomlMatrix()) // uDhInvMvmProj
-				.putMat4f(inverseMcMvmProjMatrix.createJomlMatrix()) // uMcInvMvmProj
+				.putMat4f(inverseDhMvmProjMatrix) // uDhInvMvmProj
+				.putMat4f(inverseMcMvmProjMatrix) // uMcInvMvmProj
 				.putInt((RENDER_API_DEF.getRenderDepth() == EDhRenderDepth.REVERSE_Z) ? 1 : 0) // uIsReverseZDepth
-				.get()
+				.finishAndUpload()
 			;
-			
-			this.fragUniformBuffer = BlazeUniformUtil.createBuffer("fragUniformBlock", uniformBufferSize, this.fragUniformBuffer);
-			GpuBufferSlice bufferSlice = new GpuBufferSlice(this.fragUniformBuffer, 0, uniformBufferSize);
-			
-			COMMAND_ENCODER.writeToBuffer(bufferSlice, buffer);
 		}
 		
 		
@@ -252,7 +219,7 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 			renderPassWrapper.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper);
 			renderPassWrapper.bindTexture("uDhColorTexture", BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper);
 			
-			renderPassWrapper.setUniform("fragUniformBlock", this.fragUniformBuffer);
+			renderPassWrapper.setUniform("fragUniformBlock", this.fragUniformBufferWrapper);
 			
 			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer);
 			

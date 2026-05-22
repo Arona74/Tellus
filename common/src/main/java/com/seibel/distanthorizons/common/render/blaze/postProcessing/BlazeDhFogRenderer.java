@@ -32,7 +32,7 @@ import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
-import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeUniformBufferWrapper;
 import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
@@ -47,13 +47,8 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRender
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhFogRenderer;
 
 import java.awt.*;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.buffers.Std140Builder;
-import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.CommandEncoder;
@@ -89,7 +84,7 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 	private RenderPipeline pipeline;
 	private boolean init = false;
 	
-	private GpuBuffer fragUniformBuffer;
+	private final BlazeUniformBufferWrapper fragUniformBufferWrapper = new BlazeUniformBufferWrapper("dh_fog_frag_uniform");
 	
 	private GpuBuffer vboGpuBuffer;
 	
@@ -181,48 +176,6 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 		this.fogDepthTextureWrapper.tryCreateOrResize();
 		
 		{
-			int uniformBufferSize = new Std140SizeCalculator()
-				
-				// fog uniforms
-				.putVec4() // uFogColor
-				.putFloat() //uFogScale
-				.putFloat() //uFogVerticalScale
-				// only used for debugging
-				.putInt() //uFogDebugMode  // 1 = render everything with fog color // 7 = use debug rendering
-				.putInt() //uFogFalloffType
-				
-				// fog config
-				.putFloat() // uFarFogStart
-				.putFloat() // uFarFogLength
-				.putFloat() // uFarFogMin
-				.putFloat() // uFarFogRange 
-				.putFloat() // uFarFogDensity
-				
-				// height fog config
-				.putFloat() // uHeightFogStart
-				.putFloat() // uHeightFogLength
-				.putFloat() // uHeightFogMin
-				.putFloat() // uHeightFogRange
-				.putFloat() // uHeightFogDensity
-				
-				// ??
-				.putInt() // uHeightFogEnabled
-				.putInt() // uHeightFogFalloffType
-				.putInt() // uHeightBasedOnCamera
-				.putFloat() // uHeightFogBaseHeight
-				.putInt() // uHeightFogAppliesUp
-				.putInt() // uHeightFogAppliesDown
-				.putInt() // uUseSphericalFog
-				.putInt() // uHeightFogMixingMode
-				.putFloat() // uCameraBlockYPos
-				
-				.putMat4f() // uInvMvmProj
-				
-				.putInt() // uIsReverseZDepth
-				
-				.get();
-			
-			
 			// create data //
 			
 			int lodDrawDistance = Config.Client.Advanced.Graphics.Quality.lodChunkRenderDistanceRadius.get() * LodUtil.CHUNK_WIDTH;
@@ -242,12 +195,9 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 			
 			// upload data //
 			
-			ByteBuffer buffer = ByteBuffer.allocateDirect(uniformBufferSize);
-			buffer.order(ByteOrder.nativeOrder());
-			buffer = Std140Builder.intoBuffer(buffer)
-				
+			this.fragUniformBufferWrapper
 				// fog uniforms
-				.putVec4(
+				.putVec4f(
 					fogColor.getRed() / 255.0f, 
 					fogColor.getGreen() / 255.0f, 
 					fogColor.getBlue() / 255.0f, 
@@ -282,17 +232,12 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 				.putInt(heightFogMixingMode.value) // uHeightFogMixingMode
 				.putFloat((float)MC_RENDER.getCameraExactPosition().y) // uCameraBlockYPos
 				
-				.putMat4f(inverseMvmProjMatrix.createJomlMatrix()) // uInvMvmProj
+				.putMat4f(inverseMvmProjMatrix) // uInvMvmProj
 				
 				.putInt((RENDER_API_DEF.getRenderDepth() == EDhRenderDepth.REVERSE_Z) ? 1 : 0) // uIsReverseZDepth
 				
-				.get()
+				.finishAndUpload()
 			;
-			
-			this.fragUniformBuffer = BlazeUniformUtil.createBuffer("fragUniformBlock", uniformBufferSize, this.fragUniformBuffer);
-			GpuBufferSlice bufferSlice = new GpuBufferSlice(this.fragUniformBuffer, 0, uniformBufferSize);
-			
-			COMMAND_ENCODER.writeToBuffer(bufferSlice, buffer);
 		}
 		
 		
@@ -312,7 +257,7 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 		{
 			renderPassWrapper.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper);
 			
-			renderPassWrapper.setUniform("fragUniformBlock", this.fragUniformBuffer);
+			renderPassWrapper.setUniform("fragUniformBlock", this.fragUniformBufferWrapper);
 			
 			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer); // vertex buffer can only be "0" lol
 			renderPassWrapper.setPipeline(this.pipeline);

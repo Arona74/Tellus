@@ -5,29 +5,22 @@ public class BlazeDhTerrainRenderer {}
 
 #else
 
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.buffers.Std140Builder;
-import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.PolygonMode;
-import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeBufferRenderEvent;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeRenderPassEvent;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
-import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.BlazeVertexFormatBuilder;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeLodUniformBufferWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.buffer.BlazeVertexBufferWrapper;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeUniformBufferWrapper;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
 import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.dataObjects.render.bufferBuilding.LodBufferContainer;
@@ -47,13 +40,6 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRender
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhTerrainRenderer;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.objects.IVertexBufferWrapper;
 import com.seibel.distanthorizons.coreapi.DependencyInjection.ApiEventInjector;
-import net.minecraft.resources.Identifier;
-import org.lwjgl.system.MemoryUtil;
-
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
 
 /** Renders rendering DH's LOD terrain. */
 public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
@@ -72,8 +58,8 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 	private RenderPipeline transparentPipeline;
 	private boolean init = false;
 	
-	private GpuBuffer fragUniformBuffer;
-	private GpuBuffer vertSharedUniformBuffer;
+	private final BlazeUniformBufferWrapper fragUniformBufferWrapper = new BlazeUniformBufferWrapper("fragUniformBlock");
+	private final BlazeUniformBufferWrapper vertSharedUniformBufferWrapper = new BlazeUniformBufferWrapper("vertSharedUniformBlock");
 	
 	
 	
@@ -184,7 +170,7 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 				for (int lodIndex = 0; lodIndex < bufferContainers.size(); lodIndex++)
 				{
 					LodBufferContainer bufferContainer = bufferContainers.get(lodIndex);
-					bufferContainer.uniformContainer.tryUpload();
+					bufferContainer.uniformContainer.tryUpload(bufferContainer);
 				}
 			}
 			
@@ -207,55 +193,25 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 				
 				// upload data //
 				
-				int uniformBufferSize = new Std140SizeCalculator()
-					.putInt() // uIsWhiteWorld
-					
-					.putFloat() // uWorldYOffset
-					.putFloat() // uMircoOffset
-					.putFloat() // uEarthRadius
-					
-					.putVec3() // uCameraPos
-					.putMat4f() // uCombinedMatrix
-					.get();
-				
 				int i = Config.Client.Advanced.Debugging.enableWhiteWorld.get() ? 1 : 0;
 				
-				ByteBuffer buffer = MemoryUtil.memAlloc(uniformBufferSize);
-				buffer.order(ByteOrder.nativeOrder());
-				Std140Builder.intoBuffer(buffer)
+				this.vertSharedUniformBufferWrapper
 					.putInt(i) // uIsWhiteWorld
 					
 					.putFloat((float) renderEventParam.worldYOffset) // uWorldYOffset
 					.putFloat(0.01f) // uMircoOffset // 0.01 block offset
 					.putFloat(earthCurveRatio) // uEarthRadius
 					
-					.putVec3(
+					.putVec3f(
 						(float) renderEventParam.exactCameraPosition.x,
 						(float) renderEventParam.exactCameraPosition.y,
 						(float) renderEventParam.exactCameraPosition.z) // uCameraPos
-					.putMat4f(combinedMatrix.createJomlMatrix()) // uCombinedMatrix
-					.get();
-				
-				this.vertSharedUniformBuffer = BlazeUniformUtil.createBuffer("vertSharedUniformBlock", uniformBufferSize, this.vertSharedUniformBuffer);
-				GpuBufferSlice bufferSlice = new GpuBufferSlice(this.vertSharedUniformBuffer, 0, uniformBufferSize);
-				
-				COMMAND_ENCODER.writeToBuffer(bufferSlice, buffer);
-				
-				MemoryUtil.memFree(buffer);
+					.putMat4f(combinedMatrix) // uCombinedMatrix
+					.finishAndUpload();
 			}
 			
 			profiler.popPush("set frag uniforms");
 			{
-				int uniformBufferSize = new Std140SizeCalculator()
-					.putFloat() // uClipDistance
-					.putFloat() // uNoiseIntensity
-					.putInt() // uNoiseSteps
-					.putInt() // uNoiseDropoff
-					.putInt() // uDitherDhRendering
-					.putInt() // uNoiseEnabled
-					.get();
-				
-				
 				// create data //
 				
 				float dhNearClipDistance = RenderUtil.getNearClipPlaneInBlocks();
@@ -267,24 +223,15 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 				
 				
 				// upload data //
-				
-				ByteBuffer buffer = MemoryUtil.memAlloc(uniformBufferSize);
-				buffer.order(ByteOrder.nativeOrder());
-				buffer = Std140Builder.intoBuffer(buffer)
+				this.fragUniformBufferWrapper
 					.putFloat(dhNearClipDistance) // uClipDistance
 					.putFloat(Config.Client.Advanced.Graphics.NoiseTexture.noiseIntensity.get()) // uNoiseIntensity
 					.putInt(Config.Client.Advanced.Graphics.NoiseTexture.noiseSteps.get()) // uNoiseSteps
 					.putInt(Config.Client.Advanced.Graphics.NoiseTexture.noiseDropoff.get()) // uNoiseDropoff
 					.putInt(Config.Client.Advanced.Graphics.Quality.ditherDhFade.get() ? 1 : 0) // uDitherDhRendering
 					.putInt(Config.Client.Advanced.Graphics.NoiseTexture.enableNoiseTexture.get() ? 1 : 0) // uNoiseEnabled
-					.get()
+					.finishAndUpload()
 				;
-				
-				this.fragUniformBuffer = BlazeUniformUtil.createBuffer("fragUniformBlock", uniformBufferSize, this.fragUniformBuffer);
-				GpuBufferSlice bufferSlice = new GpuBufferSlice(this.fragUniformBuffer, 0, uniformBufferSize);
-				
-				COMMAND_ENCODER.writeToBuffer(bufferSlice, buffer);
-				MemoryUtil.memFree(buffer);
 			}
 			
 			
@@ -310,8 +257,8 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 					renderPassWrapper.setPipeline(opaquePass ? this.opaquePipeline : this.transparentPipeline);
 					
 					// shared uniforms
-					renderPassWrapper.setUniform("fragUniformBlock", this.fragUniformBuffer);
-					renderPassWrapper.setUniform("vertSharedUniformBlock", this.vertSharedUniformBuffer);
+					renderPassWrapper.setUniform("fragUniformBlock", this.fragUniformBufferWrapper);
+					renderPassWrapper.setUniform("vertSharedUniformBlock", this.vertSharedUniformBufferWrapper);
 					
 					
 					
@@ -335,7 +282,7 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 							}
 						}
 						
-						renderPassWrapper.setUniform("vertUniqueUniformBlock", uniformWrapper.gpuBuffer);
+						renderPassWrapper.setUniform("vertUniqueUniformBlock", uniformWrapper);
 						
 						
 						

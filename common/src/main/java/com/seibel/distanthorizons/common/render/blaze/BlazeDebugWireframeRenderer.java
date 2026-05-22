@@ -26,21 +26,16 @@ public class BlazeDebugWireframeRenderer {}
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.buffers.Std140Builder;
-import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.PolygonMode;
-import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.BlazeVertexFormatBuilder;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeUniformBufferWrapper;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
@@ -51,13 +46,10 @@ import com.seibel.distanthorizons.core.util.math.Vec3d;
 import com.seibel.distanthorizons.core.util.math.Vec3f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
-import net.minecraft.resources.Identifier;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
 
 /**
  * Handles rendering the wireframe particles 
@@ -119,7 +111,7 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 	private GpuBuffer boxVertexBuffer;
 	private GpuBuffer boxIndexBuffer;
 	
-	private GpuBuffer uniformBuffer;
+	private final BlazeUniformBufferWrapper uniformBufferWrapper = new BlazeUniformBufferWrapper("debugWireframeUniformBlock");
 	
 	
 	
@@ -263,14 +255,7 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 		
 		// uniforms
 		{
-			int uniformBufferSize = new Std140SizeCalculator()
-				.putMat4f() // uTransform
-				.putVec4() // uColor
-				.get();
-			
-			
 			// create data //
-			
 			Vec3d camPos = MC_RENDER.getCameraExactPosition();
 			Vec3f camPosFloatThisFrame = new Vec3f((float) camPos.x, (float) camPos.y, (float) camPos.z);
 			
@@ -288,23 +273,15 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 			
 			
 			// upload data //
-			
-			ByteBuffer buffer = ByteBuffer.allocateDirect(uniformBufferSize);
-			buffer.order(ByteOrder.nativeOrder());
-			buffer = Std140Builder.intoBuffer(buffer)
-				.putMat4f(transformMatrix.createJomlMatrix()) // uTransform
-				.putVec4(
+			this.uniformBufferWrapper
+				.putMat4f(transformMatrix) // uTransform
+				.putVec4f(
 					box.color.getRed() / 255.0f,
 					box.color.getGreen() / 255.0f,
 					box.color.getBlue() / 255.0f,
 					box.color.getAlpha() / 255.0f) // uColor
-				.get()
+				.finishAndUpload()
 			;
-			
-			this.uniformBuffer = BlazeUniformUtil.createBuffer("uniformBlock", uniformBufferSize, this.uniformBuffer);
-			GpuBufferSlice bufferSlice = new GpuBufferSlice(this.uniformBuffer, 0, uniformBufferSize);
-			
-			commandEncoder.writeToBuffer(bufferSlice, buffer);
 		}
 		
 		
@@ -317,7 +294,7 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 			BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper))
 		{
 			// Bind instance data //
-			renderPassWrapper.setUniform("uniformBlock", this.uniformBuffer);
+			renderPassWrapper.setUniform("uniformBlock", this.uniformBufferWrapper);
 			
 			renderPassWrapper.setPipeline(this.pipeline);
 			renderPassWrapper.setIndexBuffer(this.boxIndexBuffer);

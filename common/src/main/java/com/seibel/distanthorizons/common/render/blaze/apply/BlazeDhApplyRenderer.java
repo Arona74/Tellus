@@ -25,9 +25,6 @@ public class BlazeDhApplyRenderer {}
 #else
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.buffers.Std140Builder;
-import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.CommandEncoder;
@@ -36,13 +33,13 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.*;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
-import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.BlazeVertexFormatBuilder;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeUniformBufferWrapper;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
@@ -51,8 +48,6 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRender
 import com.seibel.distanthorizons.coreapi.ModInfo;
 import org.jetbrains.annotations.Nullable;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Arrays;
 
 /**
@@ -74,7 +69,7 @@ public class BlazeDhApplyRenderer
 	
 	private RenderPipeline pipeline;
 	
-	private GpuBuffer fragUniformBuffer;
+	private final BlazeUniformBufferWrapper fragUniformBufferWrapper = new BlazeUniformBufferWrapper("baseFragUniformBlock");
 	
 	protected GpuBuffer vboGpuBuffer;
 	
@@ -104,7 +99,7 @@ public class BlazeDhApplyRenderer
 	 */
 	private final String[] uniformNames;
 	/** will be an empty array if unneeded */
-	private final GpuBuffer[] uniformBuffers;
+	private final BlazeUniformBufferWrapper[] uniformBufferWrappers;
 	
 	
 	
@@ -140,7 +135,7 @@ public class BlazeDhApplyRenderer
 		this.fragmentShaderPath = fragmentShaderPath;
 		
 		this.uniformNames = uniformNames;
-		this.uniformBuffers = new GpuBuffer[this.uniformNames.length];
+		this.uniformBufferWrappers = new BlazeUniformBufferWrapper[this.uniformNames.length];
 	}
 	
 	private void tryInit(
@@ -214,7 +209,7 @@ public class BlazeDhApplyRenderer
 	//========//
 	//region
 	
-	public void setUniform(String uniformName, GpuBuffer uniformBuffer)
+	public void setUniform(String uniformName, BlazeUniformBufferWrapper uniformBufferWrapper)
 	{
 		// the uniform array should be short enough (less than 10 items)
 		// where a sequential search should be plenty fast
@@ -223,7 +218,7 @@ public class BlazeDhApplyRenderer
 			String nameAtIndex = this.uniformNames[i];
 			if (nameAtIndex.equals(uniformName))
 			{
-				this.uniformBuffers[i] = uniformBuffer;
+				this.uniformBufferWrappers[i] = uniformBufferWrapper;
 				break;
 			}
 		}
@@ -239,23 +234,10 @@ public class BlazeDhApplyRenderer
 		this.dummyDepthTextureWrapper.tryCreateOrResize();
 		
 		
-		{
-			int uniformBufferSize = new Std140SizeCalculator()
-				.putInt() // uIsReverseZDepth
-				.get();
-			
-			ByteBuffer buffer = ByteBuffer.allocateDirect(uniformBufferSize);
-			buffer.order(ByteOrder.nativeOrder());
-			buffer = Std140Builder.intoBuffer(buffer)
-				.putInt((RENDER_API_DEF.getRenderDepth() == EDhRenderDepth.REVERSE_Z) ? 1 : 0) // uIsReverseZDepth
-				.get()
-			;
-			
-			this.fragUniformBuffer = BlazeUniformUtil.createBuffer("baseFragUniformBlock", uniformBufferSize, this.fragUniformBuffer);
-			GpuBufferSlice bufferSlice = new GpuBufferSlice(this.fragUniformBuffer, 0, uniformBufferSize);
-			
-			COMMAND_ENCODER.writeToBuffer(bufferSlice, buffer);
-		}
+		this.fragUniformBufferWrapper
+			.putInt((RENDER_API_DEF.getRenderDepth() == EDhRenderDepth.REVERSE_Z) ? 1 : 0) // uIsReverseZDepth
+			.finishAndUpload();
+		;
 		
 		try (RenderPassWrapper renderPassWrapper = new RenderPassWrapper(
 			this::getIdentifierName,
@@ -268,7 +250,7 @@ public class BlazeDhApplyRenderer
 			for (int i = 0; i < this.uniformNames.length; i++)
 			{
 				String uniformName = this.uniformNames[i];
-				GpuBuffer uniformBuffer = this.uniformBuffers[i];
+				BlazeUniformBufferWrapper uniformBuffer = this.uniformBufferWrappers[i];
 				if (uniformBuffer == null)
 				{
 					throw new IllegalStateException("Missing uniform ["+uniformName+"], please set the uniform before rendering.");	
@@ -277,7 +259,7 @@ public class BlazeDhApplyRenderer
 				renderPassWrapper.setUniform(uniformName, uniformBuffer);
 			}
 			
-			renderPassWrapper.setUniform("baseFragUniformBlock", this.fragUniformBuffer);
+			renderPassWrapper.setUniform("baseFragUniformBlock", this.fragUniformBufferWrapper);
 			
 			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer);
 			renderPassWrapper.setPipeline(this.pipeline);
@@ -290,7 +272,7 @@ public class BlazeDhApplyRenderer
 		// so we can check if they're missing during next frame's rendering
 		if (ModInfo.IS_DEV_BUILD)
 		{
-			Arrays.fill(this.uniformBuffers, null);
+			Arrays.fill(this.uniformBufferWrappers, null);
 		}
 	}
 	

@@ -12,10 +12,10 @@ import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.IDhBlazeTexture;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeUniformBufferWrapper;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 
-import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.function.Supplier;
@@ -101,7 +101,7 @@ public class RenderPassWrapper implements AutoCloseable
 		#endif
 	}
 	
-	public void setUniform(String uniformName, GpuBuffer uniformBuffer) { this.renderPass.setUniform(uniformName, uniformBuffer); }
+	public void setUniform(String uniformName, BlazeUniformBufferWrapper uniformBuffer) { this.renderPass.setUniform(uniformName, uniformBuffer.getGpuBuffer()); }
 	
 	public void setPipeline(RenderPipeline pipeline) { this.renderPass.setPipeline(pipeline); }
 	

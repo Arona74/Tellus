@@ -30,7 +30,7 @@ import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureWrapper;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazePostProcessUtil;
-import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeUniformBufferWrapper;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
@@ -42,20 +42,11 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRen
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhSsaoRenderer;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-
 import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.buffers.Std140Builder;
-import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 #if MC_VER <= MC_26_1_2
@@ -84,8 +75,8 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 	private RenderPipeline pipeline;
 	private boolean init = false;
 	
-	private GpuBuffer fragUniformBuffer;
-	private GpuBuffer applyFragUniformBuffer;
+	private final BlazeUniformBufferWrapper fragUniformBufferWrapper = new BlazeUniformBufferWrapper("fragUniformBlock");
+	private final BlazeUniformBufferWrapper applyFragUniformBufferWrapper = new BlazeUniformBufferWrapper("applyFragUniformBlock");
 	
 	private GpuBuffer vboGpuBuffer;
 	
@@ -181,34 +172,14 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 		
 		// frag uniforms
 		{
-			int uniformBufferSize = new Std140SizeCalculator()
-				.putInt() // uSampleCount\
-				
-				.putFloat() // uRadius
-				.putFloat() // uStrength
-				.putFloat() // uMinLight
-				.putFloat() // uBias
-				.putFloat() // uFadeDistanceInBlocks
-				
-				.putMat4f() // uInvProj
-				.putMat4f() // uProj
-				
-				.putInt() // uIsReverseZDepth
-				.get();
-			
-			
 			// create data //
-			
 			Mat4f projMatrix = new Mat4f(renderParams.dhProjectionMatrix);
 			Mat4f invertedProjMatrix = new Mat4f(renderParams.dhProjectionMatrix);
 			invertedProjMatrix.invert();
 			
 			
 			// upload data //
-			
-			ByteBuffer buffer = ByteBuffer.allocateDirect(uniformBufferSize);
-			buffer.order(ByteOrder.nativeOrder());
-			buffer = Std140Builder.intoBuffer(buffer)
+			this.fragUniformBufferWrapper
 				.putInt(6) // uSampleCount
 				
 				.putFloat(4.0f) // uRadius
@@ -217,29 +188,16 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 				.putFloat(0.02f) // uBias
 				.putFloat(1_600.0f) // uFadeDistanceInBlocks
 				
-				.putMat4f(invertedProjMatrix.createJomlMatrix())
-				.putMat4f(projMatrix.createJomlMatrix())
+				.putMat4f(invertedProjMatrix)
+				.putMat4f(projMatrix)
 				
 				.putInt((RENDER_API_DEF.getRenderDepth() == EDhRenderDepth.REVERSE_Z) ? 1 : 0) // uIsReverseZDepth
-				.get()
+				.finishAndUpload()
 			;
-			
-			this.fragUniformBuffer = BlazeUniformUtil.createBuffer("fragUniformBlock", uniformBufferSize, this.fragUniformBuffer);
-			GpuBufferSlice bufferSlice = new GpuBufferSlice(this.fragUniformBuffer, 0, uniformBufferSize);
-			
-			COMMAND_ENCODER.writeToBuffer(bufferSlice, buffer);
 		}
 		
 		// apply frag uniforms
 		{
-			int uniformBufferSize = new Std140SizeCalculator()
-				.putVec2() // uViewSize
-				.putInt() // uBlurRadius
-				.putFloat() // uNearClipPlane
-				.putFloat() // uFarClipPlane
-				.get();
-			
-			
 			// create data //
 			
 			float viewWidth = (float)MC_RENDER.getTargetFramebufferViewportWidth();
@@ -250,27 +208,19 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 			
 			
 			// upload data //
-			
-			ByteBuffer buffer = ByteBuffer.allocateDirect(uniformBufferSize);
-			buffer.order(ByteOrder.nativeOrder());
-			buffer = Std140Builder.intoBuffer(buffer)
-				.putVec2(viewWidth, viewHeight) // uViewSize
+			this.applyFragUniformBufferWrapper
+				.putVec2f(viewWidth, viewHeight) // uViewSize
 				.putInt(2) // uBlurRadius
 				.putFloat(nearClipPlane) // uNearClipPlane
 				.putFloat(farClipPlane) // uFarClipPlane
-				.get()
+				.finishAndUpload()
 			;
-			
-			this.applyFragUniformBuffer = BlazeUniformUtil.createBuffer("applyFragUniformBlock", uniformBufferSize, this.applyFragUniformBuffer);
-			GpuBufferSlice bufferSlice = new GpuBufferSlice(this.applyFragUniformBuffer, 0, uniformBufferSize);
-			
-			COMMAND_ENCODER.writeToBuffer(bufferSlice, buffer);
 		}
 		
 		
 		this.renderSsaoToTexture();
 		
-		this.applyRenderer.setUniform("applyFragUniformBlock", this.applyFragUniformBuffer);
+		this.applyRenderer.setUniform("applyFragUniformBlock", this.applyFragUniformBufferWrapper);
 		this.applyRenderer.render(this.ssaoColorTextureWrapper.texture, BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper.texture, BlazeDhMetaRenderer.INSTANCE.dhColorTextureWrapper.texture);
 		
 	}
@@ -284,7 +234,7 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 		{
 			renderPassWrapper.bindTexture("uDhDepthTexture", BlazeDhMetaRenderer.INSTANCE.dhDepthTextureWrapper);
 			
-			renderPassWrapper.setUniform("fragUniformBlock", this.fragUniformBuffer);
+			renderPassWrapper.setUniform("fragUniformBlock", this.fragUniformBufferWrapper);
 			
 			renderPassWrapper.setVertexBuffer(this.vboGpuBuffer);
 			

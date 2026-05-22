@@ -24,17 +24,10 @@ public class BlazeDhGenericObjectRenderer {}
 
 #else
 
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.buffers.Std140Builder;
-import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.PolygonMode;
-import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
-import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.api.enums.rendering.EDhApiBlockMaterial;
@@ -52,7 +45,7 @@ import com.seibel.distanthorizons.common.render.blaze.wrappers.BlazeVertexFormat
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
-import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeUniformBufferWrapper;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
@@ -73,15 +66,10 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IProfilerWrap
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhGenericRenderer;
 import com.seibel.distanthorizons.coreapi.DependencyInjection.ApiEventInjector;
 import com.seibel.distanthorizons.coreapi.ModInfo;
-import net.minecraft.resources.Identifier;
 
 import java.awt.*;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -116,7 +104,7 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 	
 	private RenderPipeline pipeline;
 	
-	private GpuBuffer vertUniformBuffer;
+	private final BlazeUniformBufferWrapper vertUniformBufferWrapper = new BlazeUniformBufferWrapper("vertUniformBlock");
 	
 	
 	
@@ -427,28 +415,6 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 				
 				// uniforms
 				{
-					int uniformBufferSize = new Std140SizeCalculator()
-						.putIVec3() // uOffsetChunk
-						.putVec3() // uOffsetSubChunk
-						.putIVec3() // uCameraPosChunk
-						.putVec3() // uCameraPosSubChunk
-						
-						.putVec3() // aTranslateChunk
-						.putVec3() // aTranslateSubChunk
-						
-						.putMat4f() // uProjectionMvm
-						.putInt() // uSkyLight
-						.putInt() // uBlockLight
-						
-						.putFloat() // uNorthShading
-						.putFloat() // uSouthShading
-						.putFloat() // uEastShading
-						.putFloat() // uWestShading
-						.putFloat() // uTopShading
-						.putFloat() // uBottomShading
-						.get();
-					
-					
 					// create data //
 					
 					Mat4f projectionMvmMatrix = new Mat4f(renderEventParam.dhProjectionMatrix);
@@ -457,31 +423,29 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 					
 					// upload data //
 					
-					ByteBuffer buffer = ByteBuffer.allocateDirect(uniformBufferSize);
-					buffer.order(ByteOrder.nativeOrder());
-					buffer = Std140Builder.intoBuffer(buffer)
-						.putIVec3(
+					this.vertUniformBufferWrapper
+						.putVec3i(
 							LodUtil.getChunkPosFromDouble(boxGroup.getOriginBlockPos().x),
 							LodUtil.getChunkPosFromDouble(boxGroup.getOriginBlockPos().y),
 							LodUtil.getChunkPosFromDouble(boxGroup.getOriginBlockPos().z)
 						) // uOffsetChunk
-						.putVec3(
+						.putVec3f(
 							LodUtil.getSubChunkPosFromDouble(boxGroup.getOriginBlockPos().x),
 							LodUtil.getSubChunkPosFromDouble(boxGroup.getOriginBlockPos().y),
 							LodUtil.getSubChunkPosFromDouble(boxGroup.getOriginBlockPos().z)
 						) // uOffsetSubChunk
-						.putIVec3(
+						.putVec3i(
 							LodUtil.getChunkPosFromDouble(camPos.x),
 							LodUtil.getChunkPosFromDouble(camPos.y),
 							LodUtil.getChunkPosFromDouble(camPos.z)
 						) // uCameraPosChunk
-						.putVec3(
+						.putVec3f(
 							LodUtil.getSubChunkPosFromDouble(camPos.x),
 							LodUtil.getSubChunkPosFromDouble(camPos.y),
 							LodUtil.getSubChunkPosFromDouble(camPos.z)
 						) // uCameraPosSubChunk
 						
-						.putMat4f(projectionMvmMatrix.createJomlMatrix()) // uProjectionMvm
+						.putMat4f(projectionMvmMatrix) // uProjectionMvm
 						.putInt(boxGroup.getSkyLight()) // uSkyLight
 						.putInt(boxGroup.getBlockLight()) // uBlockLight
 						
@@ -492,13 +456,8 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 						.putFloat(shading.top)
 						.putFloat(shading.bottom)
 						
-						.get()
+						.finishAndUpload()
 					;
-					
-					this.vertUniformBuffer = BlazeUniformUtil.createBuffer("vertUniformBlock", uniformBufferSize, this.vertUniformBuffer);
-					GpuBufferSlice bufferSlice = new GpuBufferSlice(this.vertUniformBuffer, 0, uniformBufferSize);
-					
-					COMMAND_ENCODER.writeToBuffer(bufferSlice, buffer);
 				}
 				
 				
@@ -567,7 +526,7 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 			// Bind instance data //
 			
 			
-			renderPassWrapper.setUniform("vertUniformBlock", this.vertUniformBuffer);
+			renderPassWrapper.setUniform("vertUniformBlock", this.vertUniformBufferWrapper);
 			
 			// set pipeline
 			renderPassWrapper.setPipeline(this.pipeline);
@@ -633,9 +592,9 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 		// close is called outside the render thread and buffer closing must be done on the render thread
 		RenderThreadTaskHandler.INSTANCE.queueRunningOnRenderThread("Generic Obj Cleanup", () ->
 		{
-			if (this.vertUniformBuffer != null)
+			if (this.vertUniformBufferWrapper != null)
 			{
-				this.vertUniformBuffer.close();
+				this.vertUniformBufferWrapper.close();
 			}
 		});
 	}
