@@ -19,6 +19,7 @@
 
 package com.seibel.distanthorizons.common.render.openGl.postProcessing.fog;
 
+import com.seibel.distanthorizons.api.methods.events.sharedParameterObjects.DhApiFogRenderParam;
 import com.seibel.distanthorizons.common.render.openGl.glObject.GLState;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftGLWrapper;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
@@ -108,7 +109,7 @@ public class GlDhFogRenderer implements IDhFogRenderer
 	//region
 	
 	@Override
-	public void render(RenderParams renderParams)
+	public void render(RenderParams renderParams, DhApiFogRenderParam fogRenderParams)
 	{
 		// GLState needed in MC 1.16.5 probably due to MC not manually setting each GL state they need before the next rendering step
 		try (GLState state = new GLState())
@@ -126,7 +127,7 @@ public class GlDhFogRenderer implements IDhFogRenderer
 			}
 			
 			GlDhFogShader.INSTANCE.frameBuffer = this.fogFramebuffer;
-			GlDhFogShader.INSTANCE.setProjectionMatrix(renderParams.dhMvmProjMatrix);
+			GlDhFogShader.INSTANCE.prepUniformObjects(renderParams.dhMvmProjMatrix, fogRenderParams);
 			GlDhFogShader.INSTANCE.render(renderParams);
 			
 			GlDhFogApplyShader.INSTANCE.fogTexture = this.fogTexture;

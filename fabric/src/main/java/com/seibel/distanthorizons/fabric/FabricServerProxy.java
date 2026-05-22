@@ -1,11 +1,8 @@
 package com.seibel.distanthorizons.fabric;
 
 import com.seibel.distanthorizons.api.DhApi;
-import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBlockColorOverrideEvent;
-import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBlockStateWrapperCreatedEvent;
-import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiChunkProcessingEvent;
+import com.seibel.distanthorizons.api.methods.events.abstractEvents.*;
 import com.seibel.distanthorizons.api.methods.events.DhApiEventRegister;
-import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiLevelLoadEvent;
 import com.seibel.distanthorizons.common.AbstractModInitializer;
 import com.seibel.distanthorizons.common.wrappers.chunk.ChunkWrapper;
 import com.seibel.distanthorizons.common.wrappers.misc.ServerPlayerWrapper;
@@ -18,10 +15,7 @@ import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.wrapperInterfaces.misc.IPluginPacketSender;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.ILevelWrapper;
-import com.seibel.distanthorizons.fabric.testing.TestBlockWrapperCreatedEvent;
-import com.seibel.distanthorizons.fabric.testing.TestChunkInputReplacerEvent;
-import com.seibel.distanthorizons.fabric.testing.TestCustomColorEvent;
-import com.seibel.distanthorizons.fabric.testing.TestWorldGenBindingEvent;
+import com.seibel.distanthorizons.fabric.testing.*;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -105,6 +99,12 @@ public class FabricServerProxy implements AbstractModInitializer.IEventProxy
 			{
 				DhApi.events.bind(DhApiBlockColorOverrideEvent.class, new TestCustomColorEvent());
 				DhApi.events.bind(DhApiBlockStateWrapperCreatedEvent.class, new TestBlockWrapperCreatedEvent());
+			}
+			
+			// test fog override
+			if (false)
+			{
+				DhApi.events.bind(DhApiBeforeFogRenderEvent.class, new TestFogRenderEvent());
 			}
 		}
 		

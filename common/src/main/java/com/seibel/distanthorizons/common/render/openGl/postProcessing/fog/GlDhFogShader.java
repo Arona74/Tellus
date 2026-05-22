@@ -19,9 +19,9 @@
 
 package com.seibel.distanthorizons.common.render.openGl.postProcessing.fog;
 
-import com.seibel.distanthorizons.api.enums.rendering.EDhApiFogColorMode;
 import com.seibel.distanthorizons.api.enums.rendering.EDhApiHeightFogDirection;
 import com.seibel.distanthorizons.api.enums.rendering.EDhApiHeightFogMixMode;
+import com.seibel.distanthorizons.api.methods.events.sharedParameterObjects.DhApiFogRenderParam;
 import com.seibel.distanthorizons.api.objects.math.DhApiMat4f;
 import com.seibel.distanthorizons.common.render.openGl.GlDhMetaRenderer;
 import com.seibel.distanthorizons.common.render.openGl.glObject.shader.GlShaderProgram;
@@ -37,8 +37,6 @@ import com.seibel.distanthorizons.core.util.math.Mat4f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import org.lwjgl.opengl.GL32;
 
-import java.awt.*;
-
 public class GlDhFogShader extends GlAbstractShaderRenderer
 {
 	public static final GlDhFogShader INSTANCE = new GlDhFogShader();
@@ -51,6 +49,7 @@ public class GlDhFogShader extends GlAbstractShaderRenderer
 	
 	public int frameBuffer;
 	private Mat4f inverseMvmProjMatrix; 
+	private DhApiFogRenderParam fogRenderParams;
 	
 	
 	
@@ -167,95 +166,58 @@ public class GlDhFogShader extends GlAbstractShaderRenderer
 	{
 		int lodDrawDistance = Config.Client.Advanced.Graphics.Quality.lodChunkRenderDistanceRadius.get() * LodUtil.CHUNK_WIDTH;
 		
-		
-		
-		if (this.inverseMvmProjMatrix != null)
-		{
-			this.shader.setUniform(this.uInvMvmProj, this.inverseMvmProjMatrix);
-		}
+		this.shader.setUniform(this.uInvMvmProj, this.inverseMvmProjMatrix);
 		
 		
 		// Fog uniforms
-		this.shader.setUniform(this.uFogColor, this.getFogColor(renderParams.partialTicks));
+		this.shader.setUniform(this.uFogColor, this.fogRenderParams.getFogColor());
 		this.shader.setUniform(this.uFogScale, 1.f / lodDrawDistance);
 		this.shader.setUniform(this.uFogVerticalScale, 1.f / MC.getWrappedClientLevel().getMaxHeight());
-		// only used for debugging
-		this.shader.setUniform(this.uFogDebugMode, 0); // 1 = render everything with fog color // 7 = use debug rendering
-		this.shader.setUniform(this.uFogFalloffType, Config.Client.Advanced.Graphics.Fog.farFogFalloff.get().value);
+		this.shader.setUniform(this.uFogDebugMode, 0); // 0 = normal // 1 = render everything with fog color // 7 = use debug rendering
+		this.shader.setUniform(this.uFogFalloffType, this.fogRenderParams.getFarFogFalloff().value);
 		
 		
 		// fog config
-		float farFogStart = Config.Client.Advanced.Graphics.Fog.farFogStart.get();
-		float farFogEnd = Config.Client.Advanced.Graphics.Fog.farFogEnd.get();
-		float farFogMin = Config.Client.Advanced.Graphics.Fog.farFogMin.get();
-		float farFogMax = Config.Client.Advanced.Graphics.Fog.farFogMax.get();
-		float farFogDensity = Config.Client.Advanced.Graphics.Fog.farFogDensity.get();
-		
-		// override fog if underwater
-		if (MC_RENDER.isFogStateSpecial())
-		{
-			// hide everything behind fog
-			farFogStart = 0.0f;
-			farFogEnd = 0.0f;
-		}
-		
-		this.shader.setUniform(this.uFarFogStart, farFogStart);
-		this.shader.setUniform(this.uFarFogLength, farFogEnd - farFogStart);
-		this.shader.setUniform(this.uFarFogMin, farFogMin);
-		this.shader.setUniform(this.uFarFogRange, farFogMax - farFogMin);
-		this.shader.setUniform(this.uFarFogDensity, farFogDensity);
+		this.shader.setUniform(this.uFarFogStart, this.fogRenderParams.getFarFogStartPercent());
+		this.shader.setUniform(this.uFarFogLength, this.fogRenderParams.getFarFogEndPercent() - this.fogRenderParams.getFarFogStartPercent());
+		this.shader.setUniform(this.uFarFogMin, this.fogRenderParams.getFarFogMinThickness());
+		this.shader.setUniform(this.uFarFogRange, this.fogRenderParams.getFarFogMaxThickness() - this.fogRenderParams.getFarFogMinThickness());
+		this.shader.setUniform(this.uFarFogDensity, this.fogRenderParams.getFarFogDensity());
 		
 		
 		// height config
-		EDhApiHeightFogMixMode heightFogMixingMode = Config.Client.Advanced.Graphics.Fog.HeightFog.heightFogMixMode.get();
-		boolean heightFogEnabled = heightFogMixingMode != EDhApiHeightFogMixMode.SPHERICAL && heightFogMixingMode != EDhApiHeightFogMixMode.CYLINDRICAL;
+		EDhApiHeightFogMixMode heightFogMixingMode = this.fogRenderParams.getHeightFogMixingMode();
+		boolean heightFogEnabled = 
+			heightFogMixingMode != EDhApiHeightFogMixMode.SPHERICAL 
+			&& heightFogMixingMode != EDhApiHeightFogMixMode.CYLINDRICAL;
 		boolean useSphericalFog = heightFogMixingMode == EDhApiHeightFogMixMode.SPHERICAL;
-		EDhApiHeightFogDirection heightFogCameraDirection = Config.Client.Advanced.Graphics.Fog.HeightFog.heightFogDirection.get();
+		EDhApiHeightFogDirection heightFogDirection = this.fogRenderParams.getHeightFogDirection();
 		
-		float heightFogStart = Config.Client.Advanced.Graphics.Fog.HeightFog.heightFogStart.get();
-		float heightFogEnd = Config.Client.Advanced.Graphics.Fog.HeightFog.heightFogEnd.get();
-		float heightFogMin = Config.Client.Advanced.Graphics.Fog.HeightFog.heightFogMin.get();
-		float heightFogMax = Config.Client.Advanced.Graphics.Fog.HeightFog.heightFogMax.get();
-		float heightFogDensity = Config.Client.Advanced.Graphics.Fog.HeightFog.heightFogDensity.get();
-		
-		this.shader.setUniform(this.uHeightFogStart, heightFogStart);
-		this.shader.setUniform(this.uHeightFogLength, heightFogEnd - heightFogStart);
-		this.shader.setUniform(this.uHeightFogMin, heightFogMin);
-		this.shader.setUniform(this.uHeightFogRange, heightFogMax - heightFogMin);
-		this.shader.setUniform(this.uHeightFogDensity, heightFogDensity);
+		this.shader.setUniform(this.uHeightFogStart, this.fogRenderParams.getHeightFogStartPercent());
+		this.shader.setUniform(this.uHeightFogLength, this.fogRenderParams.getHeightFogEndPercent() - this.fogRenderParams.getHeightFogStartPercent());
+		this.shader.setUniform(this.uHeightFogMin, this.fogRenderParams.getFarFogMinThickness());
+		this.shader.setUniform(this.uHeightFogRange, this.fogRenderParams.getFarFogMaxThickness() - this.fogRenderParams.getFarFogMinThickness());
+		this.shader.setUniform(this.uHeightFogDensity, this.fogRenderParams.getFarFogDensity());
 		
 		
 		this.shader.setUniform(this.uHeightFogEnabled, heightFogEnabled);
-		this.shader.setUniform(this.uHeightFogFalloffType, Config.Client.Advanced.Graphics.Fog.HeightFog.heightFogFalloff.get().value);
-		this.shader.setUniform(this.uHeightFogBaseHeight, Config.Client.Advanced.Graphics.Fog.HeightFog.heightFogBaseHeight.get());
-		this.shader.setUniform(this.uHeightBasedOnCamera, heightFogCameraDirection.basedOnCamera);
-		this.shader.setUniform(this.uHeightFogAppliesUp, heightFogCameraDirection.fogAppliesUp);
-		this.shader.setUniform(this.uHeightFogAppliesDown, heightFogCameraDirection.fogAppliesDown);
+		this.shader.setUniform(this.uHeightFogFalloffType, this.fogRenderParams.getHeightFogFalloff().value);
+		this.shader.setUniform(this.uHeightFogBaseHeight, this.fogRenderParams.getHeightFogBaseHeight());
+		this.shader.setUniform(this.uHeightBasedOnCamera, heightFogDirection.basedOnCamera);
+		this.shader.setUniform(this.uHeightFogAppliesUp, heightFogDirection.fogAppliesUp);
+		this.shader.setUniform(this.uHeightFogAppliesDown, heightFogDirection.fogAppliesDown);
 		this.shader.setUniform(this.uUseSphericalFog, useSphericalFog);
 		this.shader.setUniform(this.uHeightFogMixingMode, heightFogMixingMode.value);
 		this.shader.setUniform(this.uCameraBlockYPos, (float)MC_RENDER.getCameraExactPosition().y);
 		
 	}
-	private Color getFogColor(float partialTicks)
-	{
-		Color fogColor;
-		
-		if (Config.Client.Advanced.Graphics.Fog.colorMode.get() == EDhApiFogColorMode.USE_SKY_COLOR)
-		{
-			fogColor = MC_RENDER.getSkyColor();
-		}
-		else
-		{
-			fogColor = MC_RENDER.getFogColor(partialTicks);
-		}
-		
-		return fogColor;
-	}
 	
-	public void setProjectionMatrix(DhApiMat4f modelViewProjectionMatrix)
+	public void prepUniformObjects(DhApiMat4f modelViewProjectionMatrix, DhApiFogRenderParam fogRenderParams)
 	{
 		this.inverseMvmProjMatrix = new Mat4f(modelViewProjectionMatrix);
 		this.inverseMvmProjMatrix.invert();
+		
+		this.fogRenderParams = fogRenderParams;
 	}
 	
 	//endregion
