@@ -98,9 +98,6 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 	private static final MinecraftClientWrapper MC = MinecraftClientWrapper.INSTANCE;
 	private static final AbstractPluginPacketSender PACKET_SENDER = (AbstractPluginPacketSender) SingletonInjector.INSTANCE.get(IPluginPacketSender.class);
 	
-	@Deprecated // just use the static reference
-	private static final ClientApi clientApi = ClientApi.INSTANCE;
-	
 	HashSet<Integer> previouslyPressKeyCodes = new HashSet<>();
 	
 	
