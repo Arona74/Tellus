@@ -152,7 +152,7 @@ public class GlVanillaFadeRenderer implements IDhVanillaFadeRenderer
 			
 			
 			GlDhVanillaFadeShader.INSTANCE.frameBuffer = this.fadeFramebuffer;
-			GlDhVanillaFadeShader.INSTANCE.setProjectionMatrix(renderParams.mcModelViewMatrix, renderParams.mcProjectionMatrix);
+			GlDhVanillaFadeShader.INSTANCE.setProjectionMatrix(renderParams);
 			GlDhVanillaFadeShader.INSTANCE.setLevelMaxHeight(renderParams.clientLevelWrapper.getMaxHeight());
 			GlDhVanillaFadeShader.INSTANCE.render(renderParams);
 			

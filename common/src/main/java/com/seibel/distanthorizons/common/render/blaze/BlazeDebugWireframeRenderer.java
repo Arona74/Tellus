@@ -64,8 +64,6 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 	
 	public static BlazeDebugWireframeRenderer INSTANCE = new BlazeDebugWireframeRenderer();
 	
-	
-	
 	/** A box from 0,0,0 to 1,1,1 */
 	private static final float[] BOX_VERTICES = {
 		//region
@@ -100,6 +98,7 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 		//endregion
 	};
 	
+	private static final Mat4f TRANSFORM_MATRIX = new Mat4f();
 	
 	
 	
@@ -268,13 +267,13 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 				box.maxPos.y - box.minPos.y,
 				box.maxPos.z - box.minPos.z));
 			
-			Mat4f transformMatrix = this.dhMvmProjMatrixThisFrame.copy();
-			transformMatrix.multiply(boxTransform);
+			TRANSFORM_MATRIX.set(this.dhMvmProjMatrixThisFrame);
+			TRANSFORM_MATRIX.multiply(boxTransform);
 			
 			
 			// upload data //
 			this.uniformBufferWrapper
-				.putMat4f(transformMatrix) // uTransform
+				.putMat4f(TRANSFORM_MATRIX) // uTransform
 				.putVec4f(
 					box.color.getRed() / 255.0f,
 					box.color.getGreen() / 255.0f,

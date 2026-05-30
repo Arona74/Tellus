@@ -136,7 +136,7 @@ public class GlDhFarFadeRenderer implements IDhFarFadeRenderer
 			
 			
 			GlDhFarFadeShader.INSTANCE.frameBuffer = this.fadeFramebuffer;
-			GlDhFarFadeShader.INSTANCE.setProjectionMatrix(renderParams.mcModelViewMatrix, renderParams.mcProjectionMatrix);
+			GlDhFarFadeShader.INSTANCE.setProjectionMatrix(renderParams);
 			GlDhFarFadeShader.INSTANCE.render(renderParams);
 			
 			GlDhFarFadeApplyShader.INSTANCE.fadeTexture = this.fadeTexture;

@@ -75,6 +75,7 @@ public class GlGenericObjectRenderer implements IDhGenericRenderer
 	
 	private static final DhApiRenderableBoxGroupShading DEFAULT_SHADING = DhApiRenderableBoxGroupShading.getUnshaded();
 	
+	private static final DhApiBeforeGenericObjectRenderEvent.EventParam EVENT_PARAM = new DhApiBeforeGenericObjectRenderEvent.EventParam();
 	
 	/** 
 	 * Can be used to troubleshoot the renderer. 
@@ -418,7 +419,7 @@ public class GlGenericObjectRenderer implements IDhGenericRenderer
 			
 			this.init();
 			
-			ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericRenderSetupEvent.class, renderEventParam);
+			ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericRenderSetupEvent.class, renderEventParam.apiCopy);
 			
 			
 			boolean renderWireframe = Config.Client.Advanced.Debugging.renderWireframe.get();
@@ -482,7 +483,8 @@ public class GlGenericObjectRenderer implements IDhGenericRenderer
 				}
 				
 				// allow API users to cancel this object's rendering
-				boolean cancelRendering = ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericObjectRenderEvent.class, new DhApiBeforeGenericObjectRenderEvent.EventParam(renderEventParam, boxGroup));
+				EVENT_PARAM.update(renderEventParam, boxGroup);
+				boolean cancelRendering = ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericObjectRenderEvent.class, EVENT_PARAM);
 				if (cancelRendering)
 				{
 					continue;
@@ -529,7 +531,7 @@ public class GlGenericObjectRenderer implements IDhGenericRenderer
 			
 			profiler.popPush("cleanup");
 			
-			ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericRenderCleanupEvent.class, renderEventParam);
+			ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericRenderCleanupEvent.class, renderEventParam.apiCopy);
 			
 			if (renderWireframe)
 			{

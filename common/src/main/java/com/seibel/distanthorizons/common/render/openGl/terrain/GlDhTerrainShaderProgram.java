@@ -46,6 +46,11 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 	private static final MinecraftGLWrapper GLMC = MinecraftGLWrapper.INSTANCE;
 	private static final IIrisAccessor IRIS_ACCESSOR = ModAccessorInjector.INSTANCE.get(IIrisAccessor.class);
 	
+	private static final Vec3f MODEL_POS = new Vec3f();
+	/** single event object used to reduce GC pressure */
+	private static final DhApiBeforeBufferRenderEvent.EventParam BEFORE_BUFFER_RENDER_EVENT_PARAM = new DhApiBeforeBufferRenderEvent.EventParam();
+	
+	
 	
 	private boolean init = false;
 	
@@ -291,7 +296,7 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 		
 		// needs to be triggered after DH attempts to set the GL state so that Iris 
 		// can override it as needed
-		ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeRenderPassEvent.class, renderEventParam);
+		ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeRenderPassEvent.class, renderEventParam.apiCopy);
 		
 		
 		
@@ -324,15 +329,16 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 				// set uniforms and fire events
 				{
 					Vec3d camPos = renderEventParam.exactCameraPosition;
-					Vec3f modelPos = new Vec3f(
+					MODEL_POS.set(
 						(float) (bufferContainer.minCornerBlockPos.getX() - camPos.x),
 						(float) (bufferContainer.minCornerBlockPos.getY() - camPos.y),
 						(float) (bufferContainer.minCornerBlockPos.getZ() - camPos.z));
+					BEFORE_BUFFER_RENDER_EVENT_PARAM.update(renderEventParam, MODEL_POS);
 					
 					GlDhMetaRenderer.INSTANCE.shaderProgramForThisFrame.bind();
-					GlDhMetaRenderer.INSTANCE.shaderProgramForThisFrame.setModelOffsetPos(modelPos);
+					GlDhMetaRenderer.INSTANCE.shaderProgramForThisFrame.setModelOffsetPos(MODEL_POS);
 					
-					ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeBufferRenderEvent.class, new DhApiBeforeBufferRenderEvent.EventParam(renderEventParam, modelPos));
+					ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeBufferRenderEvent.class, BEFORE_BUFFER_RENDER_EVENT_PARAM);
 				}
 				
 				IVertexBufferWrapper[] vertexBuffers = (opaquePass ? bufferContainer.vboOpaqueWrappers : bufferContainer.vboTransparentWrappers);

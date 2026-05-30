@@ -36,6 +36,7 @@ import com.seibel.distanthorizons.api.interfaces.render.IDhApiRenderableBoxGroup
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeGenericObjectRenderEvent;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeGenericRenderCleanupEvent;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeGenericRenderSetupEvent;
+import com.seibel.distanthorizons.api.methods.events.sharedParameterObjects.DhApiRenderParam;
 import com.seibel.distanthorizons.api.objects.math.DhApiVec3d;
 import com.seibel.distanthorizons.api.objects.render.DhApiRenderableBox;
 import com.seibel.distanthorizons.api.objects.render.DhApiRenderableBoxGroupShading;
@@ -95,6 +96,10 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 	 * If enabled several debug objects will render around (0,150,0). 
 	 */
 	public static final boolean RENDER_DEBUG_OBJECTS = false;
+	
+	private static final DhApiBeforeGenericObjectRenderEvent.EventParam EVENT_PARAM = new DhApiBeforeGenericObjectRenderEvent.EventParam();
+	
+	
 	
 	private final ConcurrentHashMap<Long, RenderableBoxGroup> boxGroupById = new ConcurrentHashMap<>();
 	
@@ -343,7 +348,7 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 			
 			this.init();
 			
-			ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericRenderSetupEvent.class, renderEventParam);
+			ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericRenderSetupEvent.class, renderEventParam.apiCopy);
 			
 			Vec3d camPos = MC_RENDER.getCameraExactPosition();
 			
@@ -389,7 +394,8 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 				}
 				
 				// allow API users to cancel this object's rendering
-				boolean cancelRendering = ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericObjectRenderEvent.class, new DhApiBeforeGenericObjectRenderEvent.EventParam(renderEventParam, boxGroup));
+				EVENT_PARAM.update(renderEventParam, boxGroup);
+				boolean cancelRendering = ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericObjectRenderEvent.class, EVENT_PARAM);
 				if (cancelRendering)
 				{
 					continue;

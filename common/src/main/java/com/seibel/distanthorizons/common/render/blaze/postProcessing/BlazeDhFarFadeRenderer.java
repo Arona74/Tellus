@@ -159,20 +159,11 @@ public class BlazeDhFarFadeRenderer implements IDhFarFadeRenderer
 			float fadeEndDistance = dhFarClipDistance * 0.9f;
 			
 			
-			Mat4f dhProjectionMatrix = RenderUtil.createLodProjectionMatrix(renderParams.mcProjectionMatrix);
-			Mat4f dhModelViewMatrix = RenderUtil.createLodModelViewMatrix(renderParams.mcModelViewMatrix);
-			
-			Mat4f inverseDhMvmProjMatrix = new Mat4f(dhProjectionMatrix);
-			inverseDhMvmProjMatrix.multiply(dhModelViewMatrix);
-			inverseDhMvmProjMatrix.invert();
-			
-			
-			
 			// upload data //
 			fragUniformBufferWrapper
 				.putFloat(fadeStartDistance) // uStartFadeBlockDistance
 				.putFloat(fadeEndDistance) // uEndFadeBlockDistance
-				.putMat4f(inverseDhMvmProjMatrix) // uDhInvMvmProj
+				.putMat4f(renderParams.dhInverseMvmProjectionMatrix) // uDhInvMvmProj
 				.putInt((RENDER_API_DEF.getRenderDepth() == EDhRenderDepth.REVERSE_Z) ? 1 : 0) // uIsReverseZDepth
 				.finishAndUpload()
 			;

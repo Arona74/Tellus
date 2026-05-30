@@ -43,8 +43,8 @@ public class GlDhVanillaFadeShader extends GlAbstractShaderRenderer
 	
 	public int frameBuffer = -1;
 	
-	private Mat4f inverseMcMvmProjMatrix;
-	private Mat4f inverseDhMvmProjMatrix;
+	private DhApiMat4f inverseMcMvmProjMatrix;
+	private DhApiMat4f inverseDhMvmProjMatrix;
 	private float levelMaxHeight;
 	
 	
@@ -136,21 +136,10 @@ public class GlDhVanillaFadeShader extends GlAbstractShaderRenderer
 		this.shader.setUniform(this.uOnlyRenderLods, Config.Client.Advanced.Debugging.lodOnlyMode.get());
 	}
 	
-	public void setProjectionMatrix(DhApiMat4f mcModelViewMatrix, DhApiMat4f mcProjectionMatrix)
+	public void setProjectionMatrix(RenderParams renderParams)
 	{
-		Mat4f inverseMcModelViewProjectionMatrix = new Mat4f(mcProjectionMatrix);
-		inverseMcModelViewProjectionMatrix.multiply(mcModelViewMatrix);
-		inverseMcModelViewProjectionMatrix.invert();
-		this.inverseMcMvmProjMatrix = inverseMcModelViewProjectionMatrix;
-		
-		
-		Mat4f dhProjectionMatrix = RenderUtil.createLodProjectionMatrix(mcProjectionMatrix);
-		Mat4f dhModelViewMatrix = RenderUtil.createLodModelViewMatrix(mcModelViewMatrix);
-		
-		Mat4f inverseDhModelViewProjectionMatrix = new Mat4f(dhProjectionMatrix);
-		inverseDhModelViewProjectionMatrix.multiply(dhModelViewMatrix);
-		inverseDhModelViewProjectionMatrix.invert();
-		this.inverseDhMvmProjMatrix = inverseDhModelViewProjectionMatrix;
+		this.inverseMcMvmProjMatrix = renderParams.mcInverseMvmProjectionMatrix;
+		this.inverseDhMvmProjMatrix = renderParams.dhInverseMvmProjectionMatrix;
 	}
 	public void setLevelMaxHeight(int levelMaxHeight) { this.levelMaxHeight = levelMaxHeight; }
 	

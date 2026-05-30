@@ -13,6 +13,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeBufferRenderEvent;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeRenderPassEvent;
+import com.seibel.distanthorizons.api.methods.events.sharedParameterObjects.DhApiRenderParam;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUtil;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.BlazeVertexFormatBuilder;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
@@ -52,6 +53,10 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 	private static final CommandEncoder COMMAND_ENCODER = GPU_DEVICE.createCommandEncoder();
 	
 	public static final BlazeDhTerrainRenderer INSTANCE = new BlazeDhTerrainRenderer();
+	
+	private static final Vec3f MODEL_POS = new Vec3f();
+	/** single event object used to reduce GC pressure */
+	private static final DhApiBeforeBufferRenderEvent.EventParam BEFORE_BUFFER_RENDER_EVENT_PARAM = new DhApiBeforeBufferRenderEvent.EventParam();
 	
 	
 	private RenderPipeline opaquePipeline;
@@ -240,7 +245,7 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 			{
 				profiler.popPush("rendering");
 				
-				ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeRenderPassEvent.class, renderEventParam);
+				ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeRenderPassEvent.class, renderEventParam.apiCopy);
 				
 				// create a render pass
 				try (RenderPassWrapper renderPassWrapper = new RenderPassWrapper(
@@ -300,11 +305,12 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 							// fire render event
 							{
 								Vec3d camPos = renderEventParam.exactCameraPosition;
-								Vec3f modelPos = new Vec3f(
+								MODEL_POS.set(
 									(float) (bufferContainer.minCornerBlockPos.getX() - camPos.x),
 									(float) (bufferContainer.minCornerBlockPos.getY() - camPos.y),
 									(float) (bufferContainer.minCornerBlockPos.getZ() - camPos.z));
-								ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeBufferRenderEvent.class, new DhApiBeforeBufferRenderEvent.EventParam(renderEventParam, modelPos));
+								BEFORE_BUFFER_RENDER_EVENT_PARAM.update(renderEventParam, MODEL_POS);
+								ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeBufferRenderEvent.class, BEFORE_BUFFER_RENDER_EVENT_PARAM);
 							}
 							
 							renderPassWrapper.setIndexBuffer(bufferWrapper.getIndexGpuBuffer());

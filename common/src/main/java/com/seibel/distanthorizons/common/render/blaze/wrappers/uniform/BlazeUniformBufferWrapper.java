@@ -12,6 +12,7 @@ import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.seibel.distanthorizons.api.objects.math.DhApiMat4f;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
@@ -91,10 +92,10 @@ public class BlazeUniformBufferWrapper implements AutoCloseable
 		this.uniformBufferBuilder.putVec4(x,y,z,w);
 		return this;
 	}
-	public BlazeUniformBufferWrapper putMat4f(Mat4f matrix)
+	public BlazeUniformBufferWrapper putMat4f(DhApiMat4f matrix)
 	{
 		this.putElement(EUniformElement.MAT4f);
-		this.uniformBufferBuilder.putMat4f(matrix.createJomlMatrix());
+		this.uniformBufferBuilder.putMat4f(Mat4f.createJomlMatrix(matrix));
 		return this;
 	}
 	public BlazeUniformBufferWrapper putFloat(float f)
