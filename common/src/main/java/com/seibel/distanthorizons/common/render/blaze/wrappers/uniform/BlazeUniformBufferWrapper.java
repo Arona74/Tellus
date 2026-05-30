@@ -1,7 +1,7 @@
 package com.seibel.distanthorizons.common.render.blaze.wrappers.uniform;
 
 #if MC_VER <= MC_1_21_10
-public class BlazeNewUniformBufferWrapper {}
+public class BlazeUniformBufferWrapper {}
 
 #else
 

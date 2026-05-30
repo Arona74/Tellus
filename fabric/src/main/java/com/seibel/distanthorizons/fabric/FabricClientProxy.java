@@ -241,7 +241,7 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 			ClientApi.RENDER_STATE.clientLevelWrapper = ClientLevelWrapper.getWrapperIfDifferent(ClientApi.RENDER_STATE.clientLevelWrapper, renderContext.world());
 			
 			
-			this.clientApi.renderLods();
+			ClientApi.INSTANCE.renderLods();
 		});
 		
 		
@@ -264,7 +264,7 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 			ClientApi.RENDER_STATE.clientLevelWrapper = ClientLevelWrapper.getWrapperIfDifferent(ClientApi.RENDER_STATE.clientLevelWrapper, renderContext.world());
 			
 			
-			this.clientApi.renderFadeOpaque();
+			ClientApi.INSTANCE.renderFadeOpaque();
 		});
 		
 		WorldRenderEvents.AFTER_TRANSLUCENT.register((renderContext) ->
@@ -294,7 +294,7 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 			ClientApi.INSTANCE.renderDeferredLodsForShaders();
 			#endif
 			
-			this.clientApi.renderFadeTransparent();
+			ClientApi.INSTANCE.renderFadeTransparent();
 		});
 		#endif
 		
