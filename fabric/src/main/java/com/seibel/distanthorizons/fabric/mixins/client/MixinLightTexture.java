@@ -20,6 +20,7 @@
 package com.seibel.distanthorizons.fabric.mixins.client;
 
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftRenderWrapper;
+import com.seibel.distanthorizons.core.api.internal.ClientApi;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
@@ -85,18 +86,6 @@ public class MixinLightTexture
 	public void render(LightmapRenderState renderState, CallbackInfo ci)
 	#endif
 	{
-		IMinecraftClientWrapper mc = SingletonInjector.INSTANCE.get(IMinecraftClientWrapper.class);
-		if (mc == null)
-		{
-			return;
-		}
-		
-		IClientLevelWrapper clientLevel = mc.getWrappedClientLevel();
-		if (clientLevel == null)
-		{
-			return;
-		}
-		
 		// lazy initialization to make sure we don't call this too early
 		if (this.renderWrapper == null)
 		{
@@ -105,29 +94,29 @@ public class MixinLightTexture
 		
 		
 		#if MC_VER < MC_1_21_3
-		this.renderWrapper.updateLightmap(this.lightPixels, clientLevel);
+		this.renderWrapper.updateLightmap(this.lightPixels);
 		#elif MC_VER < MC_1_21_5
-		this.renderWrapper.setLightmapId(this.target.getColorTextureId(), clientLevel);
+		this.renderWrapper.setLightmapId(this.target.getColorTextureId());
 		#elif MC_VER <= MC_1_21_10
 		GlTexture glTexture = (GlTexture) this.texture;
-		this.renderWrapper.setLightmapId(glTexture.glId(), clientLevel);
+		this.renderWrapper.setLightmapId(glTexture.glId());
 		#elif MC_VER <= MC_26_1_2
 		// both options are available since the renderer can be changed to either Blaze3D or OpenGL
 		GlTexture glTexture = (GlTexture) this.texture;
-		this.renderWrapper.setLightmapId(glTexture.glId(), clientLevel);
+		this.renderWrapper.setLightmapId(glTexture.glId());
 		
-		this.renderWrapper.setLightmapGpuTexture(this.texture, clientLevel);
+		this.renderWrapper.setLightmapGpuTexture(this.texture);
 		#else
 		
 		// this will only be used when using native GL rendering
 		if (this.texture instanceof GlTexture)
 		{
 			GlTexture glTexture = (GlTexture) this.texture;
-			this.renderWrapper.setLightmapId(glTexture.glId(), clientLevel);
+			this.renderWrapper.setLightmapId(glTexture.glId());
 		}
 		
 		// this will be used for Blaze3D OpenGL and Vulkan
-		this.renderWrapper.setLightmapGpuTexture(this.texture, clientLevel);
+		this.renderWrapper.setLightmapGpuTexture(this.texture);
 		#endif
 	}
 	

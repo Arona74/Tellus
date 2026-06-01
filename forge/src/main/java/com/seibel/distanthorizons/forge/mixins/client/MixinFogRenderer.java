@@ -45,15 +45,7 @@ public class MixinFogRenderer
 			remap = #if MC_VER == MC_1_17_1 || MC_VER == MC_1_18_2 false #else true #endif ) // Remap messiness due to this being weird in forge
 	private static void disableSetupFog(Camera camera, FogMode fogMode, float f, boolean bl, float partTick, CallbackInfo callback)
 	{
-		#if MC_VER < MC_1_21_6
-		boolean cancelFog = MixinVanillaFogCommon.cancelFog(camera, fogMode);
-		#elif MC_VER < MC_1_21_6
-		boolean cancelFog = MixinVanillaFogCommon.cancelFog(camera);
-		#else
-		boolean cancelFog = MixinVanillaFogCommon.cancelFog();
-		#endif
-		
-		if (cancelFog)
+		if (MixinVanillaFogCommon.cancelFog(camera, fogMode))
 		{
 			#if MC_VER < MC_1_17_1
 			RenderSystem.fogStart(A_REALLY_REALLY_BIG_VALUE);

@@ -26,9 +26,13 @@ import com.mojang.blaze3d.platform.Window;
 #endif
 import com.seibel.distanthorizons.common.wrappers.gui.NativeDialogUtil;
 import com.seibel.distanthorizons.common.wrappers.world.ClientLevelWrapper;
+import com.seibel.distanthorizons.common.wrappers.world.ServerLevelWrapper;
+import com.seibel.distanthorizons.core.dependencyInjection.ModAccessorInjector;
 import com.seibel.distanthorizons.core.file.structure.ClientOnlySaveStructure;
 import com.seibel.distanthorizons.core.render.RenderThreadTaskHandler;
+import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IImmersivePortalsAccessor;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
+import com.seibel.distanthorizons.core.wrapperInterfaces.world.IServerLevelWrapper;
 import com.seibel.distanthorizons.coreapi.ModInfo;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
@@ -48,14 +52,20 @@ import net.minecraft.profiler.Profiler;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.text.TextComponentString;
+import net.minecraft.world.DimensionType;
+import net.minecraft.world.WorldServer;
+import net.minecraftforge.common.DimensionManager;
 #else
 import net.minecraft.CrashReport;
 import net.minecraft.client.CloudStatus;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 #endif
 
 import org.jetbrains.annotations.Nullable;
@@ -74,13 +84,25 @@ import net.minecraft.client.GraphicsStatus;
 #else
 #endif
 
+#if  MC_VER <= MC_1_12_2
+import net.minecraft.util.ResourceLocation;
+#elif  MC_VER <= MC_1_21_10
+#else
+import net.minecraft.resources.Identifier;
+#endif
+
+#if  MC_VER > MC_1_19_2
+import net.minecraft.core.registries.Registries;
+#elif MC_VER > MC_1_12_2
+#endif
+
 
 /**
  * A singleton that wraps the Minecraft object.
  *
  * @author James Seibel
  */
-public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecraftSharedWrapper
+public class MinecraftClientWrapper extends AbstractMinecraftSharedWrapper implements IMinecraftClientWrapper
 {
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
 	
@@ -94,6 +116,12 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	
 	
 	private ProfilerWrapper profilerWrapper;
+	
+	/** Delayed accessing is necessary since this object will be created before the mod accessors are bound. */
+	private static class DelayedAccessors 
+	{
+		public static final IImmersivePortalsAccessor IMMERSIVE_PORTALS = ModAccessorInjector.INSTANCE.get(IImmersivePortalsAccessor.class);
+	}
 	
 	
 	
@@ -232,6 +260,15 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 			return new DhBlockPos(0, 0, 0);	
 		}
 		
+		if (DelayedAccessors.IMMERSIVE_PORTALS != null)
+		{
+			DhBlockPos pos = DelayedAccessors.IMMERSIVE_PORTALS.getActualPlayerBlockPos();
+			if (pos != null)
+			{
+				return pos;
+			}
+		}
+		
 		#if MC_VER <= MC_1_12_2
 		BlockPos playerPos = player.getPosition();
 		#else
@@ -253,7 +290,16 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 			return new DhChunkPos(0, 0);
 		}
 		
-		#if MC_VER <= MC_1_12_2
+		if (DelayedAccessors.IMMERSIVE_PORTALS != null)
+		{
+			DhChunkPos pos = DelayedAccessors.IMMERSIVE_PORTALS.getActualPlayerChunkPos();
+			if (pos != null)
+			{
+				return pos;
+			}
+		}
+		
+        #if MC_VER <= MC_1_12_2
 		ChunkPos playerPos = new ChunkPos(player.getPosition());
         #elif MC_VER < MC_1_17_1
         ChunkPos playerPos = new ChunkPos(player.blockPosition());
@@ -285,6 +331,16 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 	@Nullable
 	public IClientLevelWrapper getWrappedClientLevel(boolean bypassLevelKeyManager)
 	{
+		if (!bypassLevelKeyManager 
+			&& DelayedAccessors.IMMERSIVE_PORTALS != null)
+		{
+			IClientLevelWrapper level = DelayedAccessors.IMMERSIVE_PORTALS.getActualClientLevelWrapper();
+			if (level != null)
+			{
+				return level;
+			}
+		}
+		
 		#if MC_VER <= MC_1_12_2
 		WorldClient level = MINECRAFT.world;
 		#else
@@ -581,6 +637,25 @@ public class MinecraftClientWrapper implements IMinecraftClientWrapper, IMinecra
 			return MINECRAFT.getSingleplayerServer().getPlayerCount();
 			#endif
 		}
+	}
+	
+	@Nullable
+	@Override
+	public IServerLevelWrapper getWrappedServerLevelWithDimensionResourceLocation(String dimensionResourceLocation)
+	{
+		if (!this.hasSinglePlayerServer())
+		{
+			return null;
+		}
+		
+		ResourceKey<Level> dimensionKey = this.deserializeDimensionResourceKey(dimensionResourceLocation);
+		
+		#if  MC_VER <= MC_1_12_2
+		WorldServer mcLevel = MINECRAFT.getIntegratedServer().getWorld(dimensionKey);
+		#else
+		ServerLevel mcLevel = MINECRAFT.getSingleplayerServer().getLevel(dimensionKey);
+		#endif
+		return ServerLevelWrapper.getWrapper(mcLevel);
 	}
 	
 	//endregion

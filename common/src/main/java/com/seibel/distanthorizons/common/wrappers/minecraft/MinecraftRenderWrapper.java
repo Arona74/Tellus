@@ -22,6 +22,8 @@ package com.seibel.distanthorizons.common.wrappers.minecraft;
 import java.awt.Color;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jetbrains.annotations.Nullable;
+
 #if MC_VER > MC_1_12_2
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.NativeImage;
@@ -30,20 +32,24 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.seibel.distanthorizons.api.enums.config.EDhApiLodShading;
 import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
-import com.seibel.distanthorizons.core.config.Config;
+import com.seibel.distanthorizons.core.api.internal.ClientApi;
 
 import com.seibel.distanthorizons.core.dependencyInjection.ModAccessorInjector;
-import com.seibel.distanthorizons.core.enums.EDhDirection;
+import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.api.enums.config.EDhApiRenderingApi;
-import com.seibel.distanthorizons.coreapi.util.ColorUtil;
+import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.misc.ILightMapWrapper;
 
 #if MC_VER < MC_1_17_1
+#elif MC_VER < MC_1_21_3
+import net.minecraft.client.renderer.FogRenderer;
 #elif MC_VER < MC_1_21_6
+import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import net.minecraft.client.renderer.FogRenderer;
 import com.mojang.blaze3d.systems.RenderSystem;
 #else
+import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import net.minecraft.client.renderer.fog.FogData;
 import net.minecraft.client.renderer.fog.FogRenderer;
 #endif
@@ -60,6 +66,7 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.world.ILevelWrapper;
 import com.seibel.distanthorizons.core.util.math.Vec3d;
 import com.seibel.distanthorizons.core.util.math.Vec3f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
+import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IImmersivePortalsAccessor;
 import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IOptifineAccessor;
 
 #if MC_VER <= MC_1_12_2
@@ -101,6 +108,7 @@ import com.mojang.blaze3d.opengl.GlTexture;
 #else
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import com.mojang.blaze3d.textures.GpuTexture;
+import org.joml.Vector4f;
 #endif
 
 /**
@@ -112,6 +120,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	public static final MinecraftRenderWrapper INSTANCE = new MinecraftRenderWrapper();
 	
 	private static final IOptifineAccessor OPTIFINE_ACCESSOR = ModAccessorInjector.INSTANCE.get(IOptifineAccessor.class);
+	private static final IMinecraftClientWrapper MC_CLIENT = SingletonInjector.INSTANCE.get(IMinecraftClientWrapper.class);
 	
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
 	
@@ -120,6 +129,12 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	#else
 	private static final Minecraft MC = Minecraft.getInstance();
 	#endif
+	
+	/** Delayed accessing is necessary since this object will be created before the mod accessors are bound. */
+	private static class DelayedAccessors 
+	{
+		public static final IImmersivePortalsAccessor IMMERSIVE_PORTALS = ModAccessorInjector.INSTANCE.get(IImmersivePortalsAccessor.class);
+	}
 	
 	/** 
 	 * In the case of immersive portals multiple levels may be active at once, causing conflicting lightmaps. <br> 
@@ -202,6 +217,12 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	@Override
 	public Vec3d getCameraExactPosition()
 	{
+		if (DelayedAccessors.IMMERSIVE_PORTALS != null)
+		{
+			Vec3d cameraPos = DelayedAccessors.IMMERSIVE_PORTALS.getActualCameraPos();
+			if (cameraPos != null) return cameraPos;
+		}
+		
 		#if MC_VER <= MC_1_12_2
 		RenderManager rm = MC.getRenderManager();
 		return new Vec3d(rm.viewerPosX, rm.viewerPosY, rm.viewerPosZ);
@@ -572,9 +593,6 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	}
 	
 	@Override
-	public ILightMapWrapper getLightmapWrapper(@NotNull ILevelWrapper level) { return this.lightmapByDimensionType.get(level.getDimensionType()); }
-	
-	@Override
 	public boolean isFogStateSpecial()
 	{
 		#if MC_VER <= MC_1_12_2
@@ -598,93 +616,89 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		#endif
 	}
 	
+	
+	
+	//==========//
+	// lightmap //
+	//==========//
+	//region
+	
+	@Override
+	public ILightMapWrapper getLightmapWrapper(@NotNull ILevelWrapper level) { return this.lightmapByDimensionType.get(level.getDimensionType()); }
+	
 	/** 
-	 * It's better to use {@link MinecraftRenderWrapper#setLightmapId(int, IClientLevelWrapper)} if possible,
+	 * It's better to use {@link MinecraftRenderWrapper#setLightmapId(int)} if possible,
 	 * however old MC versions don't support it.
 	 */
 	#if MC_VER > MC_1_12_2
-	public void updateLightmap(NativeImage lightPixels, IClientLevelWrapper level)
+	public void updateLightmap(NativeImage lightPixels)
 	{
+		IClientLevelWrapper clientLevel = getLightmapClientLevelWrapper();
+		if (clientLevel == null)
+		{
+			return;
+		}
+		
 		// Using ClientLevelWrapper as the key would be better, but we don't have a consistent way to create the same
 		// object for the same MC level and/or the same hash,
 		// so this will have to do for now
-		IDimensionTypeWrapper dimensionType = level.getDimensionType();
+		IDimensionTypeWrapper dimensionType = clientLevel.getDimensionType();
 		
 		LightMapWrapper wrapper = this.lightmapByDimensionType.computeIfAbsent(dimensionType, (dimType) -> new LightMapWrapper());
 		wrapper.uploadLightmap(lightPixels);
 	}
 	#endif
 	
-	public void setLightmapId(int tetxureId, IClientLevelWrapper level)
+	public void setLightmapId(int textureId)
 	{
+		IClientLevelWrapper clientLevel = getLightmapClientLevelWrapper();
+		if (clientLevel == null)
+		{
+			return;
+		}
+		
 		// Using ClientLevelWrapper as the key would be better, but we don't have a consistent way to create the same
 		// object for the same MC level and/or the same hash,
 		// so this will have to do for now
-		IDimensionTypeWrapper dimensionType = level.getDimensionType();
+		IDimensionTypeWrapper dimensionType = clientLevel.getDimensionType();
 
 		LightMapWrapper wrapper = this.lightmapByDimensionType.computeIfAbsent(dimensionType, (dimType) -> new LightMapWrapper());
-		wrapper.setLightmapId(tetxureId);
+		wrapper.setLightmapId(textureId);
 	}
 	
 	#if MC_VER <= MC_1_21_10
 	#else
-	public void setLightmapGpuTexture(GpuTexture gpuTexture, IClientLevelWrapper level)
+	public void setLightmapGpuTexture(GpuTexture gpuTexture)
 	{
+		IClientLevelWrapper clientLevel = getLightmapClientLevelWrapper();
+		if (clientLevel == null)
+		{
+			return;
+		}
+	
 		// Using ClientLevelWrapper as the key would be better, but we don't have a consistent way to create the same
 		// object for the same MC level and/or the same hash,
 		// so this will have to do for now
-		IDimensionTypeWrapper dimensionType = level.getDimensionType();
+		IDimensionTypeWrapper dimensionType = clientLevel.getDimensionType();
 
 		LightMapWrapper wrapper = this.lightmapByDimensionType.computeIfAbsent(dimensionType, (dimType) -> new LightMapWrapper());
 		wrapper.setLightmapGpuTexture(gpuTexture);
 	}
 	#endif
 	
-	@Override
-	public float getShade(EDhDirection lodDirection)
+	/** special logic is necessary in order for Immersive Portals to work correctly */
+	private static @Nullable IClientLevelWrapper getLightmapClientLevelWrapper()
 	{
-		EDhApiLodShading lodShading = Config.Client.Advanced.Graphics.Quality.lodShading.get();
-		switch (lodShading)
+		IClientLevelWrapper clientLevel = ClientApi.RENDER_STATE.clientLevelWrapper;
+		if (clientLevel == null)
 		{
-			default:
-			case AUTO:
-				#if MC_VER <= MC_1_12_2
-				// 1.12.2 has no getShade, fall through to ENABLED
-				#else
-				if (MC.level != null)
-				{
-					Direction mcDir = McObjectConverter.Convert(lodDirection);
-					#if MC_VER <= MC_1_21_11
-					return MC.level.getShade(mcDir, true);
-					#else
-					return MC.level.cardinalLighting().byFace(mcDir);
-					#endif
-				}
-				else
-				{
-					return 0.0f;
-				}
-				#endif
-			case ENABLED:
-				switch (lodDirection)
-				{
-					case DOWN:
-						return 0.5F;
-					default:
-					case UP:
-						return 1.0F;
-					case NORTH:
-					case SOUTH:
-						return 0.8F;
-					case WEST:
-					case EAST:
-						return 0.6F;
-				}
-			
-			case DISABLED:
-				return 1.0F;
+			clientLevel = MC_CLIENT.getWrappedClientLevel();
 		}
+		
+		return clientLevel;
 	}
+	
+	//endregion
 	
 	
 	
