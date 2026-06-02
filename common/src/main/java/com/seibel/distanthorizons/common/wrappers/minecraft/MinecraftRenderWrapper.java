@@ -390,7 +390,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 			int argbColorInt = MC.level.getSkyColor(MC.gameRenderer.getMainCamera().getPosition(), frameTime);
 			return ColorUtil.toColorObjARGB(argbColorInt);
 			#else
-			int argbColor = MC.level.environmentAttributes().getValue(EnvironmentAttributes.SKY_COLOR, BlockPos.ZERO);
+			int argbColor = MC.level.environmentAttributes().getValue(EnvironmentAttributes.SKY_COLOR, MC.gameRenderer.getMainCamera().position());
 			return new Color(ColorUtil.getRed(argbColor), ColorUtil.getGreen(argbColor), ColorUtil.getBlue(argbColor), 255 /* ignore alpha since DH clouds don't render correctly with transparency */);
 			#endif
 		}
