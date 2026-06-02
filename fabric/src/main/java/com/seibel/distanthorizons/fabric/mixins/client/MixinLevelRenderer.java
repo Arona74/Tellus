@@ -28,7 +28,7 @@ import com.mojang.math.Matrix4f;
 import org.lwjgl.opengl.GL32;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 #elif MC_VER < MC_1_21_6
-import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
 import net.minecraft.client.renderer.RenderType;
 import com.mojang.blaze3d.vertex.PoseStack;
 import org.joml.Matrix4f;
@@ -37,7 +37,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
@@ -165,7 +165,7 @@ public class MixinLevelRenderer
 		#elif MC_VER < MC_1_21_9
 		// MC combined the model view and projection matricies
 	    ClientApi.RENDER_STATE.mcModelViewMatrix = McObjectConverter.Convert(projectionMatrix);
-	    ClientApi.RENDER_STATE.mcProjectionMatrix = new Mat4f();
+	    ClientApi.RENDER_STATE.mcProjectionMatrix = new DhMat4f();
 	    ClientApi.RENDER_STATE.mcProjectionMatrix.setIdentity();
 		#else
 		ClientApi.RENDER_STATE.mcModelViewMatrix = McObjectConverter.Convert(positionMatrix);
