@@ -208,7 +208,7 @@ public class GlDhFogShader extends GlAbstractShaderRenderer
 		this.shader.setUniform(this.uHeightFogAppliesDown, heightFogDirection.fogAppliesDown);
 		this.shader.setUniform(this.uUseSphericalFog, useSphericalFog);
 		this.shader.setUniform(this.uHeightFogMixingMode, heightFogMixingMode.value);
-		this.shader.setUniform(this.uCameraBlockYPos, (float)MC_RENDER.getCameraExactPosition().y);
+		this.shader.setUniform(this.uCameraBlockYPos, (float)renderParams.exactCameraPosition.y);
 		
 	}
 	

@@ -450,8 +450,6 @@ public class GlGenericObjectRenderer implements IDhGenericRenderer
 			
 			this.boxIndexBuffer.bind();
 			
-			DhVec3d camPos = MC_RENDER.getCameraExactPosition();
-			
 			
 			
 			// rendering //
@@ -512,11 +510,11 @@ public class GlGenericObjectRenderer implements IDhGenericRenderer
 				{
 					if (this.instancedRenderingAvailable)
 					{
-						this.renderBoxGroupInstanced(shaderProgram, renderEventParam, boxGroup, camPos, profiler);
+						this.renderBoxGroupInstanced(shaderProgram, renderEventParam, boxGroup, renderEventParam.exactCameraPosition, profiler);
 					}
 					else
 					{
-						this.renderBoxGroupDirect(shaderProgram, renderEventParam, boxGroup, camPos, profiler);
+						this.renderBoxGroupDirect(shaderProgram, renderEventParam, boxGroup, renderEventParam.exactCameraPosition, profiler);
 					}
 				}
 				

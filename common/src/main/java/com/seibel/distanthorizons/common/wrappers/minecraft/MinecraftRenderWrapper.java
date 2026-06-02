@@ -22,6 +22,7 @@ package com.seibel.distanthorizons.common.wrappers.minecraft;
 import java.awt.Color;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.seibel.distanthorizons.core.render.RenderThreadTaskHandler;
 import org.jetbrains.annotations.Nullable;
 
 #if MC_VER > MC_1_12_2
@@ -216,10 +217,21 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	@Override
 	public DhVec3d getCameraExactPosition()
 	{
-		if (DelayedAccessors.IMMERSIVE_PORTALS != null)
+		// When immersive portals is enabled getting the camera position
+		// outside the render thread means you may get the camera for any one of the dimensions
+		// immersive portals is currently rendering, which isn't what DH wants.
+		// We want the camera that the player is currently looking through.
+		if (DelayedAccessors.IMMERSIVE_PORTALS != null
+			&& !RenderThreadTaskHandler.INSTANCE.isCurrentThread())
 		{
+			// this camera position will likely be delayed by 1 frame, so it shouldn't
+			// be used for rendering,
+			// but anything else that doesn't require that level of percision is fine.
 			DhVec3d cameraPos = DelayedAccessors.IMMERSIVE_PORTALS.getActualCameraPos();
-			if (cameraPos != null) return cameraPos;
+			if (cameraPos != null)
+			{
+				return cameraPos;
+			}
 		}
 		
 		#if MC_VER <= MC_1_12_2
