@@ -17,6 +17,7 @@
     "client.MixinDebugScreenOverlay",
     "client.MixinFogRenderer",
     "client.MixinGameRenderer",
+    "client.MixinImmersivePortalsRenderStates",
     "client.MixinLevelRenderer",
     "client.MixinChunkSectionsToRender",
     "client.MixinLightTexture",
