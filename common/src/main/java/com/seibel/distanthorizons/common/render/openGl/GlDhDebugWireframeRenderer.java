@@ -30,7 +30,7 @@ import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.render.renderer.AbstractDebugWireframeRenderer;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
 import org.lwjgl.opengl.GL32;
 
 import java.nio.ByteBuffer;
@@ -178,10 +178,10 @@ public class GlDhDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 	@Override
 	public void renderBox(Box box)
 	{
-		Mat4f boxTransform = Mat4f.createTranslateMatrix(box.minPos.x - this.camPosFloatThisFrame.x, box.minPos.y - this.camPosFloatThisFrame.y, box.minPos.z - this.camPosFloatThisFrame.z);
-		boxTransform.multiply(Mat4f.createScaleMatrix(box.maxPos.x - box.minPos.x, box.maxPos.y - box.minPos.y, box.maxPos.z - box.minPos.z));
+		DhMat4f boxTransform = DhMat4f.createTranslateMatrix(box.minPos.x - this.camPosFloatThisFrame.x, box.minPos.y - this.camPosFloatThisFrame.y, box.minPos.z - this.camPosFloatThisFrame.z);
+		boxTransform.multiply(DhMat4f.createScaleMatrix(box.maxPos.x - box.minPos.x, box.maxPos.y - box.minPos.y, box.maxPos.z - box.minPos.z));
 
-		Mat4f transformMatrix = this.dhMvmProjMatrixThisFrame.copy();
+		DhMat4f transformMatrix = this.dhMvmProjMatrixThisFrame.copy();
 		transformMatrix.multiply(boxTransform);
 		this.basicShader.setUniform(this.basicShader.getUniformLocation("uTransform"), transformMatrix);
 

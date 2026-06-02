@@ -40,7 +40,7 @@ import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.util.LodUtil;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
@@ -180,7 +180,7 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 			
 			int lodDrawDistance = Config.Client.Advanced.Graphics.Quality.lodChunkRenderDistanceRadius.get() * LodUtil.CHUNK_WIDTH;
 			
-			Mat4f inverseMvmProjMatrix = new Mat4f(renderParams.dhMvmProjMatrix);
+			DhMat4f inverseMvmProjMatrix = new DhMat4f(renderParams.dhMvmProjMatrix);
 			inverseMvmProjMatrix.invert();
 			
 			EDhApiHeightFogMixMode heightFogMixingMode = fogRenderParams.getHeightFogMixingMode();

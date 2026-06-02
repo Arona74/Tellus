@@ -40,7 +40,7 @@ import com.seibel.distanthorizons.common.wrappers.chunk.ChunkWrapper;
 import com.seibel.distanthorizons.common.wrappers.world.ClientLevelWrapper;
 import com.seibel.distanthorizons.core.config.Config;
 import com.seibel.distanthorizons.core.api.internal.ClientApi;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.RenderType;
@@ -126,7 +126,7 @@ public class MixinLevelRenderer
 		// get the matrices from the OpenGL fixed pipeline
 		float[] mcProjMatrixRaw = new float[16];
 		GL15.glGetFloatv(GL15.GL_PROJECTION_MATRIX, mcProjMatrixRaw);
-		ClientApi.RENDER_STATE.mcProjectionMatrix = new Mat4f(mcProjMatrixRaw);
+		ClientApi.RENDER_STATE.mcProjectionMatrix = new DhMat4f(mcProjMatrixRaw);
 		ClientApi.RENDER_STATE.mcProjectionMatrix.transpose();
 		
 		ClientApi.RENDER_STATE.mcModelViewMatrix = McObjectConverter.Convert(matrixStackIn.last().pose());

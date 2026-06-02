@@ -63,8 +63,8 @@ import org.joml.Vector3f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IDimensionTypeWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.ILevelWrapper;
-import com.seibel.distanthorizons.core.util.math.Vec3d;
-import com.seibel.distanthorizons.core.util.math.Vec3f;
+import com.seibel.distanthorizons.core.util.math.DhVec3d;
+import com.seibel.distanthorizons.core.util.math.DhVec3f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IImmersivePortalsAccessor;
 import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IOptifineAccessor;
@@ -108,7 +108,6 @@ import com.mojang.blaze3d.opengl.GlTexture;
 #else
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import com.mojang.blaze3d.textures.GpuTexture;
-import org.joml.Vector4f;
 #endif
 
 /**
@@ -163,20 +162,20 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	//=========//
 	
 	@Override
-	public Vec3f getLookAtVector()
+	public DhVec3f getLookAtVector()
 	{
 		#if MC_VER <= MC_1_12_2
 		net.minecraft.util.math.Vec3d lookVector = (MC.getRenderViewEntity().getLook(MC.getRenderPartialTicks()));
-		return new Vec3f((float) lookVector.x, (float) lookVector.y, (float) lookVector.z);
+		return new DhVec3f((float) lookVector.x, (float) lookVector.y, (float) lookVector.z);
 		#elif MC_VER <= MC_1_21_10
 		Camera camera = MC.gameRenderer.getMainCamera();
-		return new Vec3f(camera.getLookVector().x(), camera.getLookVector().y(), camera.getLookVector().z());
+		return new DhVec3f(camera.getLookVector().x(), camera.getLookVector().y(), camera.getLookVector().z());
 		#elif MC_VER <= MC_26_1_2
 		Camera camera = MC.gameRenderer.getMainCamera();
-		return new Vec3f(camera.forwardVector().x(), camera.forwardVector().y(), camera.forwardVector().z());
+		return new DhVec3f(camera.forwardVector().x(), camera.forwardVector().y(), camera.forwardVector().z());
 		#else
 		Camera camera = MC.gameRenderer.mainCamera();
-		return new Vec3f(camera.forwardVector().x(), camera.forwardVector().y(), camera.forwardVector().z());
+		return new DhVec3f(camera.forwardVector().x(), camera.forwardVector().y(), camera.forwardVector().z());
 		#endif
 	}
 	
@@ -215,11 +214,11 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 	}
 	
 	@Override
-	public Vec3d getCameraExactPosition()
+	public DhVec3d getCameraExactPosition()
 	{
 		if (DelayedAccessors.IMMERSIVE_PORTALS != null)
 		{
-			Vec3d cameraPos = DelayedAccessors.IMMERSIVE_PORTALS.getActualCameraPos();
+			DhVec3d cameraPos = DelayedAccessors.IMMERSIVE_PORTALS.getActualCameraPos();
 			if (cameraPos != null) return cameraPos;
 		}
 		
@@ -237,7 +236,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		#else
 		Vec3 projectedView = camera.position();
 		#endif
-		return new Vec3d(projectedView.x, projectedView.y, projectedView.z);
+		return new DhVec3d(projectedView.x, projectedView.y, projectedView.z);
 	}
 	
 	@Override

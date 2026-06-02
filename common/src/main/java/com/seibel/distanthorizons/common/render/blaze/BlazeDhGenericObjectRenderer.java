@@ -60,8 +60,8 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRender
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.objects.IDhGenericObjectVertexBufferContainer;
 import com.seibel.distanthorizons.core.render.renderer.RenderableBoxGroup;
 import com.seibel.distanthorizons.core.util.LodUtil;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
-import com.seibel.distanthorizons.core.util.math.Vec3d;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
+import com.seibel.distanthorizons.core.util.math.DhVec3d;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IProfilerWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhGenericRenderer;
@@ -350,7 +350,7 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 			
 			ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeGenericRenderSetupEvent.class, renderEventParam.apiCopy);
 			
-			Vec3d camPos = MC_RENDER.getCameraExactPosition();
+			DhVec3d camPos = MC_RENDER.getCameraExactPosition();
 			
 			//#endregion
 			
@@ -423,7 +423,7 @@ public class BlazeDhGenericObjectRenderer implements IDhGenericRenderer
 				{
 					// create data //
 					
-					Mat4f projectionMvmMatrix = new Mat4f(renderEventParam.dhProjectionMatrix);
+					DhMat4f projectionMvmMatrix = new DhMat4f(renderEventParam.dhProjectionMatrix);
 					projectionMvmMatrix.multiply(renderEventParam.dhModelViewMatrix);
 					
 					

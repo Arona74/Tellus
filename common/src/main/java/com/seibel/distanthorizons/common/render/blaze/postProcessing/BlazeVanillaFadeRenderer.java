@@ -45,7 +45,7 @@ import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.util.RenderUtil;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhVanillaFadeRenderer;
@@ -174,16 +174,16 @@ public class BlazeVanillaFadeRenderer implements IDhVanillaFadeRenderer
 			float fadeEndDistance = dhNearClipDistance * 1.9f;
 			
 			
-			Mat4f inverseMcModelViewProjectionMatrix = new Mat4f(renderParams.mcProjectionMatrix);
+			DhMat4f inverseMcModelViewProjectionMatrix = new DhMat4f(renderParams.mcProjectionMatrix);
 			inverseMcModelViewProjectionMatrix.multiply(renderParams.mcModelViewMatrix);
 			inverseMcModelViewProjectionMatrix.invert();
-			Mat4f inverseMcMvmProjMatrix = inverseMcModelViewProjectionMatrix;
+			DhMat4f inverseMcMvmProjMatrix = inverseMcModelViewProjectionMatrix;
 			
 			
-			Mat4f inverseDhModelViewProjectionMatrix = new Mat4f(renderParams.dhProjectionMatrix);
+			DhMat4f inverseDhModelViewProjectionMatrix = new DhMat4f(renderParams.dhProjectionMatrix);
 			inverseDhModelViewProjectionMatrix.multiply(renderParams.dhModelViewMatrix);
 			inverseDhModelViewProjectionMatrix.invert();
-			Mat4f inverseDhMvmProjMatrix = inverseDhModelViewProjectionMatrix;
+			DhMat4f inverseDhMvmProjMatrix = inverseDhModelViewProjectionMatrix;
 			
 			
 			

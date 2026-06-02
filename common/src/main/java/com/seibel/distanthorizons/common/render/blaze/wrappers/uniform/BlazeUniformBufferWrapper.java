@@ -16,7 +16,7 @@ import com.seibel.distanthorizons.api.objects.math.DhApiMat4f;
 import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
@@ -95,7 +95,7 @@ public class BlazeUniformBufferWrapper implements AutoCloseable
 	public BlazeUniformBufferWrapper putMat4f(DhApiMat4f matrix)
 	{
 		this.putElement(EUniformElement.MAT4f);
-		this.uniformBufferBuilder.putMat4f(Mat4f.createJomlMatrix(matrix));
+		this.uniformBufferBuilder.putMat4f(DhMat4f.createJomlMatrix(matrix));
 		return this;
 	}
 	public BlazeUniformBufferWrapper putFloat(float f)

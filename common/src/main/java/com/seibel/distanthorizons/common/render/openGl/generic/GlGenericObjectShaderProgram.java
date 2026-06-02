@@ -12,8 +12,8 @@ import com.seibel.distanthorizons.common.render.openGl.glObject.vertexAttribute.
 import com.seibel.distanthorizons.common.render.openGl.glObject.vertexAttribute.GlVertexPointer;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
 import com.seibel.distanthorizons.core.util.LodUtil;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
-import com.seibel.distanthorizons.core.util.math.Vec3f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
+import com.seibel.distanthorizons.core.util.math.DhVec3f;
 
 public class GlGenericObjectShaderProgram extends GlShaderProgram implements IDhApiGenericObjectShaderProgram
 {
@@ -123,7 +123,7 @@ public class GlGenericObjectShaderProgram extends GlShaderProgram implements IDh
 			DhApiVec3d camPos
 		)
 	{
-		Mat4f projectionMvmMatrix = new Mat4f(renderParameters.dhProjectionMatrix);
+		DhMat4f projectionMvmMatrix = new DhMat4f(renderParameters.dhProjectionMatrix);
 		projectionMvmMatrix.multiply(renderParameters.dhModelViewMatrix);
 		
 		super.bind();
@@ -138,7 +138,7 @@ public class GlGenericObjectShaderProgram extends GlShaderProgram implements IDh
 						LodUtil.getChunkPosFromDouble(boxGroup.getOriginBlockPos().z)
 				));
 		this.setUniform(this.instancedShaderOffsetSubChunkUniform,
-				new Vec3f(
+				new DhVec3f(
 						LodUtil.getSubChunkPosFromDouble(boxGroup.getOriginBlockPos().x),
 						LodUtil.getSubChunkPosFromDouble(boxGroup.getOriginBlockPos().y),
 						LodUtil.getSubChunkPosFromDouble(boxGroup.getOriginBlockPos().z)
@@ -151,7 +151,7 @@ public class GlGenericObjectShaderProgram extends GlShaderProgram implements IDh
 						LodUtil.getChunkPosFromDouble(camPos.z)
 				));
 		this.setUniform(this.instancedShaderCameraSubChunkPosUniform,
-				new Vec3f(
+				new DhVec3f(
 						LodUtil.getSubChunkPosFromDouble(camPos.x),
 						LodUtil.getSubChunkPosFromDouble(camPos.y),
 						LodUtil.getSubChunkPosFromDouble(camPos.z)
@@ -201,14 +201,14 @@ public class GlGenericObjectShaderProgram extends GlShaderProgram implements IDh
 			IDhApiRenderableBoxGroup boxGroup, DhApiRenderableBox box, 
 			DhApiVec3d camPos)
 	{
-		Mat4f projectionMvmMatrix = new Mat4f(renderParameters.dhProjectionMatrix);
+		DhMat4f projectionMvmMatrix = new DhMat4f(renderParameters.dhProjectionMatrix);
 		projectionMvmMatrix.multiply(renderParameters.dhModelViewMatrix);
 		
-		Mat4f boxTransform = Mat4f.createTranslateMatrix(
+		DhMat4f boxTransform = DhMat4f.createTranslateMatrix(
 				(float) (box.minPos.x + boxGroup.getOriginBlockPos().x - camPos.x),
 				(float) (box.minPos.y + boxGroup.getOriginBlockPos().y - camPos.y),
 				(float) (box.minPos.z + boxGroup.getOriginBlockPos().z - camPos.z));
-		boxTransform.multiply(Mat4f.createScaleMatrix(
+		boxTransform.multiply(DhMat4f.createScaleMatrix(
 				(float) (box.maxPos.x - box.minPos.x),
 				(float) (box.maxPos.y - box.minPos.y),
 				(float) (box.maxPos.z - box.minPos.z)));

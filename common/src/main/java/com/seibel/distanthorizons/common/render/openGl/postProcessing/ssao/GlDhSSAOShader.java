@@ -26,7 +26,7 @@ import com.seibel.distanthorizons.common.render.openGl.postProcessing.GlScreenQu
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftGLWrapper;
 import com.seibel.distanthorizons.common.render.openGl.util.GlAbstractShaderRenderer;
 import com.seibel.distanthorizons.core.render.RenderParams;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
 import org.lwjgl.opengl.GL32;
 
 /**
@@ -45,8 +45,8 @@ public class GlDhSSAOShader extends GlAbstractShaderRenderer
 	
 	public int frameBuffer;
 	
-	private Mat4f projection;
-	private Mat4f invertedProjection;
+	private DhMat4f projection;
+	private DhMat4f invertedProjection;
 	
 	
 	// uniforms
@@ -95,9 +95,9 @@ public class GlDhSSAOShader extends GlAbstractShaderRenderer
 	
 	public void setProjectionMatrix(DhApiMat4f projectionMatrix)
 	{
-		this.projection = new Mat4f(projectionMatrix);
+		this.projection = new DhMat4f(projectionMatrix);
 		
-		this.invertedProjection = new Mat4f(projectionMatrix);
+		this.invertedProjection = new DhMat4f(projectionMatrix);
 		this.invertedProjection.invert();
 	}
 	

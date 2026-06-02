@@ -23,9 +23,9 @@ import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.util.RenderUtil;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
-import com.seibel.distanthorizons.core.util.math.Vec3d;
-import com.seibel.distanthorizons.core.util.math.Vec3f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
+import com.seibel.distanthorizons.core.util.math.DhVec3d;
+import com.seibel.distanthorizons.core.util.math.DhVec3f;
 import com.seibel.distanthorizons.core.util.objects.SortedArraySet;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IProfilerWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IIrisAccessor;
@@ -46,7 +46,7 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 	private static final MinecraftGLWrapper GLMC = MinecraftGLWrapper.INSTANCE;
 	private static final IIrisAccessor IRIS_ACCESSOR = ModAccessorInjector.INSTANCE.get(IIrisAccessor.class);
 	
-	private static final Vec3f MODEL_POS = new Vec3f();
+	private static final DhVec3f MODEL_POS = new DhVec3f();
 	/** single event object used to reduce GC pressure */
 	private static final DhApiBeforeBufferRenderEvent.EventParam BEFORE_BUFFER_RENDER_EVENT_PARAM = new DhApiBeforeBufferRenderEvent.EventParam();
 	
@@ -199,7 +199,7 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 	@Override
 	public void fillUniformData(DhApiRenderParam renderParameters)
 	{
-		Mat4f combinedMatrix = new Mat4f(renderParameters.dhProjectionMatrix);
+		DhMat4f combinedMatrix = new DhMat4f(renderParameters.dhProjectionMatrix);
 		combinedMatrix.multiply(renderParameters.dhModelViewMatrix);
 		
 		super.bind();
@@ -246,7 +246,7 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 	}
 	
 	@Override
-	public void setModelOffsetPos(DhApiVec3f modelOffsetPos) { this.setUniform(this.uModelOffset, new Vec3f(modelOffsetPos)); }
+	public void setModelOffsetPos(DhApiVec3f modelOffsetPos) { this.setUniform(this.uModelOffset, new DhVec3f(modelOffsetPos)); }
 	
 	@Override
 	public int getId() { return this.id; }
@@ -328,7 +328,7 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 				
 				// set uniforms and fire events
 				{
-					Vec3d camPos = renderEventParam.exactCameraPosition;
+					DhVec3d camPos = renderEventParam.exactCameraPosition;
 					MODEL_POS.set(
 						(float) (bufferContainer.minCornerBlockPos.getX() - camPos.x),
 						(float) (bufferContainer.minCornerBlockPos.getY() - camPos.y),

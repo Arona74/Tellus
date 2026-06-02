@@ -41,9 +41,9 @@ import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.renderer.AbstractDebugWireframeRenderer;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
-import com.seibel.distanthorizons.core.util.math.Vec3d;
-import com.seibel.distanthorizons.core.util.math.Vec3f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
+import com.seibel.distanthorizons.core.util.math.DhVec3d;
+import com.seibel.distanthorizons.core.util.math.DhVec3f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import org.lwjgl.system.MemoryUtil;
@@ -98,7 +98,7 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 		//endregion
 	};
 	
-	private static final Mat4f TRANSFORM_MATRIX = new Mat4f();
+	private static final DhMat4f TRANSFORM_MATRIX = new DhMat4f();
 	
 	
 	
@@ -255,14 +255,14 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 		// uniforms
 		{
 			// create data //
-			Vec3d camPos = MC_RENDER.getCameraExactPosition();
-			Vec3f camPosFloatThisFrame = new Vec3f((float) camPos.x, (float) camPos.y, (float) camPos.z);
+			DhVec3d camPos = MC_RENDER.getCameraExactPosition();
+			DhVec3f camPosFloatThisFrame = new DhVec3f((float) camPos.x, (float) camPos.y, (float) camPos.z);
 			
-			Mat4f boxTransform = Mat4f.createTranslateMatrix(
+			DhMat4f boxTransform = DhMat4f.createTranslateMatrix(
 				box.minPos.x - camPosFloatThisFrame.x,
 				box.minPos.y - camPosFloatThisFrame.y,
 				box.minPos.z - camPosFloatThisFrame.z);
-			boxTransform.multiply(Mat4f.createScaleMatrix(
+			boxTransform.multiply(DhMat4f.createScaleMatrix(
 				box.maxPos.x - box.minPos.x,
 				box.maxPos.y - box.minPos.y,
 				box.maxPos.z - box.minPos.z));

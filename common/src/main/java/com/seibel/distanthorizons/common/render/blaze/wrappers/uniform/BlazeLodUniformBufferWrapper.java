@@ -6,7 +6,7 @@ public class BlazeLodUniformBufferWrapper {}
 #else
 
 import com.seibel.distanthorizons.core.dataObjects.render.bufferBuilding.LodBufferContainer;
-import com.seibel.distanthorizons.core.util.math.Vec3f;
+import com.seibel.distanthorizons.core.util.math.DhVec3f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.objects.ILodContainerUniformBufferWrapper;
 
 public class BlazeLodUniformBufferWrapper extends BlazeUniformBufferWrapper implements ILodContainerUniformBufferWrapper
@@ -40,7 +40,7 @@ public class BlazeLodUniformBufferWrapper extends BlazeUniformBufferWrapper impl
 			return;
 		}
 		
-		Vec3f modelOffset = new Vec3f(
+		DhVec3f modelOffset = new DhVec3f(
 			(float) (bufferContainer.minCornerBlockPos.getX()),
 			(float) (bufferContainer.minCornerBlockPos.getY()),
 			(float) (bufferContainer.minCornerBlockPos.getZ()));

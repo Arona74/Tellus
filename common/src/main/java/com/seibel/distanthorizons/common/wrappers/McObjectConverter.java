@@ -24,7 +24,7 @@ import java.nio.FloatBuffer;
 import com.seibel.distanthorizons.core.enums.EDhDirection;
 import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPos;
 import com.seibel.distanthorizons.core.pos.DhChunkPos;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
 
 #if MC_VER <= MC_1_12_2
 import net.minecraft.util.EnumFacing;
@@ -53,7 +53,7 @@ public class McObjectConverter
 	//region
 	
 	/** 4x4 float matrix converter */
-	public static Mat4f Convert(
+	public static DhMat4f Convert(
 			#if MC_VER <= MC_1_12_2 org.joml.Matrix4f
 			#elif MC_VER < MC_1_19_4 com.mojang.math.Matrix4f 
 			#elif MC_VER < MC_1_21_6 org.joml.Matrix4f
@@ -63,7 +63,7 @@ public class McObjectConverter
 	{
 		FloatBuffer buffer = FloatBuffer.allocate(16);
 		storeMatrix(mcMatrix, buffer);
-		Mat4f matrix = new Mat4f(buffer);
+		DhMat4f matrix = new DhMat4f(buffer);
         #if MC_VER > MC_1_12_2 && MC_VER < MC_1_19_4
 		matrix.transpose(); // In 1.19.3 and later, we no longer need to transpose it
         #endif

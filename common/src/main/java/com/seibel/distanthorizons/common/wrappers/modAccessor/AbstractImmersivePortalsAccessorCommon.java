@@ -26,14 +26,13 @@ public abstract class AbstractImmersivePortalsAccessorCommon {}
 import com.seibel.distanthorizons.common.wrappers.world.ClientLevelWrapper;
 import com.seibel.distanthorizons.core.pos.DhChunkPos;
 import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPos;
-import com.seibel.distanthorizons.core.util.math.Vec3d;
+import com.seibel.distanthorizons.core.util.math.DhVec3d;
 import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.AbstractImmersivePortalsAccessor;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IClientLevelWrapper;
 import net.minecraft.client.multiplayer.ClientLevel;
 import org.jetbrains.annotations.Nullable;
 
 #if MC_VER > MC_1_19_2
-import org.joml.Matrix4f;
 #else
 #endif
 
@@ -51,7 +50,7 @@ public abstract class AbstractImmersivePortalsAccessorCommon extends AbstractImm
 	@Nullable
 	public static volatile DhChunkPos actualChunkPos;
 	@Nullable
-	public static volatile Vec3d actualCameraPos;
+	public static volatile DhVec3d actualCameraPos;
 	
 	
 	
@@ -69,7 +68,7 @@ public abstract class AbstractImmersivePortalsAccessorCommon extends AbstractImm
 	
 	@Override
 	@Nullable
-	public Vec3d getActualCameraPos() { return actualCameraPos; }
+	public DhVec3d getActualCameraPos() { return actualCameraPos; }
 	
 }
 

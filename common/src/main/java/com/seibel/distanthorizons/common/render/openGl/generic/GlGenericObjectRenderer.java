@@ -45,7 +45,7 @@ import com.seibel.distanthorizons.core.render.renderer.RenderableBoxGroup;
 import com.seibel.distanthorizons.core.util.LodUtil;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IProfilerWrapper;
-import com.seibel.distanthorizons.core.util.math.Vec3d;
+import com.seibel.distanthorizons.core.util.math.DhVec3d;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhGenericRenderer;
 import com.seibel.distanthorizons.coreapi.DependencyInjection.ApiEventInjector;
 import com.seibel.distanthorizons.coreapi.DependencyInjection.OverrideInjector;
@@ -450,7 +450,7 @@ public class GlGenericObjectRenderer implements IDhGenericRenderer
 			
 			this.boxIndexBuffer.bind();
 			
-			Vec3d camPos = MC_RENDER.getCameraExactPosition();
+			DhVec3d camPos = MC_RENDER.getCameraExactPosition();
 			
 			
 			
@@ -555,7 +555,7 @@ public class GlGenericObjectRenderer implements IDhGenericRenderer
 	
 	private void renderBoxGroupInstanced(
 			IDhApiGenericObjectShaderProgram shaderProgram, DhApiRenderParam renderEventParam, 
-			RenderableBoxGroup boxGroup, Vec3d camPos,
+			RenderableBoxGroup boxGroup, DhVec3d camPos,
 			IProfilerWrapper profiler)
 	{
 		try (IProfilerWrapper.IProfileBlock render_profile = profiler.push("vertex setup"))
@@ -656,7 +656,7 @@ public class GlGenericObjectRenderer implements IDhGenericRenderer
 	private void renderBoxGroupDirect(
 		IDhApiGenericObjectShaderProgram shaderProgram, 
 		DhApiRenderParam renderEventParam, 
-		RenderableBoxGroup boxGroup, Vec3d camPos,
+		RenderableBoxGroup boxGroup, DhVec3d camPos,
 		IProfilerWrapper profiler)
 	{
 		profiler.popPush("shared uniforms");

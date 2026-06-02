@@ -37,7 +37,7 @@ import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.util.RenderUtil;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhSsaoRenderer;
@@ -173,8 +173,8 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 		// frag uniforms
 		{
 			// create data //
-			Mat4f projMatrix = new Mat4f(renderParams.dhProjectionMatrix);
-			Mat4f invertedProjMatrix = new Mat4f(renderParams.dhProjectionMatrix);
+			DhMat4f projMatrix = new DhMat4f(renderParams.dhProjectionMatrix);
+			DhMat4f invertedProjMatrix = new DhMat4f(renderParams.dhProjectionMatrix);
 			invertedProjMatrix.invert();
 			
 			

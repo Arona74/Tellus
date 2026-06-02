@@ -33,7 +33,7 @@ import com.seibel.distanthorizons.common.render.openGl.util.GlAbstractShaderRend
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.util.LodUtil;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftClientWrapper;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import org.lwjgl.opengl.GL32;
 
@@ -48,7 +48,7 @@ public class GlDhFogShader extends GlAbstractShaderRenderer
 	
 	
 	public int frameBuffer;
-	private Mat4f inverseMvmProjMatrix; 
+	private DhMat4f inverseMvmProjMatrix; 
 	private DhApiFogRenderParam fogRenderParams;
 	
 	
@@ -214,7 +214,7 @@ public class GlDhFogShader extends GlAbstractShaderRenderer
 	
 	public void prepUniformObjects(DhApiMat4f modelViewProjectionMatrix, DhApiFogRenderParam fogRenderParams)
 	{
-		this.inverseMvmProjMatrix = new Mat4f(modelViewProjectionMatrix);
+		this.inverseMvmProjMatrix = new DhMat4f(modelViewProjectionMatrix);
 		this.inverseMvmProjMatrix.invert();
 		
 		this.fogRenderParams = fogRenderParams;

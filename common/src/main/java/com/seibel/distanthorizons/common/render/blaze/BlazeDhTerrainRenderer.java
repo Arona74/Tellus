@@ -32,9 +32,9 @@ import com.seibel.distanthorizons.core.pos.DhSectionPos;
 import com.seibel.distanthorizons.core.render.EDhRenderDepth;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.util.RenderUtil;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
-import com.seibel.distanthorizons.core.util.math.Vec3d;
-import com.seibel.distanthorizons.core.util.math.Vec3f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
+import com.seibel.distanthorizons.core.util.math.DhVec3d;
+import com.seibel.distanthorizons.core.util.math.DhVec3f;
 import com.seibel.distanthorizons.core.util.objects.SortedArraySet;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IProfilerWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
@@ -54,7 +54,7 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 	
 	public static final BlazeDhTerrainRenderer INSTANCE = new BlazeDhTerrainRenderer();
 	
-	private static final Vec3f MODEL_POS = new Vec3f();
+	private static final DhVec3f MODEL_POS = new DhVec3f();
 	/** single event object used to reduce GC pressure */
 	private static final DhApiBeforeBufferRenderEvent.EventParam BEFORE_BUFFER_RENDER_EVENT_PARAM = new DhApiBeforeBufferRenderEvent.EventParam();
 	
@@ -181,7 +181,7 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 			
 			profiler.popPush("vert share uniforms");
 			{
-				Mat4f combinedMatrix = new Mat4f(renderEventParam.dhProjectionMatrix);
+				DhMat4f combinedMatrix = new DhMat4f(renderEventParam.dhProjectionMatrix);
 				combinedMatrix.multiply(renderEventParam.dhModelViewMatrix);
 				
 				float earthCurveRatio = Config.Client.Advanced.Graphics.Experimental.earthCurveRatio.get();
@@ -304,7 +304,7 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 							
 							// fire render event
 							{
-								Vec3d camPos = renderEventParam.exactCameraPosition;
+								DhVec3d camPos = renderEventParam.exactCameraPosition;
 								MODEL_POS.set(
 									(float) (bufferContainer.minCornerBlockPos.getX() - camPos.x),
 									(float) (bufferContainer.minCornerBlockPos.getY() - camPos.y),

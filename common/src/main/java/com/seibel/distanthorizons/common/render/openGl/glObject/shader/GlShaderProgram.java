@@ -27,8 +27,8 @@ import com.seibel.distanthorizons.api.objects.math.DhApiVec3i;
 import org.lwjgl.opengl.GL32;
 import org.lwjgl.system.MemoryStack;
 
-import com.seibel.distanthorizons.core.util.math.Mat4f;
-import com.seibel.distanthorizons.core.util.math.Vec3f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
+import com.seibel.distanthorizons.core.util.math.DhVec3f;
 
 
 /**
@@ -182,9 +182,9 @@ public class GlShaderProgram
 	public void trySetUniform(int location, float value) { if (location != -1) { this.setUniform(location, value); } }
 	
 	/** Requires a bound ShaderProgram. */
-	public void setUniform(int location, Vec3f value) { GL32.glUniform3f(location, value.x, value.y, value.z); }
-	/** @see GlShaderProgram#setUniform(int, Vec3f) */
-	public void trySetUniform(int location, Vec3f value) { if (location != -1) { this.setUniform(location, value); } }
+	public void setUniform(int location, DhVec3f value) { GL32.glUniform3f(location, value.x, value.y, value.z); }
+	/** @see GlShaderProgram#setUniform(int, DhVec3f) */
+	public void trySetUniform(int location, DhVec3f value) { if (location != -1) { this.setUniform(location, value); } }
 	
 	/** Requires a bound ShaderProgram. */
 	public void setUniform(int location, DhApiVec3i value) { GL32.glUniform3i(location, value.x, value.y, value.z); }
@@ -226,7 +226,7 @@ public class GlShaderProgram
 	private static int bufferIndex(int xIndex, int zIndex) { return (zIndex * 4) + xIndex; }
 	
 	/** @see GlShaderProgram#setUniform(int, DhApiMat4f) */
-	public void trySetUniform(int location, Mat4f value) { if (location != -1) { this.setUniform(location, value); } }
+	public void trySetUniform(int location, DhMat4f value) { if (location != -1) { this.setUniform(location, value); } }
 	
 	/**
 	 * Converts the color's RGBA values into values between 0 and 1. <br>

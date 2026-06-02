@@ -5,7 +5,7 @@ import com.google.common.collect.MapMaker;
 import com.seibel.distanthorizons.common.wrappers.world.ServerLevelWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.misc.IServerPlayerWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.world.IServerLevelWrapper;
-import com.seibel.distanthorizons.core.util.math.Vec3d;
+import com.seibel.distanthorizons.core.util.math.DhVec3d;
 #if MC_VER <= MC_1_12_2
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.NetHandlerPlayServer;
@@ -19,7 +19,6 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.phys.Vec3;
 #endif
 
-import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentMap;
 
 #if MC_VER <= MC_1_12_2
@@ -126,14 +125,14 @@ public class ServerPlayerWrapper implements IServerPlayerWrapper
 	}
 	
 	@Override
-	public Vec3d getPosition()
+	public DhVec3d getPosition()
 	{
 		#if MC_VER <= MC_1_12_2
 		BlockPos position = this.getServerPlayer().getPosition();
 		return new Vec3d(position.getX(), position.getY(), position.getZ());
 		#else
 		Vec3 position = this.getServerPlayer().position();
-		return new Vec3d(position.x, position.y, position.z);
+		return new DhVec3d(position.x, position.y, position.z);
 		#endif
 	}
 	

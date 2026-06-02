@@ -4,7 +4,7 @@ package com.seibel.distanthorizons.common.commonMixins;
 import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
 import com.seibel.distanthorizons.common.wrappers.modAccessor.AbstractImmersivePortalsAccessorCommon;
 import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPos;
-import com.seibel.distanthorizons.core.util.math.Vec3d;
+import com.seibel.distanthorizons.core.util.math.DhVec3d;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.ChunkPos;
@@ -53,7 +53,7 @@ public class MixinImmersivePortalsRenderStatesCommon
 		#else
 		Vec3 cameraPos = mc.gameRenderer.getMainCamera().position();
 		#endif
-		AbstractImmersivePortalsAccessorCommon.actualCameraPos = new Vec3d(cameraPos.x(), cameraPos.y(), cameraPos.z());
+		AbstractImmersivePortalsAccessorCommon.actualCameraPos = new DhVec3d(cameraPos.x(), cameraPos.y(), cameraPos.z());
 	}
 	
 }
