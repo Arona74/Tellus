@@ -50,8 +50,10 @@ public class MixinImmersivePortalsRenderStatesCommon
 		// camera pos
 		#if MC_VER <= MC_1_21_10
 		Vec3 cameraPos = mc.gameRenderer.getMainCamera().getPosition();
-		#else
+		#elif MC_VER <= MC_26_1_2
 		Vec3 cameraPos = mc.gameRenderer.getMainCamera().position();
+		#else
+		Vec3 cameraPos = mc.gameRenderer.mainCamera().position();
 		#endif
 		AbstractImmersivePortalsAccessorCommon.actualCameraPos = new DhVec3d(cameraPos.x(), cameraPos.y(), cameraPos.z());
 	}

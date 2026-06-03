@@ -6,7 +6,6 @@ public class BlazeDhRenderApiDefinition {}
 #else
 
 import com.seibel.distanthorizons.api.enums.config.EDhApiRenderingApi;
-import com.seibel.distanthorizons.api.enums.config.EDhApiRenderingEngine;
 import com.seibel.distanthorizons.common.render.blaze.objects.BlazeGenericObjectVertexContainer;
 import com.seibel.distanthorizons.common.render.blaze.postProcessing.BlazeDhFarFadeRenderer;
 import com.seibel.distanthorizons.common.render.blaze.postProcessing.BlazeDhFogRenderer;
@@ -35,8 +34,8 @@ public class BlazeDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 	//=========//
 	//region
 	
-	private final String apiName;
-	public String getApiName() { return this.apiName; }
+	private final String engineName;
+	public String getEngineName() { return this.engineName; }
 	
 	public EDhRenderDepth getRenderDepth()
 	{
@@ -66,11 +65,11 @@ public class BlazeDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 		#if MC_VER <= MC_26_1_2
 		renderApi = EDhApiRenderingApi.OPEN_GL;
 		#else
-		// use the same rendering API as Minecraft
+		// Blaze always uses the same rendering API as Minecraft
 		this.renderApi = MinecraftRenderWrapper.INSTANCE.getMcRenderingApi();
 		#endif
 		
-		this.apiName = "Blaze3D: " + this.getRenderApi();
+		this.engineName = "Blaze3D: " + this.getRenderApi();
 	}
 	
 	//endregion

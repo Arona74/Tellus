@@ -26,7 +26,7 @@ public class GlDhRenderApiDefinition extends AbstractDhRenderApiDefinition
 	//=========//
 	//region
 	
-	public String getApiName() { return "OpenGL"; }
+	public String getEngineName() { return "OpenGL"; }
 	
 	public EDhRenderDepth getRenderDepth() 
 	{

@@ -6,6 +6,7 @@ import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeD
 import com.seibel.distanthorizons.common.commands.CommandInitializer;
 import com.seibel.distanthorizons.common.wrappers.DependencySetup;
 import com.seibel.distanthorizons.common.wrappers.gui.DhDebugScreenEntry;
+import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftClientWrapper;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftServerWrapper;
 import com.seibel.distanthorizons.core.Initializer;
 import com.seibel.distanthorizons.core.api.internal.ClientApi;
@@ -262,6 +263,8 @@ public abstract class AbstractModInitializer
 			}
 			catch (Exception e)
 			{
+				NativeDialogUtil.showDialog(ModInfo.READABLE_NAME, e.getMessage(), "ok", "error");
+				MinecraftClientWrapper.INSTANCE.crashMinecraft(e.getMessage(), e);
 				future.completeExceptionally(e);
 			}
 			finally
