@@ -88,7 +88,7 @@ public class MinecraftServerWrapper extends AbstractMinecraftSharedWrapper
 	
 	@Nullable
 	@Override
-	public IServerLevelWrapper getWrappedServerLevelWithDimensionResourceLocation(String dimensionResourceLocation)
+	public IServerLevelWrapper getLevelWrapper(String dimensionResourceLocation)
 	{
 		if (this.dedicatedServer == null)
 		{

@@ -87,7 +87,7 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 	private static final Map<
 		#if MC_VER <= MC_1_12_2 WorldClient #else ClientLevel #endif, 
 		WeakReference<ClientLevelWrapper>> LEVEL_WRAPPER_REF_BY_CLIENT_LEVEL = Collections.synchronizedMap(new WeakHashMap<>());
-	private static final KeyedClientLevelManager KEYED_CLIENT_LEVEL_MANAGER = KeyedClientLevelManager.INSTANCE;
+	private static final KeyedClientLevelManager KEYED_CLIENT_LEVEL_MANAGER = (KeyedClientLevelManager) SingletonInjector.INSTANCE.get(IKeyedClientLevelManager.class);
 	
 	#if MC_VER <= MC_1_12_2
 	private static final Minecraft MINECRAFT = Minecraft.getMinecraft();
@@ -233,7 +233,7 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 	{
 		if (KEYED_CLIENT_LEVEL_MANAGER.isEnabled())
 		{
-			IServerKeyedClientLevel keyedLevel = KEYED_CLIENT_LEVEL_MANAGER.getServerKeyedLevel(level);
+			IServerKeyedClientLevel keyedLevel = KEYED_CLIENT_LEVEL_MANAGER.getServerKeyedLevel(getWrapper(level, true));
 			if (keyedLevel != levelWrapper)
 			{
 				return getWrapper(level);
@@ -267,7 +267,7 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 			}
 			
 			// used if the client is connected to a server that defines the currently loaded level
-			IServerKeyedClientLevel overrideLevel = KEYED_CLIENT_LEVEL_MANAGER.getServerKeyedLevel(level);
+			IServerKeyedClientLevel overrideLevel = KEYED_CLIENT_LEVEL_MANAGER.getServerKeyedLevel(getWrapper(level, true));
 			if (overrideLevel != null)
 			{
 				// if the currently loaded level wrapper doesn't match what's incoming, unload it

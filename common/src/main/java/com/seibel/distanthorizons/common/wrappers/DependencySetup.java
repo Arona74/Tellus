@@ -66,7 +66,7 @@ public class DependencySetup
 		SingletonInjector.INSTANCE.bind(ILangWrapper.class, LangWrapper.INSTANCE);
 		SingletonInjector.INSTANCE.bind(IVersionConstants.class, VersionConstants.INSTANCE);
 		SingletonInjector.INSTANCE.bind(IWrapperFactory.class, WrapperFactory.INSTANCE);
-		SingletonInjector.INSTANCE.bind(IKeyedClientLevelManager.class, KeyedClientLevelManager.INSTANCE);
+		SingletonInjector.INSTANCE.bind(IKeyedClientLevelManager.class, new KeyedClientLevelManager());
 		SingletonInjector.INSTANCE.bind(IDhApiCustomRenderObjectFactory.class, GenericRenderObjectFactory.INSTANCE);
 	}
 	

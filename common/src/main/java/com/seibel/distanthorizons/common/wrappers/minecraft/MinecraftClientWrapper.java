@@ -641,7 +641,7 @@ public class MinecraftClientWrapper extends AbstractMinecraftSharedWrapper imple
 	
 	@Nullable
 	@Override
-	public IServerLevelWrapper getWrappedServerLevelWithDimensionResourceLocation(String dimensionResourceLocation)
+	public IServerLevelWrapper getLevelWrapper(String dimensionResourceLocation)
 	{
 		if (!this.hasSinglePlayerServer())
 		{

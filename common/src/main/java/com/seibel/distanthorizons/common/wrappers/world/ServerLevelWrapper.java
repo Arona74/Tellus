@@ -83,7 +83,7 @@ public class ServerLevelWrapper implements IServerLevelWrapper
 	 * this name is cached to prevent issues during shutdown where
 	 * the server variables needed may no longer be available.
 	 */
-	private final String KeyedLevelDimensionName;
+	private final String keyedLevelDimensionName;
 	
 	
 	
@@ -112,7 +112,7 @@ public class ServerLevelWrapper implements IServerLevelWrapper
 	public ServerLevelWrapper(#if MC_VER <= MC_1_12_2 WorldServer #else ServerLevel #endif level) 
 	{ 
 		this.level = level;
-		this.KeyedLevelDimensionName = this.createKeyedLevelDimensionName();
+		this.keyedLevelDimensionName = this.createKeyedLevelDimensionName();
 	}
 	
 	//endregion
@@ -137,7 +137,7 @@ public class ServerLevelWrapper implements IServerLevelWrapper
 	}
 	
 	@Override
-	public String getKeyedLevelDimensionName() { return this.KeyedLevelDimensionName; }
+	public String getKeyedLevelDimensionName() { return this.keyedLevelDimensionName; }
 	
 	private String createKeyedLevelDimensionName()
 	{

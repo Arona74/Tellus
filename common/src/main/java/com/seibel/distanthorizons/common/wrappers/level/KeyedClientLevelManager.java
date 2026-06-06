@@ -19,8 +19,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class KeyedClientLevelManager implements IKeyedClientLevelManager
 {
-	public static final KeyedClientLevelManager INSTANCE = new KeyedClientLevelManager();
-	
 	/** Stores the server-provided keys indexed by dimension name for persistence. */
 	private final Map<String, KeyInfo> keysByDimensionName = new ConcurrentHashMap<>();
 	
@@ -33,18 +31,6 @@ public class KeyedClientLevelManager implements IKeyedClientLevelManager
 	
 	
 	
-	
-	//=============//
-	// constructor //
-	//=============//
-	//region
-	
-	private KeyedClientLevelManager() { }
-	
-	//endregion
-	
-	
-	
 	//======================//
 	// level override logic //
 	//======================//
@@ -52,19 +38,9 @@ public class KeyedClientLevelManager implements IKeyedClientLevelManager
 	
 	@Override
 	@Nullable
-	public IServerKeyedClientLevel getServerKeyedLevel() 
-	{ 
-		#if MC_VER > MC_1_12_2
-		return this.getServerKeyedLevel(Minecraft.getInstance().level); 
-		#else
-		return this.getServerKeyedLevel(Minecraft.getMinecraft().world); 
-		#endif
-	}
-	
-	@Nullable
-	public IServerKeyedClientLevel getServerKeyedLevel(@Nullable #if MC_VER > MC_1_12_2 ClientLevel #else WorldClient #endif level)
+	public IServerKeyedClientLevel getServerKeyedLevel(IClientLevelWrapper levelWrapper)
 	{
-		if (level == null)
+		if (levelWrapper == null)
 		{
 			return null;
 		}
@@ -73,6 +49,8 @@ public class KeyedClientLevelManager implements IKeyedClientLevelManager
 		// This prevents multiple threads from creating duplicate wrappers for the same level.
 		synchronized (this.keyedLevelsCache)
 		{
+			ClientLevel level = (ClientLevel) levelWrapper.getWrappedMcObject();
+			
 			// Check the cache first
 			IServerKeyedClientLevel cached = this.keyedLevelsCache.get(level);
 			if (cached != null)
@@ -103,47 +81,31 @@ public class KeyedClientLevelManager implements IKeyedClientLevelManager
 	}
 	
 	@Override
-	public IServerKeyedClientLevel setServerKeyedLevel(IClientLevelWrapper clientLevel, String serverKey, String levelKey)
+	public IServerKeyedClientLevel setServerKeyedLevel(IClientLevelWrapper clientLevel, String dimensionResource, String serverKey, String levelKey)
 	{
-		// 1. Determine the target dimension name
-		String targetDimensionName = clientLevel.getDimensionName();
-		int separatorIndex = levelKey.lastIndexOf("@");
-		if (separatorIndex != -1)
-		{
-			targetDimensionName = levelKey.substring(separatorIndex + 1);
-		}
-		
-		final String finalTargetDimensionName = targetDimensionName;
-		
-		// 2. Store the key for this dimension
-		this.keysByDimensionName.put(finalTargetDimensionName, new KeyInfo(serverKey, levelKey));
+		this.keysByDimensionName.put(dimensionResource, new KeyInfo(serverKey, levelKey));
 		this.enabled = true;
 		
-		// 3. Clear the cache for this dimension to ensure new wrappers are created with the new key
-		// (though in practice keys shouldn't change mid-session)
-		// 
-		// We synchronize manually on the map to ensure atomicity of the compound removal operation
-		// and to prevent race conditions or deadlocks with other threads accessing the map.
-		// We avoid calling ClientLevelWrapper.getWrapper() inside the lock to prevent circular lock dependencies.
 		synchronized (this.keyedLevelsCache)
 		{
-			this.keyedLevelsCache.keySet().removeIf(level -> 
-			{
-				#if MC_VER <= MC_1_12_2
-				String levelDim = level.provider.getDimensionType().getName() + ":" + level.provider.getDimension();
-				#elif MC_VER <= MC_1_21_10
+			this.keyedLevelsCache.keySet().removeIf(level -> {
+	            #if MC_VER <= MC_1_12_2
+	            String levelDim = level.provider.getDimensionType().getName() + ":" + level.provider.getDimension();
+	            #elif MC_VER <= MC_1_21_10
 				String levelDim = level.dimension().location().toString();
-				#else
-				String levelDim = level.dimension().identifier().toString();
-				#endif
+	            #else
+	            String levelDim = level.dimension().identifier().toString();
+	            #endif
 				
-				return levelDim.equals(finalTargetDimensionName);
+				return levelDim.equals(dimensionResource);
 			});
 		}
 		
-		// 4. Return the keyed wrapper for whatever level the core passed us, 
-		// but only if it matches the dimension we just keyed.
-		return this.getServerKeyedLevel((#if MC_VER > MC_1_12_2 ClientLevel #else WorldClient #endif) clientLevel.getWrappedMcObject());
+		if (clientLevel == null || !clientLevel.getDimensionName().equals(dimensionResource)) {
+			return null;
+		}
+		
+		return this.getServerKeyedLevel(clientLevel);
 	}
 	
 	@Override
