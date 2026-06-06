@@ -319,8 +319,11 @@ public class ClientBlockStateColorCache
 						// (i.e. AIR is somehow passed in)
 					}
 					
+					// return for the first valid direction we find
 					if (quads != null 
 						&& !quads.isEmpty()
+						// for rotated blocks (ie logs) we want the side instead of the top,
+						// so logs use their bark side instead of their cut/inner side
 						&& !(
 							#if MC_VER <= MC_1_12_2
 							this.blockState.getBlock() instanceof BlockRotatedPillar
@@ -466,6 +469,13 @@ public class ClientBlockStateColorCache
 		BlockState effectiveBlockState = this.blockState;
 		#endif
 		
+		
+		
+		//=========================//
+		// specific state handling //
+		//=========================//
+		//region
+		
 		// if this block is a slab, use it's double variant so we can get the top face,
 		// otherwise the color will use the side, which isn't as accurate
 		#if MC_VER <= MC_1_12_2
@@ -479,6 +489,31 @@ public class ClientBlockStateColorCache
 			effectiveBlockState = this.blockState.setValue( SlabBlock.TYPE, SlabType.DOUBLE );
 		}
 		#endif
+		
+		// huge mushroom block sides will show the inner color,
+		// which isn't what you want to see at a distance,
+		// you want to see the primary color (ie red for red mushrooms)
+		// which is shown on all sides for the default state
+		#if MC_VER <= MC_1_12_2
+		if (this.blockState.getBlock() instanceof BlockHugeMushroom)
+		{
+			effectiveBlockState = this.blockState.getBlock().getDefaultState(); 
+		}
+		#else
+		if (this.blockState.getBlock() instanceof HugeMushroomBlock)
+		{
+			effectiveBlockState = this.blockState.getBlock().defaultBlockState(); 
+		}
+		#endif
+		
+		//endregion
+		
+		
+		
+		//===============//
+		// quad handling //
+		//===============//
+		//region
 		
 		List<BakedQuad> quads;
 		
@@ -518,6 +553,8 @@ public class ClientBlockStateColorCache
 			quads.addAll(blockModelPartList.get(i).getQuads(direction));
 		}
 		#endif
+		
+		//endregion
 		
 		return quads;
 	}
