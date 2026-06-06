@@ -41,9 +41,7 @@ public class GlDhFogShader extends GlAbstractShaderRenderer
 {
 	public static final GlDhFogShader INSTANCE = new GlDhFogShader();
 	
-	private static final IMinecraftClientWrapper MC = SingletonInjector.INSTANCE.get(IMinecraftClientWrapper.class);
 	private static final MinecraftGLWrapper GLMC = MinecraftGLWrapper.INSTANCE;
-	private static final IMinecraftRenderWrapper MC_RENDER = SingletonInjector.INSTANCE.get(IMinecraftRenderWrapper.class);
 	
 	
 	
@@ -172,7 +170,7 @@ public class GlDhFogShader extends GlAbstractShaderRenderer
 		// Fog uniforms
 		this.shader.setUniform(this.uFogColor, this.fogRenderParams.getFogColor());
 		this.shader.setUniform(this.uFogScale, 1.f / lodDrawDistance);
-		this.shader.setUniform(this.uFogVerticalScale, 1.f / MC.getWrappedClientLevel().getMaxHeight());
+		this.shader.setUniform(this.uFogVerticalScale, 1.f / renderParams.clientLevelWrapper.getMaxHeight());
 		this.shader.setUniform(this.uFogDebugMode, 0); // 0 = normal // 1 = render everything with fog color // 7 = use debug rendering
 		this.shader.setUniform(this.uFogFalloffType, this.fogRenderParams.getFarFogFalloff().value);
 		

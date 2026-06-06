@@ -69,8 +69,6 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 {
 	public static final DhLogger LOGGER = new DhLoggerBuilder().build(); 
 	
-	private static final IMinecraftClientWrapper MC = SingletonInjector.INSTANCE.get(IMinecraftClientWrapper.class);
-	private static final IMinecraftRenderWrapper MC_RENDER = SingletonInjector.INSTANCE.get(IMinecraftRenderWrapper.class);
 	private static final AbstractDhRenderApiDefinition RENDER_API_DEF = SingletonInjector.INSTANCE.get(AbstractDhRenderApiDefinition.class);
 	
 	private static final GpuDevice GPU_DEVICE = RenderSystem.getDevice();
@@ -203,7 +201,7 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 					fogColor.getBlue() / 255.0f, 
 					fogColor.getAlpha() / 255.0f) // uFogColor
 				.putFloat(1.f / lodDrawDistance) //uFogScale
-				.putFloat(1.f / MC.getWrappedClientLevel().getMaxHeight()) //uFogVerticalScale
+				.putFloat(1.f / renderParams.clientLevelWrapper.getMaxHeight()) //uFogVerticalScale
 				.putInt(0) //uFogDebugMode  // 0 = normal // 1 = render everything with fog color // 7 = use debug rendering
 				.putInt(fogRenderParams.getFarFogFalloff().value) //uFogFalloffType
 				
@@ -230,7 +228,7 @@ public class BlazeDhFogRenderer implements IDhFogRenderer
 				.putInt(fogRenderParams.getHeightFogDirection().fogAppliesDown ? 1 : 0) // uHeightFogAppliesDown
 				.putInt(useSphericalFog ? 1 : 0) // uUseSphericalFog
 				.putInt(heightFogMixingMode.value) // uHeightFogMixingMode
-				.putFloat((float)MC_RENDER.getCameraExactPosition().y) // uCameraBlockYPos
+				.putFloat((float)renderParams.exactCameraPosition.y) // uCameraBlockYPos
 				
 				.putMat4f(inverseMvmProjMatrix) // uInvMvmProj
 				
