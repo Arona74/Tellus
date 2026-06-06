@@ -71,6 +71,11 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 	/** used in case there's an API override */
 	public IDhApiShaderProgram shaderProgramForThisFrame;
 	
+	/** Older MC versions assume GL state is unchanged, so we must restore it after DH rendering */
+	#if MC_VER <= MC_1_12_2
+	private int previousBoundTextureId;
+	private int previousDepthFunc;
+	#endif
 	
 	
 	//============//
@@ -113,6 +118,11 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		DhApiRenderParam renderEventParam,
 		boolean firstPass)
 	{
+		#if MC_VER <= MC_1_12_2
+		this.previousBoundTextureId = GLMC.getActiveTexture();
+		this.previousDepthFunc = GLMC.getActiveDepthFunc();
+		#endif
+		
 		//===================//
 		// framebuffer setup //
 		//===================//
@@ -357,7 +367,9 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 			}
 		}
 		
-		
+		#if MC_VER <= MC_1_12_2
+		GLMC.glDepthFunc(previousDepthFunc);
+		#endif
 		this.unbindLightmap();
 		this.shaderProgramForThisFrame.unbind();
 	}
@@ -455,8 +467,12 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 	
 	public void unbindLightmap() 
 	{
-		// strange that we don't call "glActiveTexture" here but since it's working James isn't going to change it right now (2026-03-10) 
-		GLMC.glBindTexture(0); 
+		// strange that we don't call "glActiveTexture" here but since it's working James isn't going to change it right now (2026-03-10)
+		#if MC_VER <= MC_1_12_2
+		GLMC.glBindTexture(previousBoundTextureId);
+		#else
+		GLMC.glBindTexture(0);
+		#endif
 	}
 	
 	//endregion

@@ -126,6 +126,7 @@ public class MinecraftGLWrapper
 		GlStateManager._depthFunc(func); 
 		#endif
 	}
+	public int getActiveDepthFunc() { return GL32.glGetInteger(GL32.GL_DEPTH_FUNC); }
 	
 	/** @see GL32#glDepthMask(boolean) */
 	public void enableDepthMask()
