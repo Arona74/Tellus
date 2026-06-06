@@ -21,7 +21,7 @@ package com.seibel.distanthorizons.cleanroom.mixins.client;
 
 import com.seibel.distanthorizons.common.wrappers.world.ClientLevelWrapper;
 import com.seibel.distanthorizons.core.api.internal.ClientApi;
-import com.seibel.distanthorizons.core.util.math.Mat4f;
+import com.seibel.distanthorizons.core.util.math.DhMat4f;
 import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderGlobal;
@@ -49,12 +49,12 @@ public class MixinRenderGlobal
 		{
 			float[] mcProjMatrixRaw = new float[16];
 			GL11.glGetFloatv(GL11.GL_PROJECTION_MATRIX, mcProjMatrixRaw);
-			ClientApi.RENDER_STATE.mcProjectionMatrix = new Mat4f(mcProjMatrixRaw);
+			ClientApi.RENDER_STATE.mcProjectionMatrix = new DhMat4f(mcProjMatrixRaw);
 			ClientApi.RENDER_STATE.mcProjectionMatrix.transpose();
 			
 			float[] mcModelViewRaw = new float[16];
 			GL11.glGetFloatv(GL11.GL_MODELVIEW_MATRIX, mcModelViewRaw);
-			ClientApi.RENDER_STATE.mcModelViewMatrix = new Mat4f(mcModelViewRaw);
+			ClientApi.RENDER_STATE.mcModelViewMatrix = new DhMat4f(mcModelViewRaw);
 			ClientApi.RENDER_STATE.mcModelViewMatrix.transpose();
 			
 			ClientApi.RENDER_STATE.partialTickTime = (float) partialTicks;

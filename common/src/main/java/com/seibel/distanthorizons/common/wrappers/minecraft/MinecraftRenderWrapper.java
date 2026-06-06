@@ -28,8 +28,8 @@ import org.jetbrains.annotations.Nullable;
 #if MC_VER > MC_1_12_2
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.NativeImage;
-#endif
 import com.mojang.blaze3d.systems.RenderSystem;
+#endif
 import com.seibel.distanthorizons.api.enums.config.EDhApiLodShading;
 import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
@@ -236,8 +236,9 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		
 		#if MC_VER <= MC_1_12_2
 		RenderManager rm = MC.getRenderManager();
-		return new Vec3d(rm.viewerPosX, rm.viewerPosY, rm.viewerPosZ);
-		#elif MC_VER <= MC_26_1_2
+		return new DhVec3d(rm.viewerPosX, rm.viewerPosY, rm.viewerPosZ);
+		#else
+		#if MC_VER <= MC_26_1_2
 		Camera camera = MC.gameRenderer.getMainCamera();
 		#else
 		Camera camera = MC.gameRenderer.mainCamera();
@@ -249,6 +250,7 @@ public class MinecraftRenderWrapper implements IMinecraftRenderWrapper
 		Vec3 projectedView = camera.position();
 		#endif
 		return new DhVec3d(projectedView.x, projectedView.y, projectedView.z);
+		#endif
 	}
 	
 	@Override

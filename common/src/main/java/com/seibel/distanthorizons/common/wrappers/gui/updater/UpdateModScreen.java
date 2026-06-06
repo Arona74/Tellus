@@ -188,7 +188,7 @@ public class UpdateModScreen extends DhScreen
 				MakeBtn(Translatable(ModInfo.ID + ".updater.update"), this.width / 2 - 75, this.height / 2 + 8, 150, 20, (btn) -> {
 					SelfUpdater.updateMod();
 					#if MC_VER <= MC_1_12_2
-					Objects.requireNonNull(this.mc).displayGuiScreen(this.parent);
+					DhScreenUtil.setScreen(this.parent);
 					#else
 					this.onClose();
 					#endif
@@ -199,7 +199,7 @@ public class UpdateModScreen extends DhScreen
 					Config.Client.Advanced.AutoUpdater.enableSilentUpdates.set(true);
 					SelfUpdater.updateMod();
 					#if MC_VER <= MC_1_12_2
-					Objects.requireNonNull(this.mc).displayGuiScreen(this.parent);
+					DhScreenUtil.setScreen(this.parent);
 					#else
 					this.onClose();
 					#endif
@@ -208,7 +208,7 @@ public class UpdateModScreen extends DhScreen
 		this.addBtn( // Later (not now)
 				MakeBtn(Translatable(ModInfo.ID + ".updater.later"), this.width / 2 + 2, this.height / 2 + 70, 100, 20, (btn) -> {
 					#if MC_VER <= MC_1_12_2
-					Objects.requireNonNull(this.mc).displayGuiScreen(this.parent);
+					DhScreenUtil.setScreen(this.parent);
 					#else
 					this.onClose();
 					#endif
@@ -218,7 +218,7 @@ public class UpdateModScreen extends DhScreen
 				MakeBtn(Translatable(ModInfo.ID + ".updater.never"), this.width / 2 - 102, this.height / 2 + 70, 100, 20, (btn) -> {
 					Config.Client.Advanced.AutoUpdater.enableAutoUpdater.set(false);
 					#if MC_VER <= MC_1_12_2
-					Objects.requireNonNull(this.mc).displayGuiScreen(this.parent);
+					DhScreenUtil.setScreen(this.parent);
 					#else
 					this.onClose();
 					#endif

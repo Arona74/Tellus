@@ -95,11 +95,15 @@ public class MinecraftServerWrapper extends AbstractMinecraftSharedWrapper
 			throw new IllegalStateException("Trying to get the server mcLevel before dedicated server completed initialization!");
 		}
 		
-		ResourceKey<Level> dimensionKey = this.deserializeDimensionResourceKey(dimensionResourceLocation);
-		
 		#if MC_VER <= MC_1_12_2
+		Integer dimensionKey = this.deserializeDimensionResourceKey(dimensionResourceLocation);
+		if (dimensionKey == null)
+		{
+			return null;
+		}
 		WorldServer mcLevel = dedicatedServer.getWorld(dimensionKey);
 		#else
+		ResourceKey<Level> dimensionKey = this.deserializeDimensionResourceKey(dimensionResourceLocation);
 		ServerLevel mcLevel = dedicatedServer.getLevel(dimensionKey);
 		#endif
 		return ServerLevelWrapper.getWrapper(mcLevel);

@@ -56,7 +56,6 @@ import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 import com.seibel.distanthorizons.coreapi.ModInfo;
-import net.minecraft.world.level.levelgen.Heightmap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -78,6 +77,7 @@ import net.minecraft.world.level.chunk.*;
 import net.minecraft.world.level.levelgen.DebugLevelSource;
 import net.minecraft.world.level.levelgen.FlatLevelSource;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
+import net.minecraft.world.level.levelgen.Heightmap;
 #endif
 
 

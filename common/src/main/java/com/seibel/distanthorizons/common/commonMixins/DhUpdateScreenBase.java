@@ -82,8 +82,8 @@ public class DhUpdateScreenBase
 				try
 				{
 					#if MC_VER <= MC_1_12_2
-					DhScreenUtil.showScreen(new UpdateModScreen(
-						new TitleScreen(false),
+					DhScreenUtil.setScreen(new UpdateModScreen(
+						new GuiMainMenu(),
 						versionId
 					));
 					#else

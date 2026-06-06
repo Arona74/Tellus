@@ -8,8 +8,6 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
-#else
-import net.minecraft.world.WorldServer;
 #endif
 
 #if  MC_VER <= MC_1_12_2
@@ -29,13 +27,16 @@ public abstract class AbstractMinecraftSharedWrapper implements IMinecraftShared
 {
 	
 	@Nullable
+	#if MC_VER <= MC_1_12_2
+	protected Integer deserializeDimensionResourceKey(String dimensionResourceLocation)
+	#else
 	protected ResourceKey<Level> deserializeDimensionResourceKey(String dimensionResourceLocation)
+	#endif
 	{
 		#if  MC_VER <= MC_1_12_2
-		int dimensionID;
 		try
 		{
-			dimensionID = Integer.parseInt(dimensionResourceLocation.substring(dimensionResourceLocation.indexOf(":")+1));
+			return Integer.parseInt(dimensionResourceLocation.substring(dimensionResourceLocation.indexOf(":")+1));
 		}
 		catch (NumberFormatException ignored)
 		{
@@ -57,9 +58,9 @@ public abstract class AbstractMinecraftSharedWrapper implements IMinecraftShared
 			#else
 			ResourceKey<Level> dimensionKey = ResourceKey.create(Registry.DIMENSION_REGISTRY, dimResourceLocation);
 			#endif
-		#endif
-		
+			
 		return dimensionKey;
+		#endif
 	}
 	
 }

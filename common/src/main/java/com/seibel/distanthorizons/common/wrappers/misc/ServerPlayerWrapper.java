@@ -129,7 +129,7 @@ public class ServerPlayerWrapper implements IServerPlayerWrapper
 	{
 		#if MC_VER <= MC_1_12_2
 		BlockPos position = this.getServerPlayer().getPosition();
-		return new Vec3d(position.getX(), position.getY(), position.getZ());
+		return new DhVec3d(position.getX(), position.getY(), position.getZ());
 		#else
 		Vec3 position = this.getServerPlayer().position();
 		return new DhVec3d(position.x, position.y, position.z);
