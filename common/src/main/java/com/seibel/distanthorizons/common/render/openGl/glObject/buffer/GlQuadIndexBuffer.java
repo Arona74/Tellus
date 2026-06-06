@@ -21,11 +21,9 @@ package com.seibel.distanthorizons.common.render.openGl.glObject.buffer;
 
 import com.seibel.distanthorizons.api.enums.config.EDhApiGpuUploadMethod;
 import com.seibel.distanthorizons.common.render.openGl.glObject.enums.GLEnums;
-import com.seibel.distanthorizons.core.dataObjects.render.bufferBuilding.IndexBufferBuilder;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import org.lwjgl.opengl.GL32;
-import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
 

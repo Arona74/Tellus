@@ -18,7 +18,6 @@ import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.render.RenderThreadTaskHandler;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.objects.IVertexBufferWrapper;
-import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -83,9 +82,6 @@ public class BlazeVertexBufferWrapper implements IVertexBufferWrapper
 				
 				GpuBufferSlice bufferSlice = new GpuBufferSlice(GLOBAL_INDEX_GPU_BUFFER, /*offset*/ 0, indexBuffer.capacity());
 				COMMAND_ENCODER.writeToBuffer(bufferSlice, indexBuffer);
-				
-				MemoryUtil.memFree(indexBuffer);
-				
 			});
 		}
 	}

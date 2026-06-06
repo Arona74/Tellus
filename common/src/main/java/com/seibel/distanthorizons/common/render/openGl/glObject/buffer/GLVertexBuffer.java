@@ -31,7 +31,6 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.render.objects.IVertexB
 import org.lwjgl.opengl.GL32;
 
 import com.seibel.distanthorizons.api.enums.config.EDhApiGpuUploadMethod;
-import org.lwjgl.system.MemoryUtil;
 
 /**
  * This is a container for a OpenGL
@@ -87,7 +86,6 @@ public class GLVertexBuffer extends GLBuffer implements IVertexBufferWrapper
 				
 				ByteBuffer buffer = IndexBufferBuilder.createBuffer(maxQuadCount);
 				GLOBAL_QUAD_IBO.upload(buffer, maxQuadCount);
-				MemoryUtil.memFree(buffer);
 			});
 		}
 	}

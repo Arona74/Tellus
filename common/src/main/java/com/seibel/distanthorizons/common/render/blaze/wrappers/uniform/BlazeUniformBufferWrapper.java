@@ -17,7 +17,6 @@ import com.seibel.distanthorizons.common.render.blaze.util.BlazeUniformUtil;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.util.math.DhMat4f;
-import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -132,14 +131,13 @@ public class BlazeUniformBufferWrapper implements AutoCloseable
 		ByteBuffer oldBuffer = this.cpuBuffer;
 		
 		int size = calcBufferSize(this.uniformElementTypes);
-		this.cpuBuffer = MemoryUtil.memAlloc(size);
+		this.cpuBuffer = ByteBuffer.allocateDirect(size);
 		this.cpuBuffer.order(ByteOrder.nativeOrder());
 		
 		if (oldBuffer != null)
 		{
 			oldBuffer.position(0);
 			this.cpuBuffer.put(oldBuffer);
-			MemoryUtil.memFree(oldBuffer);
 		}
 		
 		this.bufferSize = size;
@@ -209,11 +207,6 @@ public class BlazeUniformBufferWrapper implements AutoCloseable
 		if (this.gpuBuffer != null)
 		{
 			this.gpuBuffer.close();
-		}
-		
-		if (this.cpuBuffer != null)
-		{
-			MemoryUtil.memFree(this.cpuBuffer);
 		}
 	}
 	

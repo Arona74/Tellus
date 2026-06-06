@@ -24,9 +24,9 @@ import com.seibel.distanthorizons.common.render.openGl.glObject.buffer.GLVertexB
 import com.seibel.distanthorizons.common.render.openGl.glObject.vertexAttribute.GlAbstractVertexAttribute;
 import com.seibel.distanthorizons.common.render.openGl.glObject.vertexAttribute.GlVertexPointer;
 import org.lwjgl.opengl.GL32;
-import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * Renders a full-screen textured quad to the screen. 
@@ -76,14 +76,14 @@ public class GlScreenQuad
 	}
 	private void createBuffer()
 	{
-		ByteBuffer buffer = MemoryUtil.memAlloc(BOX_VERTICES.length * Float.BYTES);
+		ByteBuffer buffer = ByteBuffer.allocateDirect(BOX_VERTICES.length * Float.BYTES);
+		buffer.order(ByteOrder.nativeOrder());
 		buffer.asFloatBuffer().put(BOX_VERTICES);
 		buffer.rewind();
 		
 		this.boxBuffer = new GLVertexBuffer(false);
 		this.boxBuffer.bind();
 		this.boxBuffer.uploadBuffer(buffer, BOX_VERTICES.length, EDhApiGpuUploadMethod.DATA, BOX_VERTICES.length * Float.BYTES);
-		MemoryUtil.memFree(buffer);
 	}
 	
 	//endregion

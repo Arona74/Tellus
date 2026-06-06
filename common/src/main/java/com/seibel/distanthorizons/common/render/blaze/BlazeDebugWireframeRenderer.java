@@ -46,7 +46,6 @@ import com.seibel.distanthorizons.core.util.math.DhVec3d;
 import com.seibel.distanthorizons.core.util.math.DhVec3f;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRenderApiDefinition;
-import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -174,10 +173,10 @@ public class BlazeDebugWireframeRenderer extends AbstractDebugWireframeRenderer
 		
 		
 		// box vertices 
-		ByteBuffer boxVerticesBuffer = MemoryUtil.memAlloc(BOX_VERTICES.length * Float.BYTES);
+		ByteBuffer boxVerticesBuffer = ByteBuffer.allocateDirect(BOX_VERTICES.length * Float.BYTES);
+		boxVerticesBuffer.order(ByteOrder.nativeOrder());
 		boxVerticesBuffer.asFloatBuffer().put(BOX_VERTICES);
 		boxVerticesBuffer.rewind();
-		MemoryUtil.memFree(boxVerticesBuffer);
 		
 		// upload vertex data
 		{
