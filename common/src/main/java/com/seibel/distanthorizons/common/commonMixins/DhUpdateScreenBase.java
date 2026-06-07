@@ -38,12 +38,6 @@ public class DhUpdateScreenBase
 		{
 			return;
 		}
-
-		if (!Config.Client.Advanced.AutoUpdater.enableAutoUpdater.get())
-		{
-			LOGGER.info("Auto update disabled, ignoring new version...");
-			return;
-		}
 		
 		
 		runnable = () ->
