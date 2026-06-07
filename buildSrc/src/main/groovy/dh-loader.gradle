@@ -578,7 +578,8 @@ if (isNotCommonProject) {
                 new JsonSlurper()
                     .parse(input)
                     .each { key, value ->
-                        writer.writeLine("${key}=${value.toString().replace("%", "%%").replace("\n", "\\n")}")
+                        def text = value.toString().replaceAll(/%(?!((\d+)\$)?s|%)/, "%%").replace("\n", "\\n")
+                        writer.writeLine("${key}=${text}")
                     }
             }
         }

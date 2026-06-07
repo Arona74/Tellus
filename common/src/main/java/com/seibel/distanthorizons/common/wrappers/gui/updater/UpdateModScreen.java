@@ -11,6 +11,7 @@ import com.seibel.distanthorizons.core.jar.installer.ModrinthGetter;
 import com.seibel.distanthorizons.core.jar.updater.SelfUpdater;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 #if MC_VER <= MC_1_12_2
+import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 #else
 import net.minecraft.client.gui.screens.Screen;
@@ -297,5 +298,25 @@ public class UpdateModScreen extends DhScreen
 		DhScreenUtil.setScreen(this.parent); // Go to the parent screen
 		#endif
 	}
+	
+	#if MC_VER <= MC_1_12_2
+	@Override
+	protected void actionPerformed(GuiButton button)
+	{
+		super.actionPerformed(button);
+		if(button.id == changelogButton_id)
+		{
+			ChangelogScreen changelogScreen = new ChangelogScreen(this);
+			if (changelogScreen.usable)
+			{
+				DhScreenUtil.setScreen(changelogScreen);
+			}
+			else
+			{
+				LOGGER.warn("Changelog was not able to open");
+			}
+		}
+	}
+	#endif
 	
 }

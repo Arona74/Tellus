@@ -1030,7 +1030,7 @@ class DhConfigScreen extends DhScreen
 			ChangelogScreen changelogScreen = new ChangelogScreen(this);
 			if (changelogScreen.usable)
 			{
-				Minecraft.getMinecraft().displayGuiScreen(changelogScreen);
+				DhScreenUtil.setScreen(changelogScreen);
 			}
 			else
 			{
