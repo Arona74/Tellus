@@ -21,7 +21,11 @@ import net.minecraft.world.entity.LivingEntity;
 
 #if MC_VER <= MC_1_12_2
 import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.entity.Entity;
 import net.minecraft.init.MobEffects;
+import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.fluids.IFluidBlock;
+import net.minecraft.block.state.IBlockState;
 #elif MC_VER < MC_1_17_1
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.client.renderer.FogRenderer;
@@ -129,7 +133,11 @@ public class MixinVanillaFogCommon
 	#endif
 	{
 		#if MC_VER <= MC_1_12_2
-		boolean cameraNotInFluid = mc.getRenderViewEntity() != null && !mc.world.getBlockState(mc.getRenderViewEntity().getPosition()).getMaterial().isLiquid();
+		Entity view = mc.getRenderViewEntity();
+		if (view == null) return true;
+		
+		IBlockState fluidState = mc.world.getBlockState(new BlockPos(view.getPositionEyes(mc.getRenderPartialTicks())));
+		boolean cameraNotInFluid = !(fluidState.getMaterial().isLiquid() || fluidState.getBlock() instanceof IFluidBlock);
 		#elif MC_VER < MC_1_17_1
 		FluidState fluidState = camera.getFluidInCamera();
 		boolean cameraNotInFluid = fluidState.isEmpty();

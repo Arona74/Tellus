@@ -49,7 +49,11 @@ public class KeyedClientLevelManager implements IKeyedClientLevelManager
 		// This prevents multiple threads from creating duplicate wrappers for the same level.
 		synchronized (this.keyedLevelsCache)
 		{
+			#if MC_VER <= MC_1_12_2
+			WorldClient level = (WorldClient) levelWrapper.getWrappedMcObject(); 
+			#else
 			ClientLevel level = (ClientLevel) levelWrapper.getWrappedMcObject();
+			#endif
 			
 			// Check the cache first
 			IServerKeyedClientLevel cached = this.keyedLevelsCache.get(level);
