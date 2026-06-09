@@ -126,7 +126,7 @@ public class CleanroomServerProxy implements AbstractModInitializer.IEventProxy
 	@SubscribeEvent
 	public void serverChunkSaveEvent(ChunkDataEvent.Save event)
 	{
-		if (event.getWorld() instanceof WorldServer worldServer)
+		if (event.getWorld() instanceof WorldServer worldServer && event.getChunk().dirty)
 		{
 			MixinChunkMapCommon.onChunkSave(worldServer, event.getChunk());
 		}
