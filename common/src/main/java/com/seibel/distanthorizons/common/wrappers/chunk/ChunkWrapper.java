@@ -731,16 +731,25 @@ public class ChunkWrapper implements IChunkWrapper
 			
 			//1.12.2 doesn't store lights we must bruteforce it
 			#if MC_VER <= MC_1_12_2
-			for (int x = 0; x < 16; x++)
-			{
-				for (int z = 0; z < 16; z++)
+			for (ExtendedBlockStorage section : this.chunk.getBlockStorageArray()) {
+				if (section == null || section.isEmpty())
 				{
-					for (int y = 0; y < 256; y++)
+					continue;
+				}
+				
+				int baseY = section.getYLocation();
+				
+				for (int x = 0; x < 16; x++)
+				{
+					for (int z = 0; z < 16; z++)
 					{
-						IBlockState blockState = this.chunk.getBlockState(x, y, z);
-						if (blockState.getLightValue() > 0)
+						for (int y = 0; y < 16; y++)
 						{
-							this.blockLightPosList.add(new DhBlockPos(this.chunk.getPos().getXStart() + x, y, this.chunk.getPos().getZStart() + z));
+							IBlockState blockState = section.get(x, y, z);
+							if (blockState.getLightValue() > 0)
+							{
+								this.blockLightPosList.add(new DhBlockPos(this.chunk.getPos().getXStart() + x, baseY + y, this.chunk.getPos().getZStart() + z));
+							}
 						}
 					}
 				}
