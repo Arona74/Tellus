@@ -294,6 +294,10 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 			GLMC.disableBlend();
 		}
 		
+		// needs to be explicitly called since Iris may disable color rendering and not re-enable it
+		// when boats are rendered in the scene (due to rendering out water inside the boat)
+		GL32.glColorMask(true, true, true, true);
+		
 		// needs to be triggered after DH attempts to set the GL state so that Iris 
 		// can override it as needed
 		ApiEventInjector.INSTANCE.fireAllEvents(DhApiBeforeRenderPassEvent.class, renderEventParam.apiCopy);
