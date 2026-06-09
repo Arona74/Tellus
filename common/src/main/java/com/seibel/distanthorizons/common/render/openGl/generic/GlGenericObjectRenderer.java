@@ -236,6 +236,7 @@ public class GlGenericObjectRenderer implements IDhGenericRenderer
 		
 		// box vertex indexes
 		ByteBuffer solidIndexBuffer = ByteBuffer.allocateDirect(BOX_INDICES.length * Integer.BYTES);
+		solidIndexBuffer.order(ByteOrder.nativeOrder());
 		solidIndexBuffer.asIntBuffer().put(BOX_INDICES);
 		solidIndexBuffer.rewind();
 		this.boxIndexBuffer = new GLIndexBuffer(false);
