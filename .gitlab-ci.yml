@@ -48,6 +48,11 @@ build:
       "1.16.5",
       "1.12.2"
       ]
+  before_script:
+    # MC 1.12.2 needs both JDK 25 (for unimined) and JDK 8 (for MC 1.12)
+    # hopefully downloading the JDK 8 like this will solve that problem?
+    - apt-get update -q 
+    - apt-get install -y openjdk-8-jdk
   script:
     # this both runs the unit tests and assembles the code
     - ./gradlew clean -PmcVer="${MC_VER}" -PinfoGitCommit="${CI_COMMIT_SHA}" -PinfoGitBranch="${CI_COMMIT_BRANCH}" -PinfoBuildSource="GitLab CI (${CI_PIPELINE_ID})" --gradle-user-home cache/;
