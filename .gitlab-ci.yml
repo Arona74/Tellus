@@ -80,7 +80,7 @@ api:
     # this also runs unit tests
     - ./gradlew api:build --gradle-user-home cache/;
     - ./gradlew api:addSourcesToCompiledJar --gradle-user-home cache/;
-    - cp ./coreSubProjects/api/build/libs/merged/* .
+    - cp ./coreSubProjects/api/build/libs/* .
   artifacts:
     name: "NightlyBuild_Api-${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_TIMESTAMP}"
     paths:
