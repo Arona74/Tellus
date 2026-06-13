@@ -84,13 +84,13 @@ repositories {
 // ==================== Java Config ====================
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = rootProject.java_version as Integer
+    options.release = rootProject.compile_java_version as Integer
     options.encoding = "UTF-8"
 }
 
 java {
-    sourceCompatibility = JavaVersion.toVersion(gradle.ext.java_version as Integer)
-    targetCompatibility = JavaVersion.toVersion(gradle.ext.java_version as Integer)
+    sourceCompatibility = JavaVersion.toVersion(gradle.ext.compile_java_version as Integer)
+    targetCompatibility = JavaVersion.toVersion(gradle.ext.compile_java_version as Integer)
     withSourcesJar()
 }
 
