@@ -491,8 +491,8 @@ if (isNotCommonProject) {
         // incoming format: `["26.2.0","26.2-alpha.9"]`
         // outgoing format: `[26.2.0],[26.2-alpha.9]`
         def compatible_forgemc_versions = "${rootProject.compatible_minecraft_versions}"
-            .replaceAll("\",\"", "],[")
-            .replaceAll("\"", "")
+            .replaceAll('"', '') // remove quotes
+            .replaceAll(', ', '],[') // replace ", " with "],["
 
         // Quilt contributors
         def quilt_contributors = []
