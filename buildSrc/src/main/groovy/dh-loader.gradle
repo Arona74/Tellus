@@ -467,11 +467,7 @@ if (isNotCommonProject) {
         tasks.jar.finalizedBy(tasks.named("remapJar"))
         tasks.named("remapJar").configure { finalizedBy(tasks.shadeDowngradedApi) }
 
-        // JVMDowngrader inspects the remapped jar, whose Minecraft references are in the production
-        // mapping namespace (intermediary, SRG, ...). Its classpath otherwise defaults to the
-        // dev-mapped compile classpath, so every Minecraft supertype fails to resolve and frame
-        // computation silently falls back to Object. Add the Minecraft jar in the input's namespace
-        // alongside the existing compile classpath, which already supplies the mod-API dependencies.
+        // Fix classpath for JVMDowngrader
         def mcConfig = unimined.minecrafts.get(sourceSets.main)
         tasks.downgradeJar.classpath =
             files({ mcConfig.getMinecraft(mcConfig.mcPatcher.prodNamespace) }) + sourceSets.main.compileClasspath
