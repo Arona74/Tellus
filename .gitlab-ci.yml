@@ -30,15 +30,19 @@ variables:
           - runner_system_failure
           - stuck_or_timeout_failure
 
-# Disable Gradle's cache cleanup before building
-.disable_gradle_cleanup:
+# Build against a per-job Gradle home (own journal, so parallel jobs don't deadlock on
+# journal-1.lock) while sharing the dependency cache via GRADLE_SHARED_MODULES_DIR.
+.prepare_gradle_cache:
   script:
     - |
       guh="${GRADLE_USER_HOME_DIR:-cache/}"
       mkdir -p "$guh"
-      tmp="$guh/gradle.properties.${CI_JOB_ID:-$$}"
-      printf 'org.gradle.cache.cleanup=disabled\n' > "$tmp"
-      mv -f "$tmp" "$guh/gradle.properties"
+      printf 'org.gradle.cache.cleanup=disabled\n' > "$guh/gradle.properties.${CI_JOB_ID:-$$}"
+      mv -f "$guh/gradle.properties.${CI_JOB_ID:-$$}" "$guh/gradle.properties"
+      if [ -n "${GRADLE_SHARED_MODULES_DIR:-}" ]; then
+        mkdir -p "$guh/caches" "$GRADLE_SHARED_MODULES_DIR"
+        ln -sfn "$GRADLE_SHARED_MODULES_DIR" "$guh/caches/modules-2"
+      fi
 
 
 build:
@@ -69,7 +73,7 @@ build:
           ;;
       esac
   script:
-    - !reference [.disable_gradle_cleanup, script]
+    - !reference [.prepare_gradle_cache, script]
     # this both runs the unit tests and assembles the code
     # (no separate clean: the container starts fresh, so build/ is already empty)
     # GRADLE_USER_HOME_DIR is left unset here so a runner can point it at a persistent shared home via its config.toml; when unset it falls back to a per-job cache folder.
@@ -92,7 +96,7 @@ api:
   stage: api
   needs: []
   script:
-    - !reference [.disable_gradle_cleanup, script]
+    - !reference [.prepare_gradle_cache, script]
     # this should only run for the API
     # this also runs unit tests
     - ./gradlew api:build --gradle-user-home "${GRADLE_USER_HOME_DIR:-cache/}";
