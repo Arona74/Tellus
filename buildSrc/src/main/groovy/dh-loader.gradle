@@ -127,7 +127,6 @@ if (isNotCommonProject) {
             )
             if (project.name == "cleanroom") {
                 attributes(
-                    'ModType': 'CRL',
                     'MixinConfigs': "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json",
                     'FMLCorePlugin': 'com.seibel.distanthorizons.cleanroom.DistantHorizonsLoadingPlugin',
                     'FMLCorePluginContainsFMLMod': true,
