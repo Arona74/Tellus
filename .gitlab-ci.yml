@@ -12,11 +12,6 @@ stages:
 variables:
   # Pull core when building
   GIT_SUBMODULE_STRATEGY: recursive
-  # Where Gradle keeps its distribution, caches, and resolved dependencies.
-  # Defaults to a per-job folder so each runner works out of the box; a runner
-  # with a persistent host mount can override this to that mount in its config.toml
-  # to avoid re-downloading the Gradle distribution and dependencies every job.
-  GRADLE_USER_HOME_DIR: "cache/"
 
 
 # These can be extended so code is a bit less duplicated
@@ -66,7 +61,8 @@ build:
   script:
     # this both runs the unit tests and assembles the code
     # (no separate clean: the container starts fresh, so build/ is already empty)
-    - ./gradlew build -PmcVer="${MC_VER}" -PinfoGitCommit="${CI_COMMIT_SHA}" -PinfoGitBranch="${CI_COMMIT_BRANCH}" -PinfoBuildSource="GitLab CI (${CI_PIPELINE_ID})" --gradle-user-home "${GRADLE_USER_HOME_DIR}";
+    # GRADLE_USER_HOME_DIR is left unset here so a runner can point it at a persistent host mount via its config.toml; when unset it falls back to a per-job cache folder.
+    - ./gradlew build -PmcVer="${MC_VER}" -PinfoGitCommit="${CI_COMMIT_SHA}" -PinfoGitBranch="${CI_COMMIT_BRANCH}" -PinfoBuildSource="GitLab CI (${CI_PIPELINE_ID})" --gradle-user-home "${GRADLE_USER_HOME_DIR:-cache/}";
     - cp ./cleanroom/build/libs/* ./fabric/build/libs/* ./forge/build/libs/* ./neoforge/build/libs/* ./build/forgix/* . || true
   artifacts:
     name: "NightlyBuild_${MC_VER}-${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_TIMESTAMP}"
@@ -87,9 +83,9 @@ api:
   script:
     # this should only run for the API
     # this also runs unit tests
-    - ./gradlew api:build --gradle-user-home "${GRADLE_USER_HOME_DIR}";
+    - ./gradlew api:build --gradle-user-home "${GRADLE_USER_HOME_DIR:-cache/}";
     # build the javadoc here so the pages job can publish it without triggering another API build
-    - ./gradlew api:javadoc --gradle-user-home "${GRADLE_USER_HOME_DIR}";
+    - ./gradlew api:javadoc --gradle-user-home "${GRADLE_USER_HOME_DIR:-cache/}";
     - cp ./coreSubProjects/api/build/libs/* .
   artifacts:
     name: "NightlyBuild_Api-${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_TIMESTAMP}"
