@@ -40,22 +40,27 @@ build:
     matrix:
       - MC_VER: [
       "26.1.2",
-      "1.21.11", "1.21.10", "1.21.9", "1.21.8", "1.21.6", "1.21.5", "1.21.4", "1.21.3", "1.21.1", 
-      "1.20.6", "1.20.4", "1.20.2", "1.20.1", 
+      "1.21.11", "1.21.10", "1.21.9", "1.21.8", "1.21.6", "1.21.5", "1.21.4", "1.21.3", "1.21.1",
+      "1.20.6", "1.20.4", "1.20.2", "1.20.1",
       "1.19.4", "1.19.2",
-      "1.18.2", 
-      "1.17.1", 
+      "1.18.2",
+      "1.17.1",
       "1.16.5",
       "1.12.2"
       ]
   before_script:
-    # MC 1.12.2 needs both JDK 25 (for unimined) and JDK 8 (for MC 1.12)
-    # hopefully downloading the JDK 8 like this will solve that problem?
-    - apt-get update -q 
-    - apt-get install -y openjdk-8-jdk
+    # Only MC 1.16.5 (Java 8) and 1.12.2 (JDK 8 for MC alongside JDK 25 for unimined) need JDK 8
+    # Installing it for every matrix job floods the network with parallel apt installs at pipeline start for no reason.
+    - |
+      case "$MC_VER" in
+        1.16.5|1.12.2)
+          apt-get update -q
+          apt-get install -y openjdk-8-jdk
+          ;;
+      esac
   script:
     # this both runs the unit tests and assembles the code
-    - ./gradlew clean -PmcVer="${MC_VER}" -PinfoGitCommit="${CI_COMMIT_SHA}" -PinfoGitBranch="${CI_COMMIT_BRANCH}" -PinfoBuildSource="GitLab CI (${CI_PIPELINE_ID})" --gradle-user-home cache/;
+    # (no separate clean: the container starts fresh, so build/ is already empty)
     - ./gradlew build -PmcVer="${MC_VER}" -PinfoGitCommit="${CI_COMMIT_SHA}" -PinfoGitBranch="${CI_COMMIT_BRANCH}" -PinfoBuildSource="GitLab CI (${CI_PIPELINE_ID})" --gradle-user-home cache/;
     - cp ./cleanroom/build/libs/* ./fabric/build/libs/* ./forge/build/libs/* ./neoforge/build/libs/* ./build/forgix/* . || true
   artifacts:
@@ -76,14 +81,16 @@ api:
   needs: []
   script:
     # this should only run for the API
-    - ./gradlew api:clean --gradle-user-home cache/;
     # this also runs unit tests
     - ./gradlew api:build --gradle-user-home cache/;
+    # build the javadoc here so the pages job can publish it without triggering another API build
+    - ./gradlew api:javadoc --gradle-user-home cache/;
     - cp ./coreSubProjects/api/build/libs/* .
   artifacts:
     name: "NightlyBuild_Api-${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_TIMESTAMP}"
     paths:
       - ./*-combined.jar
+      - coreSubProjects/api/build/docs/javadoc
     exclude:
       - ./*-all.jar
       - ./*-dev.jar
@@ -93,23 +100,19 @@ api:
   extends: .build_java
 
 
-# generate and publish API javadocs
+# publish the API javadocs built by the api job
 pages:
   stage: pages
-  needs: []
+  needs:
+    - job: api
+      artifacts: true
   script:
-    # this should only run for the API
-    - ./gradlew api:clean --gradle-user-home cache/;
-    # this also runs unit tests
-    - ./gradlew api:build --gradle-user-home cache/;
-    - ./gradlew api:javadoc --gradle-user-home cache/;
     - mkdir public
     - cp -r $CI_PROJECT_DIR/coreSubProjects/api/build/docs/javadoc/. public
   artifacts:
     paths:
       - public
   allow_failure: false
-  extends: .build_java
 
 translations:
   stage: translations
