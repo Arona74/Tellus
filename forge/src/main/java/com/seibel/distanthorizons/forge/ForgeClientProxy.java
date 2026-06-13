@@ -133,7 +133,11 @@ public class ForgeClientProxy implements AbstractModInitializer.IEventProxy
 				executor.execute(() ->
 				{
 					ChunkAccess chunk = level.getChunk(event.getPos());
-					SharedApi.INSTANCE.applyChunkUpdate(new ChunkWrapper(chunk, wrappedLevel), wrappedLevel);
+					SharedApi.INSTANCE.applyChunkUpdate(
+						new ChunkWrapper(chunk, wrappedLevel), 
+						wrappedLevel, 
+						true
+					);
 				});
 			}
 		}
@@ -161,7 +165,11 @@ public class ForgeClientProxy implements AbstractModInitializer.IEventProxy
 				executor.execute(() ->
 				{
 					ChunkAccess chunk = level.getChunk(event.getPos());
-					SharedApi.INSTANCE.applyChunkUpdate(new ChunkWrapper(chunk, wrappedLevel), wrappedLevel);
+					SharedApi.INSTANCE.applyChunkUpdate(
+						new ChunkWrapper(chunk, wrappedLevel), 
+						wrappedLevel,
+						true
+					);
 				});
 			}
 		}
@@ -173,8 +181,11 @@ public class ForgeClientProxy implements AbstractModInitializer.IEventProxy
 		if (MC.clientConnectedToDedicatedServer())
 		{
 			ILevelWrapper wrappedLevel = ProxyUtil.getLevelWrapper(GetEventLevel(event));
-			IChunkWrapper chunkWrapper = new ChunkWrapper(event.getChunk(), wrappedLevel);
-			SharedApi.INSTANCE.applyChunkUpdate(chunkWrapper, wrappedLevel);
+			SharedApi.INSTANCE.applyChunkUpdate(
+				new ChunkWrapper(event.getChunk(), wrappedLevel), 
+				wrappedLevel, 
+				true
+			);
 		}
 	}
 	
