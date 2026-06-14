@@ -154,13 +154,6 @@ public class FabricMain extends AbstractModInitializer implements ClientModIniti
 		{
 			ModAccessorInjector.INSTANCE.get(IBCLibAccessor.class).setRenderCustomFog(false); // Remove BCLib's fog
 		}
-		
-		#if MC_VER >= MC_1_20_1
-		if (SingletonInjector.INSTANCE.get(IModChecker.class).isModLoaded("sodium"))
-		{
-			ModAccessorInjector.INSTANCE.get(ISodiumAccessor.class).setFogOcclusion(false);
-		}
-		#endif
 	}
 	
 }
