@@ -45,13 +45,6 @@ def loadVersionProperties() {
     props.each { key, value -> gradle.ext.set(key, value) }
     gradle.ext.mcVers = mcVers
     gradle.ext.mcIndex = mcIndex
-
-    // Compiled against the newest Java version that MC supports (JVMDowngrader will downgrade to the target version)
-    gradle.ext.compile_java_version = mcVers.collect {
-        def verProps = new Properties()
-        verProps.load(new FileInputStream("$rootDir/versionProperties/${it}.properties"))
-        (verProps.getProperty("java_version") ?: "8") as Integer
-    }.max()
 }
 loadVersionProperties()
 
