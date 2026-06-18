@@ -2,6 +2,7 @@ package com.seibel.distanthorizons.common;
 
 import com.seibel.distanthorizons.api.enums.config.EDhApiMcRenderingFadeMode;
 import com.seibel.distanthorizons.api.enums.config.EDhApiRenderingEngine;
+import com.seibel.distanthorizons.api.enums.rendering.EDhApiTransparency;
 import com.seibel.distanthorizons.api.enums.worldGeneration.EDhApiDistantGeneratorMode;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiAfterDhInitEvent;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeDhInitEvent;
@@ -104,6 +105,7 @@ public abstract class AbstractModInitializer
 		// Client uses config for auto-updater, so it's initialized here instead of post-init stage
 		this.initConfig();
 		logIncompatibilityWarnings(); // needs to be called after config loading
+		setDisabledDhConfigBasedOnMods();
 		setUnsupportedConfigsBasedOnMcVersion();
 		Initializer.postConfigInit();
 		
@@ -431,6 +433,23 @@ public abstract class AbstractModInitializer
 		Config.Client.Advanced.Graphics.Experimental.renderingEngine.setMcVersionOverrideValue(EDhApiRenderingEngine.OPEN_GL);
 		#else
 		#endif
+	}
+	
+	/**
+	 * Some DH configs should be disabled if a given
+	 * mod is present.
+	 */
+	private static void setDisabledDhConfigBasedOnMods()
+	{
+		IIrisAccessor irisAccessor = ModAccessorInjector.INSTANCE.get(IIrisAccessor.class);
+		if (irisAccessor != null)
+		{
+			// Transparency is required when Iris shaders are present, otherwise
+			// rendering will not work properly.
+			// Note: this fix doesn't prevent disabling transparency
+			// due to a lack of vertical LOD slices, so that may still cause issues.
+			Config.Client.Advanced.Graphics.Quality.transparency.setApiValue(EDhApiTransparency.COMPLETE);
+		}
 	}
 	
 	//endregion
