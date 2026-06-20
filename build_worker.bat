@@ -34,7 +34,7 @@ REM >>"%WORK_DIR%\build_%VERSION%.log" 2>&1
 echo ==================== [%VERSION%] Exporting ====================
 mkdir "%JAR_OUTPUT_DIR%"
 robocopy "%FORGIX_BUILT_JAR_DIR%" "%JAR_OUTPUT_DIR%" /NFL /NDL
-robocopy "%CLEANROOM_BUILT_JAR_DIR%" "%JAR_OUTPUT_DIR%" /NFL /NDL
+robocopy "%CLEANROOM_BUILT_JAR_DIR%" "%JAR_OUTPUT_DIR%" /XF "*-dev.jar" "*-all.jar" "*-sources.jar" /NFL /NDL
 
 echo ==================== [%VERSION%] Done ====================
 endlocal
