@@ -20,21 +20,17 @@
 package com.seibel.distanthorizons.fabric.wrappers.config;
 
 import com.seibel.distanthorizons.common.wrappers.gui.GetConfigScreen;
-#if MC_VER != MC_26_2_0
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
-#endif
 
 /** For making the config show up in modmenu */
-public class ModMenuIntegration #if MC_VER != MC_26_2_0 implements ModMenuApi #endif
+public class ModMenuIntegration implements ModMenuApi
 {
-	#if MC_VER != MC_26_2_0
 	// For the custom config code
 	@Override
 	public ConfigScreenFactory<?> getModConfigScreenFactory()
 	{
 		return parent -> GetConfigScreen.getScreen(parent);
 	}
-	#endif
 	
 }
