@@ -24,7 +24,7 @@ for %%f in (%ROOT%versionProperties\*) do (
 	
 	REM Minor timeout between launches so we can stop the build early if we only want 
 	REM to test part of the script and to reduce startup load
-	timeout /t 3 /nobreak
+	timeout /t 1 /nobreak
 	
 REM 2>nul to supress a harmless warning that the for loop
 REM "cannot find the drive specified"
