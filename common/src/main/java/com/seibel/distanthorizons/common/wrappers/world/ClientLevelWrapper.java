@@ -10,6 +10,7 @@ import com.seibel.distanthorizons.api.objects.data.IDhApiFullDataSource;
 import com.seibel.distanthorizons.common.wrappers.block.BiomeWrapper;
 import com.seibel.distanthorizons.common.wrappers.block.BlockStateWrapper;
 import com.seibel.distanthorizons.common.wrappers.block.ClientBlockStateColorCache;
+import com.seibel.distanthorizons.core.dataObjects.render.textures.BlockTextureRegistry;
 import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
 import com.seibel.distanthorizons.common.wrappers.level.KeyedClientLevelManager;
 import com.seibel.distanthorizons.core.api.internal.SharedApi;
@@ -413,9 +414,10 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 	{
 		this.blockColorCacheByBlockState.clear();
 		
-		// this technically only needs to be called once globally, but it's easier
+		// these technically only need to be called once globally, but it's easier
 		// to handle here statically
 		ClientBlockStateColorCache.clearCachedTints();
+		BlockTextureRegistry.INSTANCE.clear();
 	}
 	
 	private IDimensionTypeWrapper dimensionTypeWrapper = null;

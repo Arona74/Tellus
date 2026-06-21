@@ -113,6 +113,12 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		this.setGLState(renderParams, firstPass);
 		
 		this.bindLightmap(renderParams.lightmap);
+		
+		if (Config.Client.Advanced.Graphics.Quality.enableTexturedLods.get())
+		{
+			GlDhTerrainRenderer.INSTANCE.blockTextureAtlas.uploadPendingTiles();
+			GlDhTerrainRenderer.INSTANCE.blockTextureAtlas.bind();
+		}
 	}
 	private void setGLState(
 		DhApiRenderParam renderEventParam,
@@ -371,6 +377,10 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		GLMC.glDepthFunc(previousDepthFunc);
 		#endif
 		this.unbindLightmap();
+		if (Config.Client.Advanced.Graphics.Quality.enableTexturedLods.get())
+		{
+			GlDhTerrainRenderer.INSTANCE.blockTextureAtlas.unbind();
+		}
 		this.shaderProgramForThisFrame.unbind();
 	}
 	

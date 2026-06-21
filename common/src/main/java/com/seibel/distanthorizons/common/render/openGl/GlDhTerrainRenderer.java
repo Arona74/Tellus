@@ -1,5 +1,6 @@
 package com.seibel.distanthorizons.common.render.openGl;
 
+import com.seibel.distanthorizons.common.render.openGl.terrain.GlBlockTextureAtlas;
 import com.seibel.distanthorizons.common.render.openGl.terrain.GlDhTerrainShaderProgram;
 import com.seibel.distanthorizons.core.dataObjects.render.bufferBuilding.LodBufferContainer;
 import com.seibel.distanthorizons.core.render.RenderParams;
@@ -10,6 +11,9 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhTe
 public class GlDhTerrainRenderer implements IDhTerrainRenderer
 {
 	public static final GlDhTerrainRenderer INSTANCE = new GlDhTerrainRenderer();
+	
+	/** holds the block textures used when textured LODs are enabled */
+	public final GlBlockTextureAtlas blockTextureAtlas = new GlBlockTextureAtlas();
 	
 	private GlDhTerrainShaderProgram terrainShaderProgram = null;
 	

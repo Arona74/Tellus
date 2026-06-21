@@ -18,6 +18,7 @@ import com.seibel.distanthorizons.common.render.blaze.util.BlazeDhVertexFormatUt
 import com.seibel.distanthorizons.common.render.blaze.wrappers.BlazeVertexFormatBuilder;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPassWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.RenderPipelineBuilderWrapper;
+import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeBlockTextureAtlas;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.texture.BlazeTextureViewWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.uniform.BlazeLodUniformBufferWrapper;
 import com.seibel.distanthorizons.common.render.blaze.wrappers.buffer.BlazeVertexBufferWrapper;
@@ -108,6 +109,7 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 			pipelineBuilder.withPolygonMode(RenderPipelineBuilderWrapper.EDhPolygonMode.FILL);
 			
 			pipelineBuilder.withSampler("uLightMap");
+			pipelineBuilder.withSampler("uBlockAtlas");
 			
 			pipelineBuilder.withVertexShader("lod/blaze/vert");
 			pipelineBuilder.withFragmentShader("lod/blaze/frag");
@@ -122,8 +124,7 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 				.add("vColor", BlazeDhVertexFormatUtil.RGBA_UBYTE_COLOR)
 				.add("irisMaterial", BlazeDhVertexFormatUtil.IRIS_MATERIAL)
 				.add("irisNormal", BlazeDhVertexFormatUtil.IRIS_NORMAL)
-				.add("paddingTwo", BlazeDhVertexFormatUtil.BYTE_PAD)
-				.add("paddingThree", BlazeDhVertexFormatUtil.BYTE_PAD) // padding is to make sure the format is a multiple of 4
+				.add("textureTile", BlazeDhVertexFormatUtil.TEXTURE_TILE)
 				.build();
 			pipelineBuilder.withVertexFormat(vertexFormat);
 			
@@ -241,6 +242,9 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 			
 			
 			
+			profiler.popPush("block texture upload");
+			BlazeBlockTextureAtlas.INSTANCE.uploadPendingTiles();
+			
 			// render pass setup
 			{
 				profiler.popPush("rendering");
@@ -257,6 +261,8 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 					LightMapWrapper lightMapWrapper = (LightMapWrapper) renderEventParam.lightmap;
 					BlazeTextureViewWrapper lightmapTextureViewWrapper = lightMapWrapper.getTextureViewWrapper();
 					renderPassWrapper.bindTexture("uLightMap", lightmapTextureViewWrapper);
+					
+					renderPassWrapper.bindTexture("uBlockAtlas", BlazeBlockTextureAtlas.INSTANCE.getTextureWrapper());
 					
 					// set pipeline
 					renderPassWrapper.setPipeline(opaquePass ? this.opaquePipeline : this.transparentPipeline);
