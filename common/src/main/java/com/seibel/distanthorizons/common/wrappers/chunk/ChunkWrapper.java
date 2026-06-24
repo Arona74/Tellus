@@ -148,6 +148,8 @@ public class ChunkWrapper implements IChunkWrapper
 	
 	@Override
 	public ChunkWrapper copy() { return new ChunkWrapper(this.chunk, this.wrappedLevel); }
+	@Override
+	public ChunkWrapper copyWithLevel(ILevelWrapper levelWrapper) { return new ChunkWrapper(this.chunk, levelWrapper); }
 	
 	//endregion
 	

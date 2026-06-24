@@ -101,7 +101,11 @@ public class CleanroomClientProxy implements AbstractModInitializer.IEventProxy
 				executor.execute(() ->
 				{
 					Chunk chunk = level.getChunk(event.getPos());
-					SharedApi.INSTANCE.applyChunkUpdate(new ChunkWrapper(chunk, wrappedLevel), wrappedLevel);
+					SharedApi.INSTANCE.applyChunkUpdate(
+						new ChunkWrapper(chunk, wrappedLevel), 
+						wrappedLevel,
+						true
+					);
 				});
 			}
 		}
@@ -125,7 +129,11 @@ public class CleanroomClientProxy implements AbstractModInitializer.IEventProxy
 				executor.execute(() ->
 				{
 					Chunk chunk = level.getChunk(event.getPos());
-					SharedApi.INSTANCE.applyChunkUpdate(new ChunkWrapper(chunk, wrappedLevel), wrappedLevel);
+					SharedApi.INSTANCE.applyChunkUpdate(
+						new ChunkWrapper(chunk, wrappedLevel), 
+						wrappedLevel,
+						true
+					);
 				});
 			}
 		}
@@ -138,7 +146,7 @@ public class CleanroomClientProxy implements AbstractModInitializer.IEventProxy
 		{
 			ILevelWrapper wrappedLevel = ProxyUtil.getLevelWrapper(GetEventLevel(event));
 			IChunkWrapper chunkWrapper = new ChunkWrapper(event.getChunk(), wrappedLevel);
-			SharedApi.INSTANCE.applyChunkUpdate(chunkWrapper, wrappedLevel);
+			SharedApi.INSTANCE.applyChunkUpdate(chunkWrapper, wrappedLevel, true);
 		}
 	}
 	

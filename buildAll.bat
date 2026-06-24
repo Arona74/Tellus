@@ -22,6 +22,7 @@ for %%f in (versionProperties\*) do (
     
     echo ==================== Moving jar ====================
     move build\forgix\*.jar buildAllJars\
+    move cleanroom\build\libs\*.jar buildAllJars\
 )
 
 endlocal

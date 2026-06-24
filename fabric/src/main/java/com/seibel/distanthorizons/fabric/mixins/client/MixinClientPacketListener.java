@@ -65,7 +65,7 @@ public class MixinClientPacketListener
 		executor.execute(() ->
 		{
 			IClientLevelWrapper clientLevelWrapper = ClientLevelWrapper.getWrapper(clientLevel);
-			SharedApi.INSTANCE.applyChunkUpdate(new ChunkWrapper(chunk, clientLevelWrapper), clientLevelWrapper);
+			SharedApi.INSTANCE.applyChunkUpdate(new ChunkWrapper(chunk, clientLevelWrapper), clientLevelWrapper, true);
 		});
 	}
 

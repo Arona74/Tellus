@@ -127,7 +127,6 @@ if (isNotCommonProject) {
             )
             if (project.name == "cleanroom") {
                 attributes(
-                    'ModType': 'CRL',
                     'MixinConfigs': "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json",
                     'FMLCorePlugin': 'com.seibel.distanthorizons.cleanroom.DistantHorizonsLoadingPlugin',
                     'FMLCorePluginContainsFMLMod': true,
@@ -487,8 +486,8 @@ if (isNotCommonProject) {
         // incoming format: `["26.2.0","26.2-alpha.9"]`
         // outgoing format: `[26.2.0],[26.2-alpha.9]`
         def compatible_forgemc_versions = "${rootProject.compatible_minecraft_versions}"
-            .replaceAll("\",\"", "],[")
-            .replaceAll("\"", "")
+            .replaceAll('"', '') // remove quotes
+            .replaceAll(', ', '],[') // replace ", " with "],["
 
         // Quilt contributors
         def quilt_contributors = []

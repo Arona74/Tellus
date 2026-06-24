@@ -21,6 +21,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 #endif
 
+import java.util.ArrayList;
 import java.util.List;
 
 #if MC_VER <= MC_1_12_2
@@ -82,12 +83,22 @@ public class DhScreen extends Screen
 		drawString(fontRenderer, text.getFormattedText(), x, y, color);
 	}
 	
-	protected void DhRenderComponentTooltip(List<ITextComponent> list, int x, int y) {
-		drawHoveringText(list.stream().map(ITextComponent::getFormattedText).toList(), x, y, fontRenderer);
+	protected void DhRenderComponentTooltip(List<ITextComponent> list, int x, int y) 
+	{
+		ArrayList<String> formattedText = new ArrayList<>(list.size());
+		for (ITextComponent component : list)
+		{
+			formattedText.add(component.getFormattedText());
+		}
+		
+		drawHoveringText(formattedText, x, y, fontRenderer);
 	}
 	
-	protected void DhRenderTooltip(ITextComponent text, int x, int y) {
-		drawHoveringText(List.of(text.getFormattedText()), x, y, fontRenderer);
+	protected void DhRenderTooltip(ITextComponent text, int x, int y) 
+	{
+		ArrayList<String> formattedText = new ArrayList<>(1);
+		formattedText.add(text.getFormattedText());
+		drawHoveringText(formattedText, x, y, fontRenderer);
 	}
 	#elif MC_VER < MC_1_20_1
 	protected void DhDrawCenteredString(PoseStack guiStack, Font font, Component text, int x, int y, int color)

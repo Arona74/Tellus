@@ -252,7 +252,7 @@ public class InternalServerGenerator
 		{
 			ArrayList<CompletableFuture<Void>> releaseFutures = new ArrayList<>();
 			#if MC_VER <= MC_1_12_2
-			Set<Long> neighborIgnoreSet = new HashSet<>();
+			Set<ChunkPos> neighborIgnoreChunkPosSet = new HashSet<>();
 			#endif
 			
 			// release all chunks from the server to prevent out of memory issues
@@ -268,8 +268,12 @@ public class InternalServerGenerator
 				{
 					for (int dz = -1; dz <= 1; dz++)
 					{
-						if (dx == 0 && dz == 0) continue;
-						neighborIgnoreSet.add(ChunkPos.asLong(chunkPos.x + dx, chunkPos.z + dz));
+						if (dx == 0 && dz == 0)
+						{
+							continue;
+						}
+						
+						neighborIgnoreChunkPosSet.add(new ChunkPos(chunkPos.x + dx, chunkPos.z + dz));
 					}
 				}
                 #endif
@@ -277,9 +281,8 @@ public class InternalServerGenerator
     
             #if MC_VER <= MC_1_12_2
 			// release neighbor chunks that were loaded in requestChunkFromServerAsync
-			for (long posLong : neighborIgnoreSet)
+			for (ChunkPos neighborPos : neighborIgnoreChunkPosSet)
 			{
-				ChunkPos neighborPos = new ChunkPos(ChunkPos.getX(posLong), ChunkPos.getZ(posLong));
 				releaseFutures.add(this.releaseChunkFromServerAsync(this.params.mcServerLevel, neighborPos));
 			}
             #endif
@@ -314,9 +317,8 @@ public class InternalServerGenerator
             #endif
     
             #if MC_VER <= MC_1_12_2
-			for (long posLong : neighborIgnoreSet)
+			for (ChunkPos neighborPos : neighborIgnoreChunkPosSet)
 			{
-				ChunkPos neighborPos = new ChunkPos(ChunkPos.getX(posLong), ChunkPos.getZ(posLong));
 				this.chunkSaveIgnoreTimer.schedule(new TimerTask()
 				{
 					@Override

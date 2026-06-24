@@ -16,7 +16,7 @@ public class MixinMinecraft
 	@Inject(method = "init", at = @At("TAIL"))
 	private void onInit(CallbackInfo ci)
 	{
-		if(Config.Client.Advanced.AutoUpdater.enableAutoUpdater.get() && !ModInfo.IS_DEV_BUILD) // weird lib class not found error can occur if we don't check if we are in dev
+		if(Config.Client.Advanced.AutoUpdater.enableAutoUpdater.get())
 		{
 			DhUpdateScreenBase.tryShowUpdateScreenAndRunAutoUpdateStartup(null);
 		}

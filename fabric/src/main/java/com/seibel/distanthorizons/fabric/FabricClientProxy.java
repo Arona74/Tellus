@@ -130,7 +130,7 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 					executor.execute(() ->
 					{
 						IClientLevelWrapper wrappedLevel = ClientLevelWrapper.getWrapper(level);
-						SharedApi.INSTANCE.applyChunkUpdate(new ChunkWrapper(chunk, wrappedLevel), wrappedLevel);
+						SharedApi.INSTANCE.applyChunkUpdate(new ChunkWrapper(chunk, wrappedLevel), wrappedLevel, true);
 					});
 				}
 			}
@@ -159,8 +159,9 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 								//LOGGER.trace("attack block at blockPos: " + blockPos);
 								
 								SharedApi.INSTANCE.applyChunkUpdate(
-										new ChunkWrapper(chunk, wrappedLevel),
-										wrappedLevel
+									new ChunkWrapper(chunk, wrappedLevel),
+									wrappedLevel,
+									true
 								);
 							}
 						});
@@ -198,8 +199,9 @@ public class FabricClientProxy implements AbstractModInitializer.IEventProxy
 									//LOGGER.trace("use block at blockPos: " + hitResult.getBlockPos());
 									
 									SharedApi.INSTANCE.applyChunkUpdate(
-											new ChunkWrapper(chunk, wrappedLevel),
-											wrappedLevel
+										new ChunkWrapper(chunk, wrappedLevel),
+										wrappedLevel,
+										true
 									);
 								}
 							});
