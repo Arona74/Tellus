@@ -18,7 +18,6 @@ import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhMetaRenderer;
 import com.seibel.distanthorizons.coreapi.DependencyInjection.ApiEventInjector;
-import net.minecraft.client.Minecraft;
 
 import java.awt.*;
 
@@ -70,8 +69,8 @@ public class BlazeDhMetaRenderer implements IDhMetaRenderer
 		int oldHeight = this.dhDepthTextureWrapper.getHeight();
 		
 		boolean texturesChanged = false;
-		texturesChanged = this.dhDepthTextureWrapper.tryCreateOrResize() | texturesChanged;
-		texturesChanged = this.dhColorTextureWrapper.tryCreateOrResize() | texturesChanged;
+		texturesChanged = this.dhDepthTextureWrapper.tryCreateOrResizeToScreenSize() | texturesChanged;
+		texturesChanged = this.dhColorTextureWrapper.tryCreateOrResizeToScreenSize() | texturesChanged;
 		
 		if (texturesChanged)
 		{
