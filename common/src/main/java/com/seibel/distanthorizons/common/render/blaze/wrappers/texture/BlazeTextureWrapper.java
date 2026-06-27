@@ -5,6 +5,7 @@ public class BlazeTextureWrapper {}
 
 #else
 
+import com.mojang.blaze3d.platform.NativeImage;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
@@ -132,6 +133,16 @@ public class BlazeTextureWrapper implements IDhBlazeTexture
 		int destinationX, int destinationY, 
 		int width, int height)
 	{
+		#if MC_VER <= MC_26_1_2
+		COMMAND_ENCODER.writeToTexture(
+			this.texture,
+			pixelBuffer,
+			NativeImage.Format.RGBA,
+			/*mipLevel*/ 0, /*depthOrLayer*/ 0,
+			destinationX, destinationY,
+			width, height
+		); 
+		#else
 		COMMAND_ENCODER.writeToTexture(
 			this.texture,
 			pixelBuffer,
@@ -139,6 +150,7 @@ public class BlazeTextureWrapper implements IDhBlazeTexture
 			destinationX, destinationY,
 			width, height
 		); 
+		#endif
 	}
 	
 	//endregion
