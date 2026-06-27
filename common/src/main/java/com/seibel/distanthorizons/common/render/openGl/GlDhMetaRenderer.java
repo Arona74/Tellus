@@ -320,6 +320,10 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		IDhApiFramebuffer framebufferOverride = OverrideInjector.INSTANCE.get(IDhApiFramebuffer.class);
 		
 		
+		if (this.depthTexture != null)
+		{
+			this.depthTexture.destroy();
+		}
 		this.depthTexture = new GlDhDepthTexture(this.textureWidth, this.textureHeight, EGlDhDepthBufferFormat.DEPTH32F);
 		this.framebuffer.addDepthAttachment(this.depthTexture.getTextureId(), EGlDhDepthBufferFormat.DEPTH32F.isCombinedStencil());
 		if (framebufferOverride != null)
@@ -331,6 +335,11 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		// if we are using MC's frame buffer, a color texture is already present and shouldn't need to be bound
 		if (!this.usingMcFramebuffer)
 		{
+			if (this.nullableColorTexture != null)
+			{
+				this.nullableColorTexture.destroy();
+			}
+			
 			this.nullableColorTexture = GlDhColorTexture.builder()
 				.setDimensions(this.textureWidth, this.textureHeight)
 				.setInternalFormat(EGlDhInternalTextureFormat.RGBA8)
