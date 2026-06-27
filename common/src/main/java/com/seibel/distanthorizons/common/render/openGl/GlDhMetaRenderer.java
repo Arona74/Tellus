@@ -118,10 +118,22 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		DhApiRenderParam renderEventParam,
 		boolean firstPass)
 	{
+		//=================//
+		// local var setup //
+		//=================//
+		
 		#if MC_VER <= MC_1_12_2
 		this.previousBoundTextureId = GLMC.getActiveTexture();
 		this.previousDepthFunc = GLMC.getActiveDepthFunc();
 		#endif
+		
+		// view sizes are used in a few places and
+		// should be used instead of the instance variables
+		// to prevent using the last frame's value
+		int viewportWidth = MC_RENDER.getTargetFramebufferViewportWidth();
+		int viewportHeight = MC_RENDER.getTargetFramebufferViewportHeight();
+		
+		
 		
 		//===================//
 		// framebuffer setup //
@@ -159,7 +171,8 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		
 		// This is required for MC versions 1.21.5+
 		// due to MC updating the lightmap by changing the viewport size
-		GL32.glViewport(0, 0, this.textureWidth, this.textureHeight);
+		// and some camera mods that change the viewport size 
+		GL32.glViewport(0, 0, viewportWidth, viewportHeight);
 		
 		this.shaderProgramForThisFrame.bind();
 		
@@ -184,8 +197,8 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		//===============//
 		
 		// resize the textures if needed
-		if (MC_RENDER.getTargetFramebufferViewportWidth() != this.textureWidth
-			|| MC_RENDER.getTargetFramebufferViewportHeight() != this.textureHeight)
+		if (viewportWidth != this.textureWidth
+			|| viewportHeight != this.textureHeight)
 		{
 			// just resizing the textures doesn't work when Optifine is present,
 			// so recreate the textures with the new size instead
