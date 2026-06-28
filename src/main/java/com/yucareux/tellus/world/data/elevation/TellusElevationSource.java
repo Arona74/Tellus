@@ -24,7 +24,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.imageio.ImageIO;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
@@ -69,7 +69,7 @@ public final class TellusElevationSource implements TellusCacheHandle {
    private volatile EarthGeneratorSettings.DemSelection lastLoggedSelection;
 
    public TellusElevationSource() {
-      this.cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/elevation-tellus");
+      this.cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/elevation-tellus");
       this.cache = CacheBuilder.newBuilder().maximumSize(MAX_CACHE_TILES).build(new CacheLoader<TellusElevationSource.TileKey, ShortRaster>() {
          public ShortRaster load( TellusElevationSource.TileKey key) throws Exception {
             return TellusElevationSource.this.loadTile(key);

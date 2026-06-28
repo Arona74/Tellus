@@ -28,7 +28,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.zip.InflaterInputStream;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 public final class NorwayDtm1ElevationSource implements TellusCacheHandle {
@@ -55,7 +55,7 @@ public final class NorwayDtm1ElevationSource implements TellusCacheHandle {
    private final LoadingCache<NorwayDtm1ElevationSource.TileCacheKey, NorwayDtm1ElevationSource.TileFile> fileCache;
 
    public NorwayDtm1ElevationSource() {
-      this.cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/elevation-norway-dtm1");
+      this.cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/elevation-norway-dtm1");
       this.fileCache = CacheBuilder.newBuilder().maximumSize(MAX_FILE_CACHE).build(new CacheLoader<NorwayDtm1ElevationSource.TileCacheKey, NorwayDtm1ElevationSource.TileFile>() {
          public NorwayDtm1ElevationSource.TileFile load(NorwayDtm1ElevationSource.TileCacheKey key) throws Exception {
             return NorwayDtm1ElevationSource.this.loadTile(key);

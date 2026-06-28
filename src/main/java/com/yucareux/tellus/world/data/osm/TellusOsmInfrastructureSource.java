@@ -30,7 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 public final class TellusOsmInfrastructureSource implements TellusCacheHandle {
@@ -52,7 +52,7 @@ public final class TellusOsmInfrastructureSource implements TellusCacheHandle {
    private static final String INFRASTRUCTURE_LAYER_NAME = "infrastructure";
    private static final byte[] EMPTY_TILE_PAYLOAD = new byte[0];
 
-   private final Path cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/map/infrastructure");
+   private final Path cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/map/infrastructure");
    private final PmTilesRangeReader pmTilesReader;
    private final Object initLock = new Object();
    private final LoadingCache<TellusOsmInfrastructureSource.TileKey, OsmStreetLightTile> cache;

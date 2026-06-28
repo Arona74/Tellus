@@ -28,7 +28,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.zip.InflaterInputStream;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 public final class CopernicusDemElevationSource implements TellusCacheHandle {
@@ -44,7 +44,7 @@ public final class CopernicusDemElevationSource implements TellusCacheHandle {
    private final LoadingCache<CopernicusDemElevationSource.TileKey, CopernicusDemElevationSource.TileRecord> fileCache;
 
    public CopernicusDemElevationSource() {
-      this.cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/elevation-copernicus");
+      this.cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/elevation-copernicus");
       this.fileCache = CacheBuilder.newBuilder().maximumSize(MAX_FILE_CACHE).build(new CacheLoader<CopernicusDemElevationSource.TileKey, CopernicusDemElevationSource.TileRecord>() {
          public CopernicusDemElevationSource.TileRecord load(CopernicusDemElevationSource.TileKey key) throws Exception {
             return CopernicusDemElevationSource.this.loadTile(key);

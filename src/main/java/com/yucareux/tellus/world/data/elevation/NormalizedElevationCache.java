@@ -24,7 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 final class NormalizedElevationCache implements TellusCacheHandle {
@@ -40,7 +40,7 @@ final class NormalizedElevationCache implements TellusCacheHandle {
 
    NormalizedElevationCache() {
       this(
-         FabricLoader.getInstance().getGameDir().resolve("tellus/cache/elevation-normalized"),
+         TellusPlatform.gameDir().resolve("tellus/cache/elevation-normalized"),
          Executors.newFixedThreadPool(DEFAULT_THREADS, new BuilderThreadFactory()),
          DEFAULT_MEMORY_TILES,
          true

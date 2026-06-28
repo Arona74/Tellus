@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 public final class Gebco2026ElevationSource implements TellusCacheHandle {
@@ -62,7 +62,7 @@ public final class Gebco2026ElevationSource implements TellusCacheHandle {
    private final Map<Gebco2026ElevationSource.TileKey, Long> localOutageMisses = new HashMap<>();
 
    public Gebco2026ElevationSource() {
-      this.cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/elevation-gebco2026");
+      this.cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/elevation-gebco2026");
       String localRootProperty = System.getProperty("tellus.gebco2026.localRoot");
       this.localRoot = localRootProperty == null || localRootProperty.isBlank() ? null : Path.of(localRootProperty);
       this.fileCache = CacheBuilder.newBuilder().maximumSize(MAX_FILE_CACHE).build(new CacheLoader<Gebco2026ElevationSource.TileKey, Gebco2026ElevationSource.TileRecord>() {

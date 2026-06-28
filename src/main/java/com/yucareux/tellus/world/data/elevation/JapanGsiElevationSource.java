@@ -22,7 +22,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import javax.imageio.ImageIO;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 public final class JapanGsiElevationSource implements TellusCacheHandle {
@@ -56,7 +56,7 @@ public final class JapanGsiElevationSource implements TellusCacheHandle {
    private final LoadingCache<JapanGsiElevationSource.TileKey, JapanGsiElevationSource.TileRecord> tileCache;
 
    public JapanGsiElevationSource() {
-      this.cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/elevation-japangsi");
+      this.cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/elevation-japangsi");
       this.tileCache = CacheBuilder.newBuilder().maximumSize(MAX_CACHE_TILES).build(new CacheLoader<JapanGsiElevationSource.TileKey, JapanGsiElevationSource.TileRecord>() {
          public JapanGsiElevationSource.TileRecord load(JapanGsiElevationSource.TileKey key) throws Exception {
             return JapanGsiElevationSource.this.loadTile(key);

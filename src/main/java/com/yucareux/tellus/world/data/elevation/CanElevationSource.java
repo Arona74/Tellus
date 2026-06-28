@@ -28,7 +28,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.zip.InflaterInputStream;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 public final class CanElevationSource implements TellusCacheHandle {
@@ -63,7 +63,7 @@ public final class CanElevationSource implements TellusCacheHandle {
    private final LoadingCache<CanElevationSource.TileCacheKey, CanElevationSource.TileFile> fileCache;
 
    public CanElevationSource() {
-      this.cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/elevation-canelevation");
+      this.cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/elevation-canelevation");
       this.fileCache = CacheBuilder.newBuilder().maximumSize(MAX_FILE_CACHE).build(new CacheLoader<CanElevationSource.TileCacheKey, CanElevationSource.TileFile>() {
          public CanElevationSource.TileFile load(CanElevationSource.TileCacheKey key) throws Exception {
             return CanElevationSource.this.loadTile(key);

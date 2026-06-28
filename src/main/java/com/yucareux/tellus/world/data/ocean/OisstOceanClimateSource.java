@@ -19,7 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 public final class OisstOceanClimateSource implements TellusCacheHandle {
@@ -41,7 +41,7 @@ public final class OisstOceanClimateSource implements TellusCacheHandle {
    private final LoadingCache<OisstOceanClimateSource.CellKey, OisstOceanClimateSource.Sample> cache;
 
    public OisstOceanClimateSource() {
-      this.cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/ocean-oisst-v21");
+      this.cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/ocean-oisst-v21");
       this.cache = CacheBuilder.newBuilder()
          .maximumSize(MAX_CACHE_CELLS)
          .build(new CacheLoader<OisstOceanClimateSource.CellKey, OisstOceanClimateSource.Sample>() {

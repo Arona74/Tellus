@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.InflaterInputStream;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 public class ArcticDemElevationSource implements TellusCacheHandle {
@@ -72,7 +72,7 @@ public class ArcticDemElevationSource implements TellusCacheHandle {
       int maxFileCache = intProperty(dataset.cacheFilesPropertyKey(), 8);
       this.maxTileCache = intProperty(dataset.cacheTilesPropertyKey(), 16);
       this.failureCooldownMs = longProperty(dataset.retryPropertyKey(), 60000L);
-      this.cacheRoot = FabricLoader.getInstance().getGameDir().resolve(dataset.cacheRelativePath());
+      this.cacheRoot = TellusPlatform.gameDir().resolve(dataset.cacheRelativePath());
       this.indexCache = CacheBuilder.newBuilder()
          .maximumSize(ArcticDemElevationSource.Tier.values().length)
          .build(new CacheLoader<ArcticDemElevationSource.Tier, ArcticDemElevationSource.TileIndex>() {

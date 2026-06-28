@@ -22,7 +22,7 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 public final class Usgs3depElevationSource implements TellusCacheHandle {
@@ -63,7 +63,7 @@ public final class Usgs3depElevationSource implements TellusCacheHandle {
    private final LoadingCache<Usgs3depElevationSource.TileKey, Usgs3depElevationSource.TileRaster> fileCache;
 
    public Usgs3depElevationSource() {
-      this.cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/elevation-usgs3dep");
+      this.cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/elevation-usgs3dep");
       this.fileCache = CacheBuilder.newBuilder().maximumSize(MAX_FILE_CACHE).build(new CacheLoader<Usgs3depElevationSource.TileKey, Usgs3depElevationSource.TileRaster>() {
          public Usgs3depElevationSource.TileRaster load(Usgs3depElevationSource.TileKey key) throws Exception {
             return Usgs3depElevationSource.this.loadTile(key);

@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.IntBinaryOperator;
 import java.util.zip.InflaterInputStream;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 public final class TellusLandCoverSource implements TellusCacheHandle {
@@ -63,7 +63,7 @@ public final class TellusLandCoverSource implements TellusCacheHandle {
    );
    private static final String ENDPOINT = "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map";
    private static final String TILE_PATTERN = "ESA_WorldCover_10m_2021_v200_%s_Map.tif";
-   private final Path cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/worldcover2021");
+   private final Path cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/worldcover2021");
    private final LoadingCache<TellusLandCoverSource.TileKey, TellusLandCoverSource.GeoTiffTile> cache = CacheBuilder.newBuilder()
       .maximumSize(MAX_CACHE_TILES)
       .removalListener(notification -> {

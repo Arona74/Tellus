@@ -28,7 +28,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.zip.InflaterInputStream;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 public final class SwissAlti3dElevationSource implements TellusCacheHandle {
@@ -48,7 +48,7 @@ public final class SwissAlti3dElevationSource implements TellusCacheHandle {
    private final LoadingCache<SwissAlti3dElevationSource.TileCacheKey, SwissAlti3dElevationSource.TileFile> fileCache;
 
    public SwissAlti3dElevationSource() {
-      this.cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/elevation-swissalti3d");
+      this.cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/elevation-swissalti3d");
       this.fileCache = CacheBuilder.newBuilder()
          .maximumSize(MAX_FILE_CACHE)
          .build(new CacheLoader<SwissAlti3dElevationSource.TileCacheKey, SwissAlti3dElevationSource.TileFile>() {

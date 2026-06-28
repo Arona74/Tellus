@@ -28,7 +28,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.zip.InflaterInputStream;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 
 public final class AhnElevationSource implements TellusCacheHandle {
@@ -46,7 +46,7 @@ public final class AhnElevationSource implements TellusCacheHandle {
    private final LoadingCache<AhnCoverageIndex.TileReference, AhnElevationSource.TileFile> fileCache;
 
    public AhnElevationSource() {
-      this.cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/elevation-ahn/dtm_05m");
+      this.cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/elevation-ahn/dtm_05m");
       this.fileCache = CacheBuilder.newBuilder().maximumSize(MAX_FILE_CACHE).build(new CacheLoader<AhnCoverageIndex.TileReference, AhnElevationSource.TileFile>() {
          public AhnElevationSource.TileFile load(AhnCoverageIndex.TileReference key) throws Exception {
             return AhnElevationSource.this.loadTile(key);

@@ -7,11 +7,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Properties;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 
 public final class HmaAccessConfig {
    private static final String TOKEN_KEY = "earthdata_bearer_token";
-   private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("tellus-hma-access.properties");
+   private static final Path CONFIG_PATH = TellusPlatform.configDir().resolve("tellus-hma-access.properties");
    private static final Object LOCK = new Object();
    private static volatile String bearerToken = loadToken();
 
