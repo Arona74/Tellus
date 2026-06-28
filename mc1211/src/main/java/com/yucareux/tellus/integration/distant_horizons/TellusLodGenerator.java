@@ -56,6 +56,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.SectionPos;
 import net.minecraft.resources.ResourceKey;
@@ -2327,18 +2328,26 @@ public final class TellusLodGenerator implements IDhApiWorldGenerator {
          BuildingBlueprint blueprint = TellusBuildingBlueprints.create(rasterized.groupId(), rasterized.feature(), profile, this.generator.worldSeed(), baseY, floorY, roofBaseY, topY, List.of(), worldScale);
          TellusBuildingMaterials.BuildingMaterialPalette palette = TellusBuildingMaterials.resolvePalette(blueprint);
          int[] boundaryDistance = computeLodBoundaryDistance(rasterized);
+         int occupiedCount = rasterized.occupiedCells().length;
+         int[] structuralDistances = new int[occupiedCount];
+         int[] cellTopYs = new int[occupiedCount];
+         int[] orderByLocalIndex = new int[Math.max(1, rasterized.width() * rasterized.height())];
+         Arrays.fill(cellTopYs, Integer.MIN_VALUE);
+         Arrays.fill(orderByLocalIndex, -1);
          boolean groundContact = rasterized.feature().kind() != com.yucareux.tellus.world.data.osm.OsmBuildingKind.PART || minHeightBlocks <= 0;
 
-         for (int order = 0; order < rasterized.occupiedCells().length; order++) {
+         for (int order = 0; order < occupiedCount; order++) {
             int cellIndex = rasterized.occupiedCells()[order];
             int localX = cellIndex % worldXs.length;
             int localZ = cellIndex / worldXs.length;
-            int distance = boundaryDistance[order];
+            int localIndex = lodLocalIndex(rasterized, cellIndex);
+            if (localIndex >= 0 && localIndex < orderByLocalIndex.length) {
+               orderByLocalIndex[localIndex] = order;
+            }
+            int distance = scaleLodBoundaryDistance(boundaryDistance[order], cellSize);
+            structuralDistances[order] = distance;
             int cellTopY = blueprint.roofTopY(worldXs[localX], worldZs[localZ], distance);
-            if (profile.roofProfile() == BuildingProfile.RoofProfile.FLAT
-               || profile.roofProfile() == BuildingProfile.RoofProfile.FLAT_PARAPET
-               || profile.roofProfile() == BuildingProfile.RoofProfile.FLAT_CROWN
-               || profile.roofProfile() == BuildingProfile.RoofProfile.FLAT_SKYLIGHT) {
+            if (isFlatRoof(profile.roofProfile()) && boundaryDistance[order] == 0) {
                cellTopY += profile.parapetHeight();
             }
 
@@ -2349,6 +2358,21 @@ public final class TellusLodGenerator implements IDhApiWorldGenerator {
             if (cellTopY < floorY) {
                continue;
             }
+            cellTopYs[order] = cellTopY;
+         }
+
+         for (int order = 0; order < occupiedCount; order++) {
+            int cellTopY = cellTopYs[order];
+            if (cellTopY < floorY) {
+               continue;
+            }
+
+            int cellIndex = rasterized.occupiedCells()[order];
+            int localX = cellIndex % worldXs.length;
+            int localZ = cellIndex / worldXs.length;
+            int worldX = worldXs[localX];
+            int worldZ = worldZs[localZ];
+            int distance = structuralDistances[order];
 
             TellusLodGenerator.LodBuildingColumn column = columns[cellIndex];
             if (column == null) {
@@ -2360,19 +2384,26 @@ public final class TellusLodGenerator implements IDhApiWorldGenerator {
             int roofStart = Math.max(floorY, blueprint.roofBaseY(distance));
             int facadeEnd = Math.min(cellTopY, roofStart - 1);
             if (facadeEnd >= floorY) {
-               addLodFacadeSpans(column, blueprint, palette, distance, worldXs[localX], worldZs[localZ], floorY, facadeEnd, highestFloor, cellSize);
+               addLodFacadeSpans(column, blueprint, palette, distance, worldX, worldZ, floorY, facadeEnd, highestFloor, cellSize);
             }
 
             if (cellTopY >= roofStart) {
+               int roofMaterialDistance = lodFacadeDistanceForFloor(blueprint, distance, cellSize, highestFloor);
+               BlockState roofBlock = TellusBuildingMaterials.resolveLodRoofBlock(blueprint, palette, roofMaterialDistance, worldX, worldZ);
+               if (cellTopY > roofStart) {
+                  column.addSpan(roofStart, cellTopY - 1, roofBlock, (byte)0);
+               }
                column.addSpan(
-                  roofStart,
                   cellTopY,
-                  TellusBuildingMaterials.resolveLodRoofBlock(blueprint, palette, distance, worldXs[localX], worldZs[localZ]),
+                  cellTopY,
+                  resolveLodRoofSurfaceBlock(
+                     rasterized, blueprint, palette, structuralDistances, boundaryDistance, cellTopYs, orderByLocalIndex, order, worldX, worldZ, cellSize
+                  ),
                   (byte)0
                );
-               BlockState roofDetail = TellusBuildingMaterials.resolveLodRoofDetailBlock(blueprint, palette, distance, worldXs[localX], worldZs[localZ]);
+               BlockState roofDetail = TellusBuildingMaterials.resolveLodRoofDetailBlock(blueprint, palette, distance, worldX, worldZ);
                if (roofDetail != null) {
-                  int detailHeight = TellusBuildingMaterials.resolveLodRoofDetailHeight(blueprint, distance, worldXs[localX], worldZs[localZ]);
+                  int detailHeight = TellusBuildingMaterials.resolveLodRoofDetailHeight(blueprint, distance, worldX, worldZ);
                   column.addSpan(cellTopY + 1, cellTopY + Math.max(1, detailHeight), roofDetail, (byte)0);
                }
             }
@@ -2441,18 +2472,163 @@ public final class TellusLodGenerator implements IDhApiWorldGenerator {
          }
 
          int sampleFloor = (floorIndex + endFloor) >>> 1;
+         int materialDistance = lodFacadeDistanceForFloor(blueprint, boundaryDistance, cellSize, sampleFloor);
          BlockState facadeBlock = TellusBuildingMaterials.resolveLodFacadeBlock(
-            blueprint, palette, boundaryDistance, worldX, worldZ, sampleFloor
+            blueprint, palette, materialDistance, worldX, worldZ, sampleFloor
          );
          column.addSpan(
             bandStart,
             bandEnd,
             facadeBlock,
             TellusBuildingLighting.resolveLodFacadeLightLevel(
-               blueprint, facadeBlock, palette.window(), boundaryDistance, worldX, worldZ, sampleFloor, cellSize
+               blueprint, facadeBlock, palette.window(), materialDistance, worldX, worldZ, sampleFloor, cellSize
             )
          );
       }
+   }
+
+   private static BlockState resolveLodRoofSurfaceBlock(
+      TellusLodGenerator.LodRasterizedBuildingFeature rasterized,
+      BuildingBlueprint blueprint,
+      TellusBuildingMaterials.BuildingMaterialPalette palette,
+      int[] structuralDistances,
+      int[] boundaryDistance,
+      int[] cellTopYs,
+      int[] orderByLocalIndex,
+      int order,
+      int worldX,
+      int worldZ,
+      int cellSize
+   ) {
+      int distance = structuralDistances[order];
+      int highestFloor = blueprint.highestActiveFloor(distance);
+      int roofMaterialDistance = lodFacadeDistanceForFloor(blueprint, distance, cellSize, highestFloor);
+      BlockState roofBlock = TellusBuildingMaterials.resolveLodRoofBlock(blueprint, palette, roofMaterialDistance, worldX, worldZ);
+      if (!isPitchedRoof(blueprint.profile().roofProfile())) {
+         return roofBlock;
+      }
+
+      Direction lowerDirection = lowerLodRoofNeighborDirection(
+         rasterized, blueprint, structuralDistances, boundaryDistance, cellTopYs, orderByLocalIndex, order, worldX, worldZ
+      );
+      return lowerDirection == null ? roofBlock : TellusBuildingMaterials.resolveRoofStairBlock(palette, lowerDirection.getOpposite());
+   }
+
+   private static Direction lowerLodRoofNeighborDirection(
+      TellusLodGenerator.LodRasterizedBuildingFeature rasterized,
+      BuildingBlueprint blueprint,
+      int[] structuralDistances,
+      int[] boundaryDistance,
+      int[] cellTopYs,
+      int[] orderByLocalIndex,
+      int order,
+      int worldX,
+      int worldZ
+   ) {
+      int localIndex = lodLocalIndex(rasterized, rasterized.occupiedCells()[order]);
+      if (localIndex < 0) {
+         return null;
+      }
+
+      int localX = localIndex % rasterized.width();
+      int localZ = localIndex / rasterized.width();
+      int cellTopY = cellTopYs[order];
+      Direction bestDirection = null;
+      int bestDrop = 0;
+      for (Direction direction : Direction.Plane.HORIZONTAL) {
+         int neighborX = localX + direction.getStepX();
+         int neighborZ = localZ + direction.getStepZ();
+         if (neighborX < 0 || neighborX >= rasterized.width() || neighborZ < 0 || neighborZ >= rasterized.height()) {
+            continue;
+         }
+
+         int neighborLocalIndex = neighborX + neighborZ * rasterized.width();
+         int neighborOrder = orderByLocalIndex[neighborLocalIndex];
+         if (neighborOrder < 0 || cellTopYs[neighborOrder] == Integer.MIN_VALUE) {
+            continue;
+         }
+
+         int drop = cellTopY - cellTopYs[neighborOrder];
+         if (drop > bestDrop) {
+            bestDrop = drop;
+            bestDirection = direction;
+         }
+      }
+
+      if (bestDrop > 0) {
+         return bestDirection;
+      }
+      return boundaryDistance[order] == 0 ? lodRoofSlopeLowerDirection(blueprint, worldX, worldZ, structuralDistances[order]) : null;
+   }
+
+   private static Direction lodRoofSlopeLowerDirection(BuildingBlueprint blueprint, int worldX, int worldZ, int boundaryDistance) {
+      int highestFloor = blueprint.highestActiveFloor(boundaryDistance);
+      int setback = blueprint.setbackForFloor(highestFloor);
+      int minX = blueprint.minWorldX() + setback;
+      int maxX = blueprint.maxWorldX() - setback;
+      int minZ = blueprint.minWorldZ() + setback;
+      int maxZ = blueprint.maxWorldZ() - setback;
+      double centerX = (minX + maxX) * 0.5;
+      double centerZ = (minZ + maxZ) * 0.5;
+      return switch (blueprint.profile().roofProfile()) {
+         case GABLED_X -> worldZ <= centerZ ? Direction.NORTH : Direction.SOUTH;
+         case GABLED_Z -> worldX <= centerX ? Direction.WEST : Direction.EAST;
+         case SKILLION -> blueprint.width() >= blueprint.depth() ? Direction.WEST : Direction.NORTH;
+         case HIPPED, PYRAMIDAL -> {
+            int west = Math.abs(worldX - minX);
+            int east = Math.abs(maxX - worldX);
+            int north = Math.abs(worldZ - minZ);
+            int south = Math.abs(maxZ - worldZ);
+            int best = Math.min(Math.min(west, east), Math.min(north, south));
+            if (best == west) {
+               yield Direction.WEST;
+            } else if (best == east) {
+               yield Direction.EAST;
+            } else if (best == north) {
+               yield Direction.NORTH;
+            }
+            yield Direction.SOUTH;
+         }
+         default -> null;
+      };
+   }
+
+   private static int lodFacadeDistanceForFloor(BuildingBlueprint blueprint, int structuralDistance, int cellSize, int floorIndex) {
+      int setback = blueprint.setbackForFloor(floorIndex);
+      int tolerance = Math.max(0, cellSize >> 1);
+      return Math.abs(structuralDistance - setback) <= tolerance ? setback : structuralDistance;
+   }
+
+   private static int scaleLodBoundaryDistance(int boundaryDistance, int cellSize) {
+      if (cellSize <= 1) {
+         return Math.max(0, boundaryDistance);
+      }
+      return Math.max(0, boundaryDistance * cellSize + (cellSize >> 1));
+   }
+
+   private static int lodLocalIndex(TellusLodGenerator.LodRasterizedBuildingFeature rasterized, int globalIndex) {
+      int gridX = globalIndex % rasterized.lodSize();
+      int gridZ = globalIndex / rasterized.lodSize();
+      int localX = gridX - rasterized.minGridX();
+      int localZ = gridZ - rasterized.minGridZ();
+      return localX < 0 || localX >= rasterized.width() || localZ < 0 || localZ >= rasterized.height()
+         ? -1
+         : localX + localZ * rasterized.width();
+   }
+
+   private static boolean isFlatRoof(BuildingProfile.RoofProfile roofProfile) {
+      return roofProfile == BuildingProfile.RoofProfile.FLAT
+         || roofProfile == BuildingProfile.RoofProfile.FLAT_PARAPET
+         || roofProfile == BuildingProfile.RoofProfile.FLAT_CROWN
+         || roofProfile == BuildingProfile.RoofProfile.FLAT_SKYLIGHT;
+   }
+
+   private static boolean isPitchedRoof(BuildingProfile.RoofProfile roofProfile) {
+      return roofProfile == BuildingProfile.RoofProfile.GABLED_X
+         || roofProfile == BuildingProfile.RoofProfile.GABLED_Z
+         || roofProfile == BuildingProfile.RoofProfile.HIPPED
+         || roofProfile == BuildingProfile.RoofProfile.PYRAMIDAL
+         || roofProfile == BuildingProfile.RoofProfile.SKILLION;
    }
 
    private static int[] computeLodBoundaryDistance(TellusLodGenerator.LodRasterizedBuildingFeature rasterized) {

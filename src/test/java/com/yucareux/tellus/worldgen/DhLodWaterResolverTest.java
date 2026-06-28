@@ -167,22 +167,37 @@ class DhLodWaterResolverTest {
    }
 
    @Test
-   void classifiesUnhintedOvertureWaterAsOceanWhenLandMaskIsMarine() {
-      boolean ocean = DhLodWaterResolver.classifyWaterCellAsOcean(false, TellusLandMaskSource.LandMaskSample.known(false), 62, 80, 63);
+   void keepsUnhintedOvertureWaterInlandWhenStrictOsmModeUsesMarineLandMask() {
+      boolean ocean = DhLodWaterResolver.classifyWaterCellAsOcean(
+         false, true, TellusLandMaskSource.LandMaskSample.known(false), 62, 80, 63
+      );
+
+      assertFalse(ocean);
+   }
+
+   @Test
+   void classifiesUnhintedWaterAsOceanWhenNotInStrictOsmModeAndLandMaskIsMarine() {
+      boolean ocean = DhLodWaterResolver.classifyWaterCellAsOcean(
+         false, false, TellusLandMaskSource.LandMaskSample.known(false), 62, 80, 63
+      );
 
       assertTrue(ocean);
    }
 
    @Test
    void keepsUnhintedOvertureWaterInlandWhenLandMaskIsLand() {
-      boolean ocean = DhLodWaterResolver.classifyWaterCellAsOcean(false, TellusLandMaskSource.LandMaskSample.known(true), 62, 80, 63);
+      boolean ocean = DhLodWaterResolver.classifyWaterCellAsOcean(
+         false, false, TellusLandMaskSource.LandMaskSample.known(true), 62, 80, 63
+      );
 
       assertFalse(ocean);
    }
 
    @Test
    void acceptsOvertureOceanHint() {
-      boolean ocean = DhLodWaterResolver.classifyWaterCellAsOcean(true, TellusLandMaskSource.LandMaskSample.known(true), 80, 80, 63);
+      boolean ocean = DhLodWaterResolver.classifyWaterCellAsOcean(
+         true, true, TellusLandMaskSource.LandMaskSample.known(true), 80, 80, 63
+      );
 
       assertTrue(ocean);
    }
@@ -213,7 +228,9 @@ class DhLodWaterResolverTest {
 
    @Test
    void classifiesKnownOceanWaterCoverAboveSeaLevelAsOcean() {
-      boolean ocean = DhLodWaterResolver.classifyWaterCellAsOcean(false, TellusLandMaskSource.LandMaskSample.known(false), 120, 80, 63);
+      boolean ocean = DhLodWaterResolver.classifyWaterCellAsOcean(
+         false, false, TellusLandMaskSource.LandMaskSample.known(false), 120, 80, 63
+      );
 
       assertTrue(ocean);
    }

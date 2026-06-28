@@ -145,8 +145,9 @@ public final class DhLodWaterResolver implements TellusCacheHandle {
                TellusLandMaskSource.LandMaskSample landMaskSample = needsLandMask
                   ? landMaskSampler.sample(worldX, worldZ, worldScale)
                   : null;
+               boolean oceanHint = overtureOcean || sampledOceanCell;
                boolean cellOcean = shouldClassifyWaterCellAsOcean(osmWaterEnabled, overtureWater, sampledOceanCell)
-                  && classifyWaterCellAsOcean(overtureOcean, landMaskSample, surface, coverClass, seaLevel);
+                  && classifyWaterCellAsOcean(oceanHint, osmWaterEnabled, landMaskSample, surface, coverClass, seaLevel);
                boolean cellHasWater = overtureWater || cellOcean || esaWater;
                if (!cellHasWater && sampledOceanCell && (belowSeaLevel || isKnownOceanMask(landMaskSample))) {
                   cellHasWater = true;
@@ -313,12 +314,13 @@ public final class DhLodWaterResolver implements TellusCacheHandle {
 
    static boolean classifyWaterCellAsOcean(
       boolean overtureOcean,
+      boolean strictOverture,
       TellusLandMaskSource.LandMaskSample landMaskSample,
       int surface,
       int coverClass,
       int seaLevel
    ) {
-      return OceanClassification.isOcean(overtureOcean, false, landMaskSample, surface, coverClass, seaLevel);
+      return OceanClassification.isOcean(overtureOcean, strictOverture, landMaskSample, surface, coverClass, seaLevel);
    }
 
    static boolean shouldClassifyWaterCellAsOcean(boolean osmWaterEnabled, boolean overtureWater, boolean sampledOceanCell) {

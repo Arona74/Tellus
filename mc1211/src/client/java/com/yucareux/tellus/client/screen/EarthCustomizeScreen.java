@@ -1327,14 +1327,6 @@ public class EarthCustomizeScreen extends Screen {
       return Objects.requireNonNull(Component.translatable("property.tellus." + key + ".tooltip").withStyle(ChatFormatting.GRAY), "settingTooltip");
    }
 
-   private static Component gebcoOutageTooltip() {
-      return Objects.requireNonNull(
-         Component.translatable("tellus.dem_provider.force_disabled.gebco_outage").withStyle(ChatFormatting.RED),
-         "gebcoOutageTooltip"
-      );
-   }
-
-   
    private static Component requiresModTooltip( String modId) {
       return Objects.requireNonNull(
          Component.translatable("tellus.compatibility.requires_mod", new Object[]{compatibilityModName(modId)}).withStyle(ChatFormatting.GRAY),
@@ -1625,24 +1617,16 @@ public class EarthCustomizeScreen extends Screen {
          }
 
          Component automaticTooltip = Component.translatable("tellus.dem_provider.force_disabled.automatic").withStyle(ChatFormatting.GRAY);
-         Component outageTooltip = gebcoOutageTooltip();
          if (automatic != null && automatic.value) {
             for (EarthCustomizeScreen.DemProviderToggleDefinition providerToggle : providerToggles.values()) {
-               boolean gebco = providerToggle.provider == EarthGeneratorSettings.DemProvider.GEBCO2026;
-               providerToggle.value = !gebco;
-               providerToggle.forceDisabled(true, gebco ? outageTooltip : automaticTooltip);
+               providerToggle.value = true;
+               providerToggle.forceDisabled(true, automaticTooltip);
             }
             return;
          }
 
          for (EarthCustomizeScreen.DemProviderToggleDefinition providerToggle : providerToggles.values()) {
             providerToggle.forceDisabled(false);
-         }
-
-         EarthCustomizeScreen.DemProviderToggleDefinition gebco = providerToggles.get(EarthGeneratorSettings.DemProvider.GEBCO2026);
-         if (gebco != null) {
-            gebco.value = false;
-            gebco.forceDisabled(true, outageTooltip);
          }
 
          EarthCustomizeScreen.DemProviderToggleDefinition terrainTiles = providerToggles.get(EarthGeneratorSettings.DemProvider.TERRARIUM);

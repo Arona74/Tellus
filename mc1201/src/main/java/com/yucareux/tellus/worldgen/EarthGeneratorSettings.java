@@ -1797,7 +1797,7 @@ public record EarthGeneratorSettings(
       }
 
       public boolean available() {
-         return this != GEBCO2026;
+         return true;
       }
 
       public int selectionBit() {

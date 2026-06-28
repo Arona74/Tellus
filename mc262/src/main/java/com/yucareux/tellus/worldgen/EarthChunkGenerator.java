@@ -631,6 +631,12 @@ public final class EarthChunkGenerator extends ChunkGenerator {
       return Objects.requireNonNull(CODEC, "CODEC");
    }
 
+   @Override
+   public CompletableFuture<ChunkAccess> createBiomes(RandomState random, Blender blender, StructureManager structures, ChunkAccess chunk) {
+      this.disableFastSpawnMode();
+      return super.createBiomes(random, blender, structures, chunk);
+   }
+
    public void applyCarvers(
        WorldGenRegion level,
       long seed,
@@ -8605,52 +8611,42 @@ public final class EarthChunkGenerator extends ChunkGenerator {
       int[] chunkRoadDeckY,
       EarthChunkGenerator.PreparedChunkBuildings preparedBuildings
    ) {
-      EarthChunkGenerator.RoadCrossingAnchor anchor = findCrossingAnchor(localX, localZ, chunkRoadClass, chunkRoadMode, chunkRoadDeckY);
+      RoadCrossingLayout.Anchor anchor = RoadCrossingLayout.findAnchor(
+         localX,
+         localZ,
+         chunkRoadClass,
+         chunkRoadMode,
+         (byte)(RoadMode.TUNNEL.ordinal() + 1),
+         CHUNK_SIDE,
+         OSM_CROSSING_SCAN_RADIUS
+      );
       if (anchor == null) {
          return;
       }
 
-      int axisStepX = anchor.horizontal() ? 1 : 0;
-      int axisStepZ = anchor.horizontal() ? 0 : 1;
-      int crossStepX = anchor.horizontal() ? 0 : 1;
-      int crossStepZ = anchor.horizontal() ? 1 : 0;
-      for (int stripe = -OSM_CROSSING_STRIPE_RADIUS; stripe <= OSM_CROSSING_STRIPE_RADIUS; stripe++) {
-         if (Math.floorMod(stripe + OSM_CROSSING_STRIPE_RADIUS, 2) != 0) {
+      for (RoadCrossingLayout.Cell cell : RoadCrossingLayout.markedCells(
+         anchor,
+         chunkRoadClass,
+         chunkRoadMode,
+         (byte)(RoadMode.TUNNEL.ordinal() + 1),
+         CHUNK_SIDE,
+         OSM_CROSSING_HALF_SPAN,
+         OSM_CROSSING_STRIPE_RADIUS
+      )) {
+         int targetX = cell.localX();
+         int targetZ = cell.localZ();
+         int deckY = chunkRoadDeckY[cell.index()];
+         if (deckY < chunkMinY || deckY > chunkMaxY) {
             continue;
          }
 
-         int stripeX = anchor.localX() + axisStepX * stripe;
-         int stripeZ = anchor.localZ() + axisStepZ * stripe;
-         if (stripeX < 0 || stripeX > CHUNK_MASK || stripeZ < 0 || stripeZ > CHUNK_MASK) {
+         if (preparedBuildings != null && preparedBuildings.intersectsRoad(targetX, targetZ, deckY)) {
             continue;
          }
 
-         int stripeIndex = chunkIndex(stripeX, stripeZ);
-         if (!isRoadPointRoadCell(stripeIndex, chunkRoadClass, chunkRoadMode)) {
-            continue;
-         }
-
-         for (int across = -OSM_CROSSING_HALF_SPAN; across <= OSM_CROSSING_HALF_SPAN; across++) {
-            int targetX = stripeX + crossStepX * across;
-            int targetZ = stripeZ + crossStepZ * across;
-            if (targetX < 0 || targetX > CHUNK_MASK || targetZ < 0 || targetZ > CHUNK_MASK) {
-               continue;
-            }
-
-            int index = chunkIndex(targetX, targetZ);
-            int deckY = chunkRoadDeckY[index];
-            if (!isRoadPointRoadCell(index, chunkRoadClass, chunkRoadMode) || deckY < chunkMinY || deckY > chunkMaxY) {
-               continue;
-            }
-
-            if (preparedBuildings != null && preparedBuildings.intersectsRoad(targetX, targetZ, deckY)) {
-               continue;
-            }
-
-            cursor.set(chunkMinX + targetX, deckY, chunkMinZ + targetZ);
-            if (isRoadDeckState(blockStateAt(level, chunk, cursor))) {
-               this.setChunkBlock(level, chunk, cursor, ROAD_MARKING_STATE);
-            }
+         cursor.set(chunkMinX + targetX, deckY, chunkMinZ + targetZ);
+         if (isRoadDeckState(blockStateAt(level, chunk, cursor))) {
+            this.setChunkBlock(level, chunk, cursor, ROAD_MARKING_STATE);
          }
       }
    }
@@ -8893,54 +8889,6 @@ public final class EarthChunkGenerator extends ChunkGenerator {
       return true;
    }
 
-   private static EarthChunkGenerator.RoadCrossingAnchor findCrossingAnchor(
-      int localX, int localZ, byte[] chunkRoadClass, byte[] chunkRoadMode, int[] chunkRoadDeckY
-   ) {
-      int minX = Math.max(0, localX - OSM_CROSSING_SCAN_RADIUS);
-      int maxX = Math.min(CHUNK_MASK, localX + OSM_CROSSING_SCAN_RADIUS);
-      int minZ = Math.max(0, localZ - OSM_CROSSING_SCAN_RADIUS);
-      int maxZ = Math.min(CHUNK_MASK, localZ + OSM_CROSSING_SCAN_RADIUS);
-      EarthChunkGenerator.RoadCrossingAnchor best = null;
-      int bestScore = Integer.MIN_VALUE;
-      int bestDistanceSq = Integer.MAX_VALUE;
-      int bestBoundary = -1;
-
-      for (int z = minZ; z <= maxZ; z++) {
-         for (int x = minX; x <= maxX; x++) {
-            int index = chunkIndex(x, z);
-            if (!isRoadPointRoadCell(index, chunkRoadClass, chunkRoadMode)) {
-               continue;
-            }
-
-            int horizontalRun = roadRunLength(x, z, 1, 0, chunkRoadClass, chunkRoadMode);
-            int verticalRun = roadRunLength(x, z, 0, 1, chunkRoadClass, chunkRoadMode);
-            boolean horizontal = horizontalRun >= verticalRun;
-            int dominance = Math.abs(horizontalRun - verticalRun);
-            int axisRun = Math.max(horizontalRun, verticalRun);
-            int boundary = roadBoundaryScore(x, z, chunkRoadClass);
-            int dx = x - localX;
-            int dz = z - localZ;
-            int distanceSq = dx * dx + dz * dz;
-            int score = dominance * 32 + axisRun * 2 + boundary * 8 - distanceSq;
-            if (boundary <= 0) {
-               score -= 12;
-            }
-            if (horizontalRun >= 8 && verticalRun >= 8) {
-               score -= 48;
-            }
-
-            if (score > bestScore || score == bestScore && (distanceSq < bestDistanceSq || distanceSq == bestDistanceSq && boundary > bestBoundary)) {
-               bestScore = score;
-               bestDistanceSq = distanceSq;
-               bestBoundary = boundary;
-               best = new EarthChunkGenerator.RoadCrossingAnchor(x, z, chunkRoadDeckY[index], index, horizontal);
-            }
-         }
-      }
-
-      return best;
-   }
-
    private static EarthChunkGenerator.RoadLightAnchor findNearestRoadPointAnchor(
       int localX, int localZ, byte[] chunkRoadClass, byte[] chunkRoadMode, int[] chunkRoadDeckY, boolean preferBoundary
    ) {
@@ -8979,35 +8927,6 @@ public final class EarthChunkGenerator extends ChunkGenerator {
       }
 
       return preferBoundary && bestBoundary <= 0 ? null : best;
-   }
-
-   private static int roadRunLength(int localX, int localZ, int stepX, int stepZ, byte[] chunkRoadClass, byte[] chunkRoadMode) {
-      int length = 1;
-      length += roadRunLengthOneSide(localX, localZ, stepX, stepZ, chunkRoadClass, chunkRoadMode);
-      length += roadRunLengthOneSide(localX, localZ, -stepX, -stepZ, chunkRoadClass, chunkRoadMode);
-      return length;
-   }
-
-   private static int roadRunLengthOneSide(int localX, int localZ, int stepX, int stepZ, byte[] chunkRoadClass, byte[] chunkRoadMode) {
-      byte roadClass = chunkRoadClass[chunkIndex(localX, localZ)];
-      byte roadMode = chunkRoadMode[chunkIndex(localX, localZ)];
-      int length = 0;
-      for (int offset = 1; offset <= 4; offset++) {
-         int x = localX + stepX * offset;
-         int z = localZ + stepZ * offset;
-         if (x < 0 || x > CHUNK_MASK || z < 0 || z > CHUNK_MASK) {
-            break;
-         }
-
-         int index = chunkIndex(x, z);
-         if (chunkRoadClass[index] != roadClass || chunkRoadMode[index] != roadMode) {
-            break;
-         }
-
-         length++;
-      }
-
-      return length;
    }
 
    private static boolean isRoadPointRoadCell(int index, byte[] chunkRoadClass, byte[] chunkRoadMode) {
@@ -13595,9 +13514,6 @@ public final class EarthChunkGenerator extends ChunkGenerator {
    }
 
    private record RoadLightAnchor(int localX, int localZ, int baseY, int index) {
-   }
-
-   private record RoadCrossingAnchor(int localX, int localZ, int baseY, int index, boolean horizontal) {
    }
 
    private static final class PreparedChunkBuildings {

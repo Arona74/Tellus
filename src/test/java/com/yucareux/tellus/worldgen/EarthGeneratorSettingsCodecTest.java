@@ -21,11 +21,11 @@ class EarthGeneratorSettingsCodecTest {
    @Test
    void defaultSettingsEnableWater() {
       assertTrue(EarthGeneratorSettings.DEFAULT.enableWater());
-      assertFalse(EarthGeneratorSettings.DEFAULT.demSelection().gebco2026Enabled());
+      assertTrue(EarthGeneratorSettings.DEFAULT.demSelection().gebco2026Enabled());
    }
 
    @Test
-   void gebcoIsDisabledForAutomaticManualAndSerializedSelections() {
+   void gebcoIsEnabledForAutomaticManualAndSerializedSelections() {
       EarthGeneratorSettings.DemProvider gebco = EarthGeneratorSettings.DemProvider.GEBCO2026;
       EarthGeneratorSettings.DemSelection automatic = EarthGeneratorSettings.DemSelection.automaticSelection();
       EarthGeneratorSettings.DemSelection manual = EarthGeneratorSettings.DemSelection.manual(
@@ -35,10 +35,11 @@ class EarthGeneratorSettingsCodecTest {
          EarthGeneratorSettings.DemSelection.maskFromProviderIds(java.util.List.of("terrarium", "gebco2026"))
       );
 
-      assertFalse(automatic.gebco2026Enabled());
-      assertFalse(manual.gebco2026Enabled());
-      assertFalse(serialized.gebco2026Enabled());
-      assertFalse(automatic.enabledProviderIds().contains("gebco2026"));
+      assertTrue(automatic.gebco2026Enabled());
+      assertTrue(manual.gebco2026Enabled());
+      assertTrue(serialized.gebco2026Enabled());
+      assertTrue(automatic.enabledProviderIds().contains("gebco2026"));
+      assertTrue(serialized.enabledProviderIds().contains("gebco2026"));
    }
 
    @Test

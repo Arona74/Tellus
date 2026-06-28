@@ -194,9 +194,7 @@ public final class EarthBiomeSource extends BiomeSource {
    public Holder<Biome> getBiomeAtBlock(
       int blockX, int blockZ, int rawCoverClass, int visualCoverClass, boolean hasWater, boolean isOcean
    ) {
-      return this.fastSpawnMode
-         ? this.resolveFastSpawnSurfaceBiome(blockX, blockZ)
-         : this.resolveSurfaceBiomeAtBlock(blockX, blockZ, rawCoverClass, visualCoverClass, hasWater, isOcean, null);
+      return this.resolveSurfaceBiomeAtBlock(blockX, blockZ, rawCoverClass, visualCoverClass, hasWater, isOcean, null);
    }
 
    public Holder<Biome> getLodBiomeAtBlock(
@@ -208,9 +206,7 @@ public final class EarthBiomeSource extends BiomeSource {
    Holder<Biome> getBiomeAtBlock(
       int blockX, int blockZ, int rawCoverClass, int visualCoverClass, WaterSurfaceResolver.WaterColumnData column, String koppenCode
    ) {
-      return this.fastSpawnMode
-         ? this.resolveFastSpawnSurfaceBiome(blockX, blockZ)
-         : this.resolveSurfaceBiomeAtBlock(blockX, blockZ, rawCoverClass, visualCoverClass, column, koppenCode);
+      return this.resolveSurfaceBiomeAtBlock(blockX, blockZ, rawCoverClass, visualCoverClass, column, koppenCode);
    }
 
    
