@@ -28,7 +28,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import org.jetbrains.annotations.Nullable;
 
+import java.awt.*;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -85,7 +87,7 @@ public class ClientBlockStateTextureCache
 	 * The resolution face textures are baked at. <br>
 	 * Sprites with a higher resolution (IE from resource packs) are down-sampled.
 	 */
-	public static final int TEXTURE_WIDTH = 16;
+	public static final int TEXTURE_WIDTH_AND_HEIGHT = 16;
 	
 	/**
 	 * Both the bake order and the face index order used by
@@ -212,6 +214,9 @@ public class ClientBlockStateTextureCache
 				faceTextures[faceIndex] = BlockFaceTexture.createSolidColor(ColorUtil.HOT_PINK, false);
 			}
 		}
+		
+		
+		
 		return faceTextures;
 	}
 	
@@ -227,12 +232,15 @@ public class ClientBlockStateTextureCache
 			List<BakedQuad> directionQuads = getQuads(blockStateWrapper.blockState, dhDirection);
 			if (directionQuads != null && !directionQuads.isEmpty())
 			{
+				BakedQuad faceQuad = pickFaceQuad(directionQuads);
+				TextureAtlasSprite quadSprite = getQuadSprite(faceQuad);
+				boolean isQuadTinted = isQuadTinted(faceQuad);	
+				
 				// Faces with culled quads cover the whole face (IE full cubes),
 				// copying the quad's sprite directly is both more reliable
 				// and more accurate than rasterizing.
-				return bakeSpriteTexture(
-						getQuadSprite(pickFaceQuad(directionQuads)),
-						isQuadTinted(pickFaceQuad(directionQuads)));
+				BlockFaceTexture texture = bakeSpriteTexture(quadSprite, isQuadTinted);
+				return texture; 
 			}
 			
 			// unculled quads (IE fence posts)
@@ -291,7 +299,7 @@ public class ClientBlockStateTextureCache
 		// rasterization //
 		//===============//
 		
-		int[] pixels = new int[TEXTURE_WIDTH * TEXTURE_WIDTH];
+		int[] pixels = new int[TEXTURE_WIDTH_AND_HEIGHT * TEXTURE_WIDTH_AND_HEIGHT];
 		boolean anyPixelDrawn = false;
 		for (int geometryIndex = 0; geometryIndex < geometryList.size(); geometryIndex++)
 		{
@@ -312,7 +320,7 @@ public class ClientBlockStateTextureCache
 			return bakeSpriteTexture(getParticleSprite(blockStateWrapper), false);
 		}
 		
-		return new BlockFaceTexture(TEXTURE_WIDTH, TEXTURE_WIDTH, pixels, textureTinted);
+		return new BlockFaceTexture(TEXTURE_WIDTH_AND_HEIGHT, TEXTURE_WIDTH_AND_HEIGHT, pixels, textureTinted);
 	}
 	
 	/**
@@ -374,17 +382,17 @@ public class ClientBlockStateTextureCache
 			return BlockFaceTexture.createSolidColor(ColorUtil.HOT_PINK, false);
 		}
 		
-		int[] pixels = new int[TEXTURE_WIDTH * TEXTURE_WIDTH];
-		for (int v = 0; v < TEXTURE_WIDTH; v++)
+		int[] pixels = new int[TEXTURE_WIDTH_AND_HEIGHT * TEXTURE_WIDTH_AND_HEIGHT];
+		for (int v = 0; v < TEXTURE_WIDTH_AND_HEIGHT; v++)
 		{
-			for (int u = 0; u < TEXTURE_WIDTH; u++)
+			for (int u = 0; u < TEXTURE_WIDTH_AND_HEIGHT; u++)
 			{
-				int texelX = (u * spriteWidth) / TEXTURE_WIDTH;
-				int texelY = (v * spriteHeight) / TEXTURE_WIDTH;
-				pixels[(v * TEXTURE_WIDTH) + u] = getSpriteTexelArgb(sprite, texelX, texelY);
+				int texelX = (u * spriteWidth) / TEXTURE_WIDTH_AND_HEIGHT;
+				int texelY = (v * spriteHeight) / TEXTURE_WIDTH_AND_HEIGHT;
+				pixels[(v * TEXTURE_WIDTH_AND_HEIGHT) + u] = getSpriteTexelArgb(sprite, texelX, texelY);
 			}
 		}
-		return new BlockFaceTexture(TEXTURE_WIDTH, TEXTURE_WIDTH, pixels, tinted);
+		return new BlockFaceTexture(TEXTURE_WIDTH_AND_HEIGHT, TEXTURE_WIDTH_AND_HEIGHT, pixels, tinted);
 	}
 	
 	//endregion
@@ -438,10 +446,10 @@ public class ClientBlockStateTextureCache
 		}
 		
 		// only check pixels inside the triangle's bounding box
-		int minPixelU = Math.max((int) Math.floor(Math.min(faceAU, Math.min(faceBU, faceCU)) * TEXTURE_WIDTH), 0);
-		int maxPixelU = Math.min((int) Math.ceil(Math.max(faceAU, Math.max(faceBU, faceCU)) * TEXTURE_WIDTH), TEXTURE_WIDTH - 1);
-		int minPixelV = Math.max((int) Math.floor(Math.min(faceAV, Math.min(faceBV, faceCV)) * TEXTURE_WIDTH), 0);
-		int maxPixelV = Math.min((int) Math.ceil(Math.max(faceAV, Math.max(faceBV, faceCV)) * TEXTURE_WIDTH), TEXTURE_WIDTH - 1);
+		int minPixelU = Math.max((int) Math.floor(Math.min(faceAU, Math.min(faceBU, faceCU)) * TEXTURE_WIDTH_AND_HEIGHT), 0);
+		int maxPixelU = Math.min((int) Math.ceil(Math.max(faceAU, Math.max(faceBU, faceCU)) * TEXTURE_WIDTH_AND_HEIGHT), TEXTURE_WIDTH_AND_HEIGHT - 1);
+		int minPixelV = Math.max((int) Math.floor(Math.min(faceAV, Math.min(faceBV, faceCV)) * TEXTURE_WIDTH_AND_HEIGHT), 0);
+		int maxPixelV = Math.min((int) Math.ceil(Math.max(faceAV, Math.max(faceBV, faceCV)) * TEXTURE_WIDTH_AND_HEIGHT), TEXTURE_WIDTH_AND_HEIGHT - 1);
 		
 		boolean anyPixelDrawn = false;
 		for (int pixelV = minPixelV; pixelV <= maxPixelV; pixelV++)
@@ -449,8 +457,8 @@ public class ClientBlockStateTextureCache
 			for (int pixelU = minPixelU; pixelU <= maxPixelU; pixelU++)
 			{
 				// sample at the pixel's center
-				float sampleU = (pixelU + 0.5f) / TEXTURE_WIDTH;
-				float sampleV = (pixelV + 0.5f) / TEXTURE_WIDTH;
+				float sampleU = (pixelU + 0.5f) / TEXTURE_WIDTH_AND_HEIGHT;
+				float sampleV = (pixelV + 0.5f) / TEXTURE_WIDTH_AND_HEIGHT;
 				
 				// barycentric weights, all in [0,1] when the sample is inside the triangle
 				float weightB = (((sampleU - faceAU) * (faceCV - faceAV)) - ((sampleV - faceAV) * (faceCU - faceAU))) / area;
@@ -476,7 +484,7 @@ public class ClientBlockStateTextureCache
 					continue;
 				}
 				
-				int pixelIndex = (pixelV * TEXTURE_WIDTH) + pixelU;
+				int pixelIndex = (pixelV * TEXTURE_WIDTH_AND_HEIGHT) + pixelU;
 				pixels[pixelIndex] = blendSourceOver(sourceColor, pixels[pixelIndex]);
 				anyPixelDrawn = true;
 			}
@@ -782,24 +790,23 @@ public class ClientBlockStateTextureCache
 	}
 	
 	/** @return the texel color in ARGB order, the same order {@link ColorUtil} uses */
-	private static int getSpriteTexelArgb(TextureAtlasSprite sprite, int texelX, int texelY)
+	private static int getSpriteTexelArgb(TextureAtlasSprite texture, int texelX, int texelY)
 	{
-		int rawColor = TextureAtlasSpriteWrapper.getPixelRGBA(sprite, 0, texelX, texelY);
-		
+		int tempColor = TextureAtlasSpriteWrapper.getPixelRGBA(texture, 0, texelX, texelY);
+					
 		#if MC_VER <= MC_1_12_2
-		// already in ARGB order
-		return rawColor;
-		#elif MC_VER < MC_1_21_3
-		// NativeImage colors are in ABGR order
-		return ColorUtil.argbToInt(
-			(rawColor & 0xFF000000) >>> 24,
-			rawColor & 0x000000FF,
-			(rawColor & 0x0000FF00) >>> 8,
-			(rawColor & 0x00FF0000) >>> 16);
+		int b = (tempColor & 0x000000FF);
+		int g = (tempColor & 0x0000FF00) >>> 8;
+		int r = (tempColor & 0x00FF0000) >>> 16;
+		int a = (tempColor & 0xFF000000) >>> 24;
 		#else
-		// TextureAtlasSpriteWrapper already converts to ARGB order
-		return rawColor;
+		int r = (tempColor & 0x000000FF);
+		int g = (tempColor & 0x0000FF00) >>> 8;
+		int b = (tempColor & 0x00FF0000) >>> 16;
+		int a = (tempColor & 0xFF000000) >>> 24;
 		#endif
+		
+		return ColorUtil.argbToInt(a,r,g,b);
 	}
 	
 	private static int getSpriteWidth(TextureAtlasSprite sprite)
