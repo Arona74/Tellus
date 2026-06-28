@@ -33,22 +33,26 @@ import org.jetbrains.annotations.Nullable;
 public class BlockStateFaceTextureProvider implements IBlockStateFaceTextureProvider
 {
 	public static final BlockStateFaceTextureProvider INSTANCE = new BlockStateFaceTextureProvider();
-
+	
+	
+	
 	@Nullable
 	@Override
 	public BlockFaceTexture getFaceTexture(IBlockStateWrapper blockState, EDhDirection direction)
 	{
 		if (!(blockState instanceof BlockStateWrapper))
 		{
-			// API users can provide their own IBlockStateWrapper implementations
-			// which don't have Minecraft block states to bake
-			// TODO: (need to double check)
-			return null;
+			// shouldn't happen, but just in case
+			throw new UnsupportedOperationException("blockState must be a ["+BlockStateWrapper.class.getSimpleName()+"]");
 		}
 		return ClientBlockStateTextureCache.getFaceTexture((BlockStateWrapper) blockState, direction);
 	}
-
+	
 	@Override
-	public void clearCache() { ClientBlockStateTextureCache.clearCache(); }
-
+	public void clearCache() 
+	{
+		ClientBlockStateTextureCache.clearCache();
+		ClientBlockStateColorCache.clearCachedTints();
+	}
+	
 }
