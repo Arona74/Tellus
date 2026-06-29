@@ -118,6 +118,8 @@ public class CleanroomMain extends AbstractModInitializer
 		{
 			eventHandlerStartServer.accept(event.getServer());
 		}
+		
+		ServerApi.INSTANCE.serverLoadEvent(event.getServer().isDedicatedServer());
 	}
 	
 	Consumer<MinecraftServer> eventHandlerStartServer;
@@ -130,13 +132,6 @@ public class CleanroomMain extends AbstractModInitializer
 	
 	@Override
 	protected void runDelayedSetup() { SingletonInjector.INSTANCE.runDelayedSetup(); }
-	
-	// ServerWorldLoadEvent
-	@Mod.EventHandler
-	public void dedicatedWorldLoadEvent(FMLServerAboutToStartEvent event)
-	{
-		ServerApi.INSTANCE.serverLoadEvent(event.getServer().isDedicatedServer());
-	}
 	
 	// ServerWorldUnloadEvent
 	@Mod.EventHandler
