@@ -107,6 +107,8 @@ public class GlScreenQuad
 		GL32.glPolygonMode(GL32.GL_FRONT_AND_BACK, GL32.GL_FILL);
 		
 		GL32.glDrawArrays(GL32.GL_TRIANGLES, 0, 6);
+		
+		this.boxBuffer.unbind();
 	}
 	
 	//endregion

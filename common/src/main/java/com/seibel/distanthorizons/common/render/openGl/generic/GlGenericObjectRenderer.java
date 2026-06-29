@@ -539,6 +539,8 @@ public class GlGenericObjectRenderer implements IDhGenericRenderer
 			}
 			
 			shaderProgram.unbind();
+			boxVertexBuffer.unbind();
+			boxIndexBuffer.unbind();
 		}
 	}
 	
