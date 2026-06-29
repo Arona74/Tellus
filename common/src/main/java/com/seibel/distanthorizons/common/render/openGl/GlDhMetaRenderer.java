@@ -389,8 +389,10 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 			}
 		}
 		
+		// Restore GL states that 1.12.2 vanilla expects
 		#if MC_VER <= MC_1_12_2
 		GLMC.glDepthFunc(previousDepthFunc);
+		GLMC.glBlendFuncSeparate(GL32.GL_SRC_ALPHA, GL32.GL_ONE, GL32.GL_ONE, GL32.GL_ZERO);
 		#endif
 		this.unbindLightmap();
 		this.shaderProgramForThisFrame.unbind();

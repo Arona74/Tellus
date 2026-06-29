@@ -410,6 +410,14 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 			GLMC.enableFaceCulling();
 		}
 		
+		// Restore GL states that 1.12.2 vanilla expects
+		#if MC_VER <= MC_1_12_2
+		if (!opaquePass)
+		{
+			GLMC.disableBlend();
+			GLMC.glBlendFuncSeparate(GL32.GL_SRC_ALPHA, GL32.GL_ONE, GL32.GL_ONE, GL32.GL_ZERO);
+		}
+		#endif
 	}
 	
 	//endregion
