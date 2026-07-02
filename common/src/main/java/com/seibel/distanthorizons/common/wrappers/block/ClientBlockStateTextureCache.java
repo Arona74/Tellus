@@ -28,7 +28,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import org.jetbrains.annotations.Nullable;
 
-import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,6 +59,8 @@ import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import org.joml.Vector3fc;
+
+import javax.imageio.ImageIO;
 #endif
 
 /**
@@ -89,10 +93,7 @@ public class ClientBlockStateTextureCache
 	 */
 	public static final int TEXTURE_WIDTH_AND_HEIGHT = 16;
 	
-	/**
-	 * Both the bake order and the face index order used by
-	 * {@link ClientBlockStateTextureCache#getFaceIndex(EDhDirection)}.
-	 */
+	/** The bake order */
 	private static final EDhDirection[] FACE_DIRECTIONS =
 		{
 			EDhDirection.DOWN,
@@ -126,6 +127,14 @@ public class ClientBlockStateTextureCache
 	private static final ConcurrentHashMap<BlockState, BlockFaceTexture[]> TEXTURES_BY_BLOCK_STATE = new ConcurrentHashMap<>();
 	#endif
 	
+	/** 
+	 * can be enabled to make sure the textures are being parsed
+	 * with the correct colors.
+	 */
+	private static final boolean WRITE_TEXTURES_TO_FILE_FOR_DEBUGGING = false;
+	/** should end with a "/" */
+	private static final String TEST_TEXTURE_OUTPUT_FOLDER_PATH = "C:/Users/James_Seibel/Desktop/tex_output/";
+	
 	
 	
 	//================//
@@ -137,26 +146,20 @@ public class ClientBlockStateTextureCache
 	{
 		BlockFaceTexture[] faceTextures = TEXTURES_BY_BLOCK_STATE.computeIfAbsent(
 				blockStateWrapper.blockState,
-				(blockState) -> bakeAllFaceTextures(blockStateWrapper));
-		return faceTextures[getFaceIndex(direction)];
+				(blockState) ->
+				{
+					BlockFaceTexture[] blockFaceTextures = bakeAllFaceTextures(blockStateWrapper);
+					if (WRITE_TEXTURES_TO_FILE_FOR_DEBUGGING)
+					{
+						writeTopAndNorthTexturesToFile(blockStateWrapper, blockFaceTextures);
+					}
+					return blockFaceTextures;
+				});
+		return faceTextures[direction.faceIndex];
 	}
 	
 	/** Should be called whenever MC's textures change, IE when resource packs are swapped. */
 	public static void clearCache() { TEXTURES_BY_BLOCK_STATE.clear(); }
-	
-	private static int getFaceIndex(EDhDirection direction)
-	{
-		switch (direction)
-		{
-			case DOWN: return 0;
-			case UP: return 1;
-			case NORTH: return 2;
-			case SOUTH: return 3;
-			case WEST: return 4;
-			case EAST: return 5;
-			default: throw new IllegalArgumentException("No face texture for direction [" + direction + "].");
-		}
-	}
 	
 	//endregion
 	
@@ -844,7 +847,89 @@ public class ClientBlockStateTextureCache
 	}
 	
 	//endregion
-
-
+	
+	
+	
+	//====================//
+	// debug file writing //
+	//====================//
+	//region
+	
+	private static void writeTopAndNorthTexturesToFile(BlockStateWrapper blockStateWrapper, BlockFaceTexture[] blockFaceTextures)
+	{
+		for (int i = 0; i < blockFaceTextures.length; i++)
+		{
+			// top and north are generally enough when troubleshooting texture problems,
+			// although this can be commented out if additional directions need to be tested
+			EDhDirection dir = FACE_DIRECTIONS[i];
+			if (dir != EDhDirection.UP
+				&& dir != EDhDirection.NORTH)
+			{
+				continue;
+			}
+			
+			
+			BlockFaceTexture faceTexture = blockFaceTextures[dir.faceIndex];
+			
+			String blockSerial = blockStateWrapper
+				.getSerialString()
+				.replace(":", "-")
+				.replace("{", "[")
+				.replace("}", "]")
+				;
+			String filePath = TEST_TEXTURE_OUTPUT_FOLDER_PATH + blockSerial + "_" + dir + ".png";
+			try
+			{
+				writeArgbPixelsToPng(faceTexture.argbPixels, filePath);
+			}
+			catch (Exception e)
+			{
+				LOGGER.error("failed to save file ["+filePath+"], error: ["+e.getMessage()+"]");
+			}
+		}
+	}
+	
+	public static void writeArgbPixelsToPng(int[] pixels, String outputPath)
+		throws IOException
+	{
+		// Multiplies the output texture size by this many times.
+		// Done to make viewing textures in File Explorer easier.
+		int scale = 8;
+		
+		BufferedImage image = new BufferedImage(
+			TEXTURE_WIDTH_AND_HEIGHT * scale,
+			TEXTURE_WIDTH_AND_HEIGHT * scale, 
+			BufferedImage.TYPE_INT_ARGB);
+		
+		for (int u = 0; u < TEXTURE_WIDTH_AND_HEIGHT; u++)
+		{
+			for (int v = 0; v < TEXTURE_WIDTH_AND_HEIGHT; v++)
+			{
+				int argb = pixels[(v * TEXTURE_WIDTH_AND_HEIGHT) + u];
+				
+				// duplicate the same pixel "scale" times to make it larger
+				for (int uScale = 0; uScale < scale; uScale++)
+				{
+					for (int vScale = 0; vScale < scale; vScale++)
+					{
+						image.setRGB(
+							(u * scale) + uScale, 
+							(v * scale) + vScale, 
+							argb);
+					}
+				}
+			}
+		}
+		
+		File outputFile = new File(outputPath);
+		if (!ImageIO.write(image, "png", outputFile))
+		{
+			throw new IOException("No PNG writer found, javax.imageio may not be available.");
+		}
+	}
+	
+	//endregion
+	
+	
 
 }
