@@ -19,8 +19,6 @@
 
 package com.seibel.distanthorizons.common.wrappers.block;
 
-import com.seibel.distanthorizons.api.interfaces.block.IDhApiBlockStateWrapper;
-import com.seibel.distanthorizons.api.interfaces.world.IDhApiLevelWrapper;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBlockColorOverrideEvent;
 import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
 import com.seibel.distanthorizons.core.dataObjects.fullData.sources.FullDataSourceV2;
@@ -578,23 +576,12 @@ public class ClientBlockStateColorCache
 			{
 				for (int u = 0; u < getTextureWidth(texture); u++)
 				{
-					//note: Minecraft color format is: 0xAA BB GG RR
-					//________ DH mod color format is: 0xAA RR GG BB
-					//OpenGL RGBA format native order: 0xRR GG BB AA
-					//_ OpenGL RGBA format Java Order: 0xAA BB GG RR
-					tempColor = TextureAtlasSpriteWrapper.getPixelRGBA(texture, 0, u, v);
+					tempColor = TextureAtlasSpriteWrapper.getPixelARGB(texture, 0, u, v);
 					
-					#if MC_VER <= MC_1_12_2
-					int b = (tempColor & 0x000000FF);
-					int g = (tempColor & 0x0000FF00) >>> 8;
-					int r = (tempColor & 0x00FF0000) >>> 16;
-					int a = (tempColor & 0xFF000000) >>> 24;
-					#else
-					int r = (tempColor & 0x000000FF);
-					int g = (tempColor & 0x0000FF00) >>> 8;
-					int b = (tempColor & 0x00FF0000) >>> 16;
-					int a = (tempColor & 0xFF000000) >>> 24;
-					#endif
+					int r = ColorUtil.getRed(tempColor);
+					int g = ColorUtil.getGreen(tempColor);
+					int b = ColorUtil.getBlue(tempColor);
+					int a = ColorUtil.getAlpha(tempColor);
 					
 					int scale = 1;
 					if (colorMode == EColorMode.Leaves)

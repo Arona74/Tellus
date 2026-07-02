@@ -19,7 +19,6 @@
 
 package com.seibel.distanthorizons.common.wrappers.block;
 
-import com.seibel.distanthorizons.common.wrappers.chunk.ChunkWrapper;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 #if MC_VER < MC_1_17_1
@@ -36,29 +35,33 @@ import net.minecraft.client.renderer.texture.SpriteContents;
  */
 public class TextureAtlasSpriteWrapper
 {
-	public static int getPixelRGBA(TextureAtlasSprite sprite, int frameIndex, int x, int y)
+	public static int getPixelARGB(TextureAtlasSprite sprite, int frameIndex, int x, int y)
 	{
 		#if MC_VER <= MC_1_12_2
 		int[][] frameData = sprite.getFrameTextureData(frameIndex);
-		return frameData[0][y * sprite.getIconWidth() + x];
+		int argb = frameData[0][y * sprite.getIconWidth() + x];
+		return argb;
         #elif MC_VER < MC_1_17_1
-        return sprite.mainImage[0].getPixelRGBA(
+        int rgba = sprite.mainImage[0].getPixelRGBA(
                 x + sprite.framesX[frameIndex] * sprite.getWidth(),
                 y + sprite.framesY[frameIndex] * sprite.getHeight());
+        return convertRgbaToArgb(rgba);
         #elif MC_VER < MC_1_19_4
 		if (sprite.animatedTexture != null)
 		{
 			x += sprite.animatedTexture.getFrameX(frameIndex) * sprite.width;
 			y += sprite.animatedTexture.getFrameY(frameIndex) * sprite.height;
 		}
-		return sprite.mainImage[0].getPixelRGBA(x, y);
+		int rbga = sprite.mainImage[0].getPixelRGBA(x, y);
+		return convertRgbaToArgb(rgba);
 		#elif MC_VER < MC_1_21_3
 		if (sprite.contents().animatedTexture != null)
 		{
 			x += sprite.contents().animatedTexture.getFrameX(frameIndex) * sprite.contents().width();
 			y += sprite.contents().animatedTexture.getFrameY(frameIndex) * sprite.contents().width();
 		}
-		return sprite.contents().originalImage.getPixelRGBA(x, y);
+		int rgba = sprite.contents().originalImage.getPixelRGBA(x, y);
+		return convertRgbaToArgb(rgba);
         #else
 		
 		SpriteContents content = sprite.contents(); // don't close, otherwise MC will be corrupted and you won't be able to re-access the texture
@@ -68,15 +71,20 @@ public class TextureAtlasSpriteWrapper
 			y += content.animatedTexture.getFrameY(frameIndex) * content.width();
 		}
 		
-		int abgr = content.originalImage.getPixel(x, y);
-		// re-pack the color so we can access it normally
-		int a = (abgr & 0xFF000000) >>> 24;
-		int b = (abgr & 0x00FF0000) >>> 16;
-		int g = (abgr & 0x0000FF00) >>> 8;
-		int r = (abgr & 0x000000FF);
-		return ColorUtil.argbToInt(a, r, g, b);
+		int argb = content.originalImage.getPixel(x, y);
+		return argb;
         #endif
-		
 	}
+	
+	private static int convertRgbaToArgb(int rgba)
+	{
+		int r = (rgba & 0xFF000000) >>> 24;
+		int g = (rgba & 0x00FF0000) >>> 16;
+		int b = (rgba & 0x0000FF00) >>> 8;
+		int a = (rgba & 0x000000FF);
+		return ColorUtil.argbToInt(a, r, g, b);
+	}
+	
+	
 	
 }

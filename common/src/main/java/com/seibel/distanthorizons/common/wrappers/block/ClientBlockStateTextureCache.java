@@ -389,7 +389,7 @@ public class ClientBlockStateTextureCache
 			{
 				int texelX = (u * spriteWidth) / TEXTURE_WIDTH_AND_HEIGHT;
 				int texelY = (v * spriteHeight) / TEXTURE_WIDTH_AND_HEIGHT;
-				pixels[(v * TEXTURE_WIDTH_AND_HEIGHT) + u] = getSpriteTexelArgb(sprite, texelX, texelY);
+				pixels[(v * TEXTURE_WIDTH_AND_HEIGHT) + u] = TextureAtlasSpriteWrapper.getPixelARGB(sprite, 0, texelX, texelY);
 			}
 		}
 		return new BlockFaceTexture(TEXTURE_WIDTH_AND_HEIGHT, TEXTURE_WIDTH_AND_HEIGHT, pixels, tinted);
@@ -476,8 +476,8 @@ public class ClientBlockStateTextureCache
 				int texelX = Math.min(Math.max((int) (spriteU * spriteWidth), 0), spriteWidth - 1);
 				int texelY = Math.min(Math.max((int) (spriteV * spriteHeight), 0), spriteHeight - 1);
 				
-				int sourceColor = getSpriteTexelArgb(geometry.sprite, texelX, texelY);
-				if (ColorUtil.getAlpha(sourceColor) == 0)
+				int argbSourceColor = TextureAtlasSpriteWrapper.getPixelARGB(geometry.sprite, 0, texelX, texelY);
+				if (ColorUtil.getAlpha(argbSourceColor) == 0)
 				{
 					// fully transparent texels (IE the area around a fence post)
 					// shouldn't overwrite anything behind them
@@ -485,7 +485,7 @@ public class ClientBlockStateTextureCache
 				}
 				
 				int pixelIndex = (pixelV * TEXTURE_WIDTH_AND_HEIGHT) + pixelU;
-				pixels[pixelIndex] = blendSourceOver(sourceColor, pixels[pixelIndex]);
+				pixels[pixelIndex] = blendSourceOver(argbSourceColor, pixels[pixelIndex]);
 				anyPixelDrawn = true;
 			}
 		}
@@ -787,26 +787,6 @@ public class ClientBlockStateTextureCache
 			LOGGER.warn("Failed to get particle sprite for block ["+blockStateWrapper.getSerialString()+"], error: ["+e.getMessage()+"].", e);
 			return null;
 		}
-	}
-	
-	/** @return the texel color in ARGB order, the same order {@link ColorUtil} uses */
-	private static int getSpriteTexelArgb(TextureAtlasSprite texture, int texelX, int texelY)
-	{
-		int tempColor = TextureAtlasSpriteWrapper.getPixelRGBA(texture, 0, texelX, texelY);
-					
-		#if MC_VER <= MC_1_12_2
-		int b = (tempColor & 0x000000FF);
-		int g = (tempColor & 0x0000FF00) >>> 8;
-		int r = (tempColor & 0x00FF0000) >>> 16;
-		int a = (tempColor & 0xFF000000) >>> 24;
-		#else
-		int r = (tempColor & 0x000000FF);
-		int g = (tempColor & 0x0000FF00) >>> 8;
-		int b = (tempColor & 0x00FF0000) >>> 16;
-		int a = (tempColor & 0xFF000000) >>> 24;
-		#endif
-		
-		return ColorUtil.argbToInt(a,r,g,b);
 	}
 	
 	private static int getSpriteWidth(TextureAtlasSprite sprite)
