@@ -404,13 +404,13 @@ public class BlockStateWrapper implements IBlockStateWrapper
 				#if MC_VER <= MC_1_12_2
 				if (block instanceof BlockStainedGlass)
 				{
-					colorInt = blockState.getValue(BlockStainedGlass.COLOR).getColorValue();
-					beaconTintColor = ColorUtil.toColorObjRGB(colorInt);
+					float[] c = blockState.getValue(BlockStainedGlass.COLOR).getColorComponentValues();
+					beaconTintColor = new Color(c[0], c[1], c[2]);
 				}
 				else if (block instanceof BlockStainedGlassPane)
 				{
-					colorInt = blockState.getValue(BlockStainedGlassPane.COLOR).getColorValue();
-					beaconTintColor = ColorUtil.toColorObjRGB(colorInt);
+					float[] c = blockState.getValue(BlockStainedGlassPane.COLOR).getColorComponentValues();
+					beaconTintColor = new Color(c[0], c[1], c[2]);
 				}
 				#else
 				if (block instanceof BeaconBeamBlock)
