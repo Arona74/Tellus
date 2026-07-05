@@ -30,9 +30,9 @@ import org.jetbrains.annotations.Nullable;
  *
  * @see IBlockStateFaceTextureProvider
  */
-public class BlockStateFaceTextureProvider implements IBlockStateFaceTextureProvider
+public class BlockStateTextureProvider implements IBlockStateFaceTextureProvider
 {
-	public static final BlockStateFaceTextureProvider INSTANCE = new BlockStateFaceTextureProvider();
+	public static final BlockStateTextureProvider INSTANCE = new BlockStateTextureProvider();
 	
 	
 	
