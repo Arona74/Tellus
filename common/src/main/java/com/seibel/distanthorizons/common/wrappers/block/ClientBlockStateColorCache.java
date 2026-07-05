@@ -725,7 +725,7 @@ public class ClientBlockStateColorCache
 							// Example: cherry blossom leaves
 							if (tintSource != null)
 							{
-								BlockPos mcPos = McObjectConverter.Convert(blockPos);
+								BlockPos mcPos = McObjectConverter.convert(blockPos);
 								tintColor = tintSource.colorInWorld(this.blockState, tintOverride, mcPos);
 								if (tintColor == ClientBlockStateColorCache.INVALID_COLOR)
 								{

@@ -34,7 +34,6 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.ChunkPos;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 #endif
 
@@ -55,7 +54,7 @@ public class McObjectConverter
 	//region
 	
 	/** 4x4 float matrix converter */
-	public static DhMat4f Convert(
+	public static DhMat4f convert(
 			#if MC_VER <= MC_1_12_2 org.joml.Matrix4f
 			#elif MC_VER < MC_1_19_4 com.mojang.math.Matrix4f 
 			#elif MC_VER < MC_1_21_6 org.joml.Matrix4f
@@ -160,10 +159,10 @@ public class McObjectConverter
 	//==================//
 	//region
 	
-	public static BlockPos Convert(DhBlockPos wrappedPos) { return new BlockPos(wrappedPos.getX(), wrappedPos.getY(), wrappedPos.getZ()); }
+	public static BlockPos convert(DhBlockPos wrappedPos) { return new BlockPos(wrappedPos.getX(), wrappedPos.getY(), wrappedPos.getZ()); }
 	
-	public static ChunkPos Convert(DhChunkPos wrappedPos) { return new ChunkPos(wrappedPos.getX(), wrappedPos.getZ()); }
-	public static DhChunkPos Convert(ChunkPos mcPos) 
+	public static ChunkPos convert(DhChunkPos wrappedPos) { return new ChunkPos(wrappedPos.getX(), wrappedPos.getZ()); }
+	public static DhChunkPos convert(ChunkPos mcPos) 
 	{ 
 		#if MC_VER <= MC_1_21_11
 		return new DhChunkPos(mcPos.x, mcPos.z);

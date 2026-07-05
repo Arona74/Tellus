@@ -221,7 +221,7 @@ public class MixinLevelRenderer
 		final ChunkSectionsToRender chunkSectionsToRender,
 		CallbackInfo callback)
 	{
-		ClientApi.RENDER_STATE.mcModelViewMatrix = McObjectConverter.Convert(modelViewMatrix);
+		ClientApi.RENDER_STATE.mcModelViewMatrix = McObjectConverter.convert(modelViewMatrix);
 		
 		ClientApi.RENDER_STATE.partialTickTime = MinecraftRenderWrapper.INSTANCE.getPartialTickTime();
 		
