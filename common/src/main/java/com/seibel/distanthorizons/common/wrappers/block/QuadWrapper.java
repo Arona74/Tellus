@@ -15,12 +15,12 @@ import net.minecraft.client.renderer.color.BlockColors;
 import net.minecraft.util.math.BlockPos;
 #else
 import net.minecraft.core.Direction;
-import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
 #endif
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 
 #if MC_VER >= MC_1_19_2
 import net.minecraft.util.RandomSource;
@@ -52,6 +52,16 @@ public class QuadWrapper
 	private static final RandomSource RANDOM = RandomSource.create();
 	#endif
 	
+	/**
+	 * Methods using MC's "RandomSource" object aren't thread safe <br>
+	 * so we need to put locks around that logic. <br>
+	 * specifically:
+	 * <code>
+	 * getBlockModel(blockState).getQuads(blockState, direction, RANDOM)
+	 * </code>
+	 */
+	private static final ReentrantLock GETTER_LOCK = new ReentrantLock();
+	
 	
 	
 	@Nullable
@@ -73,61 +83,71 @@ public class QuadWrapper
 	public static List<BakedQuad> getQuadsForDirection(BlockState blockState, @Nullable EDhDirection dhDirection) throws Exception
 	#endif
 	{
-		#if MC_VER <= MC_1_12_2
-		@Nullable EnumFacing direction = McObjectConverter.convert(dhDirection);
-		#else
-		@Nullable Direction direction = McObjectConverter.convert(dhDirection);
-		#endif
-		
-		
-		
-		//===============//
-		// quad handling //
-		//===============//
-		//region
-		
-		List<BakedQuad> quads;
-		
-		#if MC_VER <= MC_1_12_2
-		try {
-			quads = MC.getBlockRendererDispatcher().getModelForState(blockState).getQuads(blockState, direction, RANDOM.nextLong());
-		}
-		catch (Exception e)
+		GETTER_LOCK.lock();
+		try
 		{
-			quads = Collections.emptyList();
-		}
-		#elif MC_VER < MC_1_21_5
-		quads = MC.getModelManager().getBlockModelShaper().
-			getBlockModel(blockState).getQuads(blockState, direction, RANDOM);
-		#elif MC_VER <= MC_1_21_11
-		List<BlockModelPart> blockModelPartList = MC.getModelManager().getBlockModelShaper().
-			getBlockModel(blockState).collectParts(RANDOM);
-		
-		quads = new ArrayList<>();
-		if (blockModelPartList != null)
-		{
+			#if MC_VER <= MC_1_12_2
+			@Nullable EnumFacing direction = McObjectConverter.convert(dhDirection);
+			#else
+			@Nullable Direction direction = McObjectConverter.convert(dhDirection);
+			#endif
+			
+			
+			
+			//===============//
+			// quad handling //
+			//===============//
+			//region
+			
+			List<BakedQuad> quads;
+			
+			#if MC_VER <= MC_1_12_2
+			try {
+				quads = MC.getBlockRendererDispatcher().getModelForState(blockState).getQuads(blockState, direction, RANDOM.nextLong());
+			}
+			catch (Exception e)
+			{
+				quads = Collections.emptyList();
+			}
+			#elif MC_VER < MC_1_21_5
+			quads = MC.getModelManager().getBlockModelShaper().
+				getBlockModel(blockState).getQuads(blockState, direction, RANDOM);
+			#elif MC_VER <= MC_1_21_11
+			List<BlockModelPart> blockModelPartList = MC.getModelManager().getBlockModelShaper().
+				getBlockModel(blockState).collectParts(RANDOM);
+			
+			quads = new ArrayList<>();
+			if (blockModelPartList != null)
+			{
+				for (int i = 0; i < blockModelPartList.size(); i++)
+				{
+					// if direction is null this will return the unculled quads
+					quads.addAll(blockModelPartList.get(i).getQuads(direction));
+				}
+			}
+			#else
+			List<BlockStateModelPart> blockModelPartList = new ArrayList<>();
+			MC.getModelManager()
+				.getBlockStateModelSet()
+				.get(blockState)
+				.collectParts(RANDOM, blockModelPartList);
+			
+			quads = new ArrayList<>();
 			for (int i = 0; i < blockModelPartList.size(); i++)
 			{
 				// if direction is null this will return the unculled quads
 				quads.addAll(blockModelPartList.get(i).getQuads(direction));
 			}
+			#endif
+			
+			//endregion
+			
+			return quads;
 		}
-		#else
-		List<BlockStateModelPart> blockModelPartList = new ArrayList<>();
-		MC.getModelManager().getBlockStateModelSet()
-			.get(blockState).collectParts(RANDOM, blockModelPartList);
-		
-		quads = new ArrayList<>();
-		for (int i = 0; i < blockModelPartList.size(); i++)
+		finally
 		{
-			// if direction is null this will return the unculled quads
-			quads.addAll(blockModelPartList.get(i).getQuads(direction));
+			GETTER_LOCK.unlock();
 		}
-		#endif
-		
-		//endregion
-		
-		return quads;
 	}
 	
 	
