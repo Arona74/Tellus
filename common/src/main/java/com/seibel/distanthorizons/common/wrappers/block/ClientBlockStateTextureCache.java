@@ -641,14 +641,19 @@ public class ClientBlockStateTextureCache
 	
 	
 	
-	//====================//
-	// minecraft wrappers //
-	//====================//
+	//================//
+	// helper methods //
+	//================//
 	//region
 	
 	@Nullable
 	private static TextureAtlasSprite getParticleSprite(BlockStateWrapper blockStateWrapper)
 	{
+		if (blockStateWrapper.blockState == null)
+		{
+			return null;
+		}
+		
 		try
 		{
 			#if MC_VER <= MC_1_12_2
@@ -665,15 +670,6 @@ public class ClientBlockStateTextureCache
 			return null;
 		}
 	}
-	
-	//endregion
-	
-	
-	
-	//================//
-	// helper methods //
-	//================//
-	//region
 	
 	/** Picks which quad represents the face when several overlap. */
 	private static BakedQuad pickFaceQuad(List<BakedQuad> quadList)
