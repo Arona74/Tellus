@@ -22,6 +22,7 @@ package com.seibel.distanthorizons.common.wrappers.block;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBlockColorOverrideEvent;
 import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
 import com.seibel.distanthorizons.core.dataObjects.fullData.sources.FullDataSourceV2;
+import com.seibel.distanthorizons.core.enums.EDhDirection;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPos;
 import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPosMutable;
@@ -41,7 +42,6 @@ import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.renderer.color.BlockColors;
 import net.minecraft.util.math.BlockPos;
 #else
-import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.SlabType;
@@ -51,11 +51,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
-
-#if MC_VER >= MC_1_19_2
-import net.minecraft.util.RandomSource;
-#else
-#endif
 
 #if MC_VER < MC_1_21_5
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -124,28 +119,21 @@ public class ClientBlockStateColorCache
 			EnumFacing.DOWN
 		};
 	#else
-	private static final @Nullable Direction[] COLOR_RESOLUTION_DIRECTION_ORDER = 
+	private static final @Nullable EDhDirection[] COLOR_RESOLUTION_DIRECTION_ORDER = 
 		{
-			Direction.UP,
+			EDhDirection.UP,
 			null, // null represents "unculled" faces, IE the top of farmland
-			Direction.NORTH,
-			Direction.EAST,
-			Direction.WEST,
-			Direction.SOUTH,
-			Direction.DOWN
+			EDhDirection.NORTH,
+			EDhDirection.EAST,
+			EDhDirection.WEST,
+			EDhDirection.SOUTH,
+			EDhDirection.DOWN
 		};
 	#endif
 	
 	private static final int FLOWER_COLOR_SCALE = 5;
 	
 	
-	
-	#if MC_VER < MC_1_19_2
-	private static final Random RANDOM = new Random(0);
-	#else
-	/** Note: this object isn't thread safe and must be put in a lock */
-	private static final RandomSource RANDOM = RandomSource.create();
-	#endif
 	
 	private final IClientLevelWrapper clientLevelWrapper;
 	#if MC_VER <= MC_1_12_2
@@ -192,8 +180,8 @@ public class ClientBlockStateColorCache
 		};
 	
 	private static final float[] srgbToLinearTable = new float[] 
-		//region
 		{
+			//region
 			0.0f, 0.000303527f, 0.000607054f, 0.00091058103f, 0.001214108f, 0.001517635f, 0.0018211621f, 0.002124689f,
 			0.002428216f, 0.002731743f, 0.00303527f, 0.0033465356f, 0.003676507f, 0.004024717f, 0.004391442f,
 			0.0047769533f, 0.005181517f, 0.0056053917f, 0.0060488326f, 0.006512091f, 0.00699541f, 0.0074990317f,
@@ -298,11 +286,7 @@ public class ClientBlockStateColorCache
 				// look for the first non-empty direction
 				List<BakedQuad> quads = null;
 				
-				#if MC_VER <= MC_1_12_2 
-				EnumFacing direction; 
-				#else 
-				Direction direction;
-				#endif
+				EDhDirection direction;
 				
 				for (int i = 0; i < COLOR_RESOLUTION_DIRECTION_ORDER.length; i++)
 				{
@@ -328,7 +312,7 @@ public class ClientBlockStateColorCache
 							&& direction == EnumFacing.UP
 							#else
 							this.blockState.getBlock() instanceof RotatedPillarBlock
-							&& direction == Direction.UP
+							&& direction == EDhDirection.UP
 							#endif
 							)
 						)
@@ -450,29 +434,19 @@ public class ClientBlockStateColorCache
 	
 	@Nullable
 	private List<BakedQuad> getUnculledQuads() throws Exception { return this.getQuadsForDirection(null); }
-	/** 
-	 * throws Exception is to document that rarely MC will throw errors if this method
-	 * is called on the wrong block (even though in that case it should just return null).
-	 */
 	@Nullable
-	#if MC_VER <= MC_1_12_2
-	private List<BakedQuad> getQuadsForDirection(@Nullable EnumFacing direction) throws Exception
-	#else
-	private List<BakedQuad> getQuadsForDirection(@Nullable Direction direction) throws Exception
-	#endif
+	private List<BakedQuad> getQuadsForDirection(@Nullable EDhDirection direction) throws Exception
 	{
+		//=========================//
+		// specific state handling //
+		//=========================//
+		//region
+		
 		#if MC_VER <= MC_1_12_2
 		IBlockState effectiveBlockState = this.blockState;
 		#else
 		BlockState effectiveBlockState = this.blockState;
 		#endif
-		
-		
-		
-		//=========================//
-		// specific state handling //
-		//=========================//
-		//region
 		
 		// if this block is a slab, use it's double variant so we can get the top face,
 		// otherwise the color will use the side, which isn't as accurate
@@ -508,52 +482,7 @@ public class ClientBlockStateColorCache
 		
 		
 		
-		//===============//
-		// quad handling //
-		//===============//
-		//region
-		
-		List<BakedQuad> quads;
-		
-		#if MC_VER <= MC_1_12_2
-		try {
-			quads = MC.getBlockRendererDispatcher().getModelForState(effectiveBlockState).getQuads(effectiveBlockState, direction, RANDOM.nextLong());
-		}
-		catch (Exception e)
-		{
-			quads = Collections.emptyList();
-		}
-		#elif MC_VER < MC_1_21_5
-		quads = MC.getModelManager().getBlockModelShaper().
-			getBlockModel(effectiveBlockState).getQuads(effectiveBlockState, direction, RANDOM);
-		#elif MC_VER <= MC_1_21_11
-		List<BlockModelPart> blockModelPartList = MC.getModelManager().getBlockModelShaper().
-			getBlockModel(effectiveBlockState).collectParts(RANDOM);
-		
-		quads = new ArrayList<>();
-		if (blockModelPartList != null)
-		{
-			for (int i = 0; i < blockModelPartList.size(); i++)
-			{
-				// if direction is null this will return the unculled quads
-				quads.addAll(blockModelPartList.get(i).getQuads(direction));
-			}
-		}
-		#else
-		List<BlockStateModelPart> blockModelPartList = new ArrayList<>();
-		MC.getModelManager().getBlockStateModelSet()
-			.get(effectiveBlockState).collectParts(RANDOM, blockModelPartList);
-		
-		quads = new ArrayList<>();
-		for (int i = 0; i < blockModelPartList.size(); i++)
-		{
-			// if direction is null this will return the unculled quads
-			quads.addAll(blockModelPartList.get(i).getQuads(direction));
-		}
-		#endif
-		
-		//endregion
-		
+		List<BakedQuad> quads = QuadWrapper.getQuadsForDirection(effectiveBlockState, direction);
 		return quads;
 	}
 	

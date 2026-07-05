@@ -188,7 +188,6 @@ public class ClientBlockStateTextureCache
 			
 			if (blockStateWrapper.isLiquid())
 			{
-				// TODO: Works fine for water but not lava
 				// liquids don't have models to rasterize, bake their sprite directly,
 				// tinting is needed for biome dependent water colors
 				BlockFaceTexture liquidTexture = bakeSpriteTexture(getParticleSprite(blockStateWrapper), true);
@@ -232,10 +231,27 @@ public class ClientBlockStateTextureCache
 		ArrayList<BakedQuad> quadList = new ArrayList<>();
 		try
 		{
-			List<BakedQuad> directionQuads = getQuads(blockStateWrapper.blockState, dhDirection);
-			if (directionQuads != null && !directionQuads.isEmpty())
+			List<BakedQuad> bakedQuads;
+			if (dhDirection != EDhDirection.UP)
 			{
-				BakedQuad faceQuad = pickFaceQuad(directionQuads);
+				bakedQuads = QuadWrapper.getQuadsForDirection(blockStateWrapper.blockState, dhDirection);
+			}
+			else
+			{
+				// the top direction needs to get unculled quads for farm land to render properly
+				bakedQuads = QuadWrapper.getUnculledQuads(blockStateWrapper.blockState);
+				if (bakedQuads == null
+					|| bakedQuads.isEmpty())
+				{
+					bakedQuads = QuadWrapper.getQuadsForDirection(blockStateWrapper.blockState, dhDirection);
+				}
+			}
+			
+			
+			if (bakedQuads != null 
+				&& !bakedQuads.isEmpty())
+			{
+				BakedQuad faceQuad = pickFaceQuad(bakedQuads);
 				TextureAtlasSprite quadSprite = getQuadSprite(faceQuad);
 				boolean isQuadTinted = isQuadTinted(faceQuad);	
 				
@@ -248,7 +264,7 @@ public class ClientBlockStateTextureCache
 			
 			// unculled quads (IE fence posts)
 			// can be visible from every direction
-			List<BakedQuad> unculledQuads = getQuads(blockStateWrapper.blockState, null);
+			List<BakedQuad> unculledQuads = QuadWrapper.getUnculledQuads(blockStateWrapper.blockState);
 			if (unculledQuads != null)
 			{
 				quadList.addAll(unculledQuads);
@@ -262,7 +278,7 @@ public class ClientBlockStateTextureCache
 		
 		if (quadList.isEmpty())
 		{
-			// blocks without quads (IE blocks rendered via block entities)
+			// blocks without quads (IE blocks rendered via block entities like chests)
 			// fall back to their particle texture
 			return bakeSpriteTexture(getParticleSprite(blockStateWrapper), false);
 		}
@@ -682,95 +698,6 @@ public class ClientBlockStateTextureCache
 	// minecraft wrappers //
 	//====================//
 	//region
-	
-	/**
-	 * throws Exception MC may throw errors if this method is called on the wrong block (even though in that case it should just return null).
-	 */
-	@Nullable
-	#if MC_VER <= MC_1_12_2
-	private static List<BakedQuad> getQuads(IBlockState blockState, @Nullable EDhDirection dhDirection) throws Exception
-	#else
-	private static List<BakedQuad> getQuads(BlockState blockState, @Nullable EDhDirection dhDirection) throws Exception
-	#endif
-	{
-		#if MC_VER <= MC_1_12_2
-		EnumFacing direction = convertDirection(dhDirection);
-		#else
-		Direction direction = convertDirection(dhDirection);
-		#endif
-		
-		List<BakedQuad> quads;
-		
-		#if MC_VER <= MC_1_12_2
-		try
-		{
-			quads = MC.getBlockRendererDispatcher().getModelForState(blockState).getQuads(blockState, direction, RANDOM.nextLong());
-		}
-		catch (Exception e)
-		{
-			quads = Collections.emptyList();
-		}
-		#elif MC_VER < MC_1_21_5
-		quads = MC.getModelManager().getBlockModelShaper().getBlockModel(blockState).getQuads(blockState, direction, RANDOM);
-		#elif MC_VER <= MC_1_21_11
-		List<BlockModelPart> blockModelPartList = MC.getModelManager().getBlockModelShaper().getBlockModel(blockState).collectParts(RANDOM);
-		
-		quads = new ArrayList<>();
-		if (blockModelPartList != null)
-		{
-			for (int i = 0; i < blockModelPartList.size(); i++)
-			{
-				// if direction is null this will return the unculled quads
-				quads.addAll(blockModelPartList.get(i).getQuads(direction));
-			}
-		}
-		#else
-		List<BlockStateModelPart> blockModelPartList = new ArrayList<>();
-		MC.getModelManager().getBlockStateModelSet().get(blockState).collectParts(RANDOM, blockModelPartList);
-		
-		quads = new ArrayList<>();
-		for (int i = 0; i < blockModelPartList.size(); i++)
-		{
-			// if direction is null this will return the unculled quads
-			quads.addAll(blockModelPartList.get(i).getQuads(direction));
-		}
-		#endif
-		
-		return quads;
-	}
-	
-	@Nullable
-	#if MC_VER <= MC_1_12_2
-	private static EnumFacing convertDirection(@Nullable EDhDirection dhDirection)
-	#else
-	private static Direction convertDirection(@Nullable EDhDirection dhDirection)
-	#endif
-	{
-		if (dhDirection == null)
-		{
-			return null;
-		}
-		
-		switch (dhDirection)
-		{
-			#if MC_VER <= MC_1_12_2
-			case DOWN: return EnumFacing.DOWN;
-			case UP: return EnumFacing.UP;
-			case NORTH: return EnumFacing.NORTH;
-			case SOUTH: return EnumFacing.SOUTH;
-			case WEST: return EnumFacing.WEST;
-			case EAST: return EnumFacing.EAST;
-			#else
-			case DOWN: return Direction.DOWN;
-			case UP: return Direction.UP;
-			case NORTH: return Direction.NORTH;
-			case SOUTH: return Direction.SOUTH;
-			case WEST: return Direction.WEST;
-			case EAST: return Direction.EAST;
-			#endif
-			default: throw new IllegalArgumentException("No Minecraft direction for [" + dhDirection + "].");
-		}
-	}
 	
 	@Nullable
 	private static TextureAtlasSprite getParticleSprite(BlockStateWrapper blockStateWrapper)

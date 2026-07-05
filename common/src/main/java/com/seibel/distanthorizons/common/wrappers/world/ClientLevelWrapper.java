@@ -730,7 +730,7 @@ public class ClientLevelWrapper implements IClientLevelWrapper
 				#if MC_VER <= MC_1_12_2
 				// 1.12.2 level doesn't have a getShade method, fall through to ENABLED
 				#else
-					Direction mcDir = McObjectConverter.Convert(lodDirection);
+					Direction mcDir = McObjectConverter.convert(lodDirection);
 					#if MC_VER <= MC_1_21_11
 					return this.level.getShade(mcDir, true);
 					#else

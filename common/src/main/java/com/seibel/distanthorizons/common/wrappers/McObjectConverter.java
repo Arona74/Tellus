@@ -34,6 +34,8 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.ChunkPos;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 #endif
 
 /**
@@ -114,103 +116,40 @@ public class McObjectConverter
 	//===========//
 	//region
 	
+	@Nullable
+	/** Can be null since some MC methods need a null direction */
 	#if MC_VER <= MC_1_12_2
-	private static final EnumFacing[] mcDirections;
+	public static EnumFacing convert(@Nullable EDhDirection dhDirection)
 	#else
-	private static final Direction[] mcDirections;
+	public static Direction convert(@Nullable EDhDirection dhDirection)
 	#endif
-	
-	private static final EDhDirection[] dhDirections;
-	static
 	{
-		EDhDirection[] lodDirs = EDhDirection.values();
-		
-		#if MC_VER <= MC_1_12_2
-		mcDirections = new EnumFacing[lodDirs.length];
-		#else
-		mcDirections = new Direction[lodDirs.length];
-		#endif
-		
-		dhDirections = new EDhDirection[lodDirs.length];
-		for (EDhDirection lodDir : lodDirs)
+		if (dhDirection == null)
 		{
-			#if MC_VER <= MC_1_12_2 
-			EnumFacing dir;
-			#else 
-			Direction dir; 
+			return null;
+		}
+		
+		switch (dhDirection)
+		{
+			#if MC_VER <= MC_1_12_2
+			case DOWN: return EnumFacing.DOWN;
+			case UP: return EnumFacing.UP;
+			case NORTH: return EnumFacing.NORTH;
+			case SOUTH: return EnumFacing.SOUTH;
+			case WEST: return EnumFacing.WEST;
+			case EAST: return EnumFacing.EAST;
+			#else
+			case DOWN: return Direction.DOWN;
+			case UP: return Direction.UP;
+			case NORTH: return Direction.NORTH;
+			case SOUTH: return Direction.SOUTH;
+			case WEST: return Direction.WEST;
+			case EAST: return Direction.EAST;
 			#endif
-			switch (lodDir.name().toUpperCase())
-			{
-				case "DOWN":
-					#if MC_VER <= MC_1_12_2
-					dir = EnumFacing.DOWN;
-					#else 
-					dir = Direction.DOWN;
-					#endif
-					break;
-				case "UP":
-					#if MC_VER <= MC_1_12_2
-					dir = EnumFacing.UP;
-					#else 
-					dir = Direction.UP;
-					#endif
-					break;
-				case "NORTH":
-					#if MC_VER <= MC_1_12_2
-					dir = EnumFacing.NORTH;
-					#else 
-					dir = Direction.NORTH;
-					#endif
-					break;
-				case "SOUTH":
-					#if MC_VER <= MC_1_12_2
-					dir = EnumFacing.SOUTH;
-					#else 
-					dir = Direction.SOUTH;
-					#endif
-					break;
-				case "WEST":
-					#if MC_VER <= MC_1_12_2
-					dir = EnumFacing.WEST;
-					#else 
-					dir = Direction.WEST;
-					#endif
-					break;
-				case "EAST":
-					#if MC_VER <= MC_1_12_2
-					dir = EnumFacing.EAST;
-					#else 
-					dir = Direction.EAST;
-					#endif
-					break;
-				default:
-					dir = null;
-					break;
-			}
 			
-			if (dir == null)
-			{
-				throw new IllegalArgumentException("Invalid direction on init mapping: [" + lodDir + "].");
-			}
-			mcDirections[lodDir.ordinal()] = dir;
-			dhDirections[dir.ordinal()] = lodDir;
+			default: throw new IllegalArgumentException("No Minecraft direction defined for [" + dhDirection + "].");
 		}
 	}
-	
-	#if MC_VER <= MC_1_12_2
-	public static EnumFacing Convert(EDhDirection lodDirection)
-	#else
-	public static Direction Convert(EDhDirection lodDirection)
-	#endif
-	{ return mcDirections[lodDirection.ordinal()]; }
-	
-	
-	#if MC_VER <= MC_1_12_2
-	public static EDhDirection Convert(EnumFacing direction) 
-	#else
-	public static EDhDirection Convert(Direction direction) 
-	#endif
-	{ return dhDirections[direction.ordinal()]; }
 	
 	//endregion
 	
