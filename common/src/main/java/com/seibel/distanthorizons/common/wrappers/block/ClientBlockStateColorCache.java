@@ -58,7 +58,6 @@ import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 #else
-import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.BlockPos;
 import net.minecraft.client.color.block.BlockTintSource;
@@ -500,10 +499,11 @@ public class ClientBlockStateColorCache
 		// Since EColorMode is set per block, you only need to check this once.
 		if (colorMode != EColorMode.Chisel)
 		{
-			// textures normally use u and v instead of x and y
-			for (int v = 0; v < getTextureHeight(texture); v++)
+			int textureHeight = TextureAtlasSpriteWrapper.getHeight(texture);
+			int textureWidth = TextureAtlasSpriteWrapper.getWidth(texture);
+			for (int v = 0; v < textureHeight; v++)
 			{
-				for (int u = 0; u < getTextureWidth(texture); u++)
+				for (int u = 0; u < textureWidth; u++)
 				{
 					tempColor = TextureAtlasSpriteWrapper.getPixelARGB(texture, 0, u, v);
 					
@@ -565,26 +565,6 @@ public class ClientBlockStateColorCache
 			tempColor = ColorUtil.argbToInt(0, 255, 255, 255);
 		}
 		return tempColor;
-	}
-	private static int getTextureWidth(TextureAtlasSprite texture)
-	{
-		#if MC_VER <= MC_1_12_2
-		return texture.getIconWidth();
-        #elif MC_VER < MC_1_19_4
-		return texture.getWidth();
-        #else
-		return texture.contents().width();
-        #endif
-	}
-	private static int getTextureHeight(TextureAtlasSprite texture)
-	{
-		#if MC_VER <= MC_1_12_2
-		return texture.getIconHeight();
-        #elif MC_VER < MC_1_19_4
-		return texture.getHeight();
-        #else
-		return texture.contents().height();
-        #endif
 	}
 	/**
 	 * This method was suggested by IMS from the Iris/Sodium team. 

@@ -40,12 +40,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.EnumFacing;
 #else
-import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
 #endif
 
 #if MC_VER >= MC_1_19_2
-import net.minecraft.util.RandomSource;
 #else
 #endif
 
@@ -56,7 +54,6 @@ import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 #else
 import net.minecraft.client.model.geom.builders.UVPair;
-import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import org.joml.Vector3fc;
 
@@ -114,13 +111,6 @@ public class ClientBlockStateTextureCache
 	 */
 	private static final ReentrantLock BAKE_LOCK = new ReentrantLock();
 	
-	#if MC_VER < MC_1_19_2
-	private static final Random RANDOM = new Random(0);
-	#else
-	/** Note: this object isn't thread safe and must be put in a lock */
-	private static final RandomSource RANDOM = RandomSource.create();
-	#endif
-	
 	#if MC_VER <= MC_1_12_2
 	private static final ConcurrentHashMap<IBlockState, BlockFaceTexture[]> TEXTURES_BY_BLOCK_STATE = new ConcurrentHashMap<>();
 	#else
@@ -138,7 +128,7 @@ public class ClientBlockStateTextureCache
 	
 	
 	//================//
-	// public getters //
+	// public methods //
 	//================//
 	//region
 	
@@ -165,9 +155,9 @@ public class ClientBlockStateTextureCache
 	
 	
 	
-	//========//
-	// baking //
-	//========//
+	//================//
+	// texture baking //
+	//================//
 	//region
 	
 	private static BlockFaceTexture[] bakeAllFaceTextures(BlockStateWrapper blockStateWrapper)
@@ -342,50 +332,6 @@ public class ClientBlockStateTextureCache
 		return new BlockFaceTexture(TEXTURE_WIDTH_AND_HEIGHT, TEXTURE_WIDTH_AND_HEIGHT, pixels, textureTinted);
 	}
 	
-	/**
-	 * Picks which quad represents the face when several overlap. <br>
-	 * When tinted and untinted quads mix (IE grass block sides where a tinted
-	 * grass overlay covers untinted dirt) the untinted quad is used since
-	 * tinting can only be applied to the whole face texture,
-	 * this matches how the flat color resolution handles those faces.
-	 */
-	private static BakedQuad pickFaceQuad(List<BakedQuad> quadList)
-	{
-		for (int i = 0; i < quadList.size(); i++)
-		{
-			if (!isQuadTinted(quadList.get(i)))
-			{
-				return quadList.get(i);
-			}
-		}
-		return quadList.get(0);
-	}
-	
-	private static TextureAtlasSprite getQuadSprite(BakedQuad quad)
-	{
-		#if MC_VER <= MC_1_12_2
-		return quad.getSprite();
-		#elif MC_VER < MC_1_17_1
-		return quad.sprite;
-		#elif MC_VER < MC_1_21_5
-		return quad.getSprite();
-		#elif MC_VER <= MC_1_21_11
-		return quad.sprite();
-		#else
-		return quad.materialInfo().sprite();
-		#endif
-	}
-	private static boolean isQuadTinted(BakedQuad quad)
-	{
-		#if MC_VER <= MC_1_12_2
-		return quad.hasTintIndex();
-		#elif MC_VER <= MC_1_21_11
-		return quad.isTinted();
-		#else
-		return quad.materialInfo().isTinted();
-		#endif
-	}
-	
 	/** Copies the given sprite directly, used for blocks where rasterizing model quads isn't possible. */
 	private static BlockFaceTexture bakeSpriteTexture(@Nullable TextureAtlasSprite sprite, boolean tinted)
 	{
@@ -394,17 +340,18 @@ public class ClientBlockStateTextureCache
 			return BlockFaceTexture.createSolidColor(ColorUtil.HOT_PINK, false);
 		}
 		
-		int spriteWidth = getSpriteWidth(sprite);
-		int spriteHeight = getSpriteHeight(sprite);
-		if (spriteWidth <= 0 || spriteHeight <= 0)
+		int spriteWidth = TextureAtlasSpriteWrapper.getWidth(sprite);
+		int spriteHeight = TextureAtlasSpriteWrapper.getHeight(sprite);
+		if (spriteWidth <= 0 
+			|| spriteHeight <= 0)
 		{
 			return BlockFaceTexture.createSolidColor(ColorUtil.HOT_PINK, false);
 		}
 		
 		int[] pixels = new int[TEXTURE_WIDTH_AND_HEIGHT * TEXTURE_WIDTH_AND_HEIGHT];
-		for (int v = 0; v < TEXTURE_WIDTH_AND_HEIGHT; v++)
+		for (int u = 0; u < TEXTURE_WIDTH_AND_HEIGHT; u++)
 		{
-			for (int u = 0; u < TEXTURE_WIDTH_AND_HEIGHT; u++)
+			for (int v = 0; v < TEXTURE_WIDTH_AND_HEIGHT; v++)
 			{
 				int texelX = (u * spriteWidth) / TEXTURE_WIDTH_AND_HEIGHT;
 				int texelY = (v * spriteHeight) / TEXTURE_WIDTH_AND_HEIGHT;
@@ -457,8 +404,8 @@ public class ClientBlockStateTextureCache
 			return false;
 		}
 		
-		int spriteWidth = getSpriteWidth(geometry.sprite);
-		int spriteHeight = getSpriteHeight(geometry.sprite);
+		int spriteWidth = TextureAtlasSpriteWrapper.getWidth(geometry.sprite);
+		int spriteHeight = TextureAtlasSpriteWrapper.getHeight(geometry.sprite);
 		if (spriteWidth <= 0 || spriteHeight <= 0)
 		{
 			return false;
@@ -624,10 +571,10 @@ public class ClientBlockStateTextureCache
 			#if MC_VER <= MC_1_21_11
 			// vertex UVs are texture atlas coordinates and
 			// need to be converted into sprite local coordinates
-			float minU = getSpriteMinU(geometry.sprite);
-			float maxU = getSpriteMaxU(geometry.sprite);
-			float minV = getSpriteMinV(geometry.sprite);
-			float maxV = getSpriteMaxV(geometry.sprite);
+			float minU = getMinU(geometry.sprite);
+			float maxU = getMaxU(geometry.sprite);
+			float minV = getMinV(geometry.sprite);
+			float maxV = getMaxV(geometry.sprite);
 			geometry.spriteU[vertexIndex] = (maxU != minU) ? ((u - minU) / (maxU - minU)) : 0.0f;
 			geometry.spriteV[vertexIndex] = (maxV != minV) ? ((v - minV) / (maxV - minV)) : 0.0f;
 			#else
@@ -719,57 +666,57 @@ public class ClientBlockStateTextureCache
 		}
 	}
 	
-	private static int getSpriteWidth(TextureAtlasSprite sprite)
+	//endregion
+	
+	
+	
+	//================//
+	// helper methods //
+	//================//
+	//region
+	
+	/** Picks which quad represents the face when several overlap. */
+	private static BakedQuad pickFaceQuad(List<BakedQuad> quadList)
 	{
-		#if MC_VER <= MC_1_12_2
-		return sprite.getIconWidth();
-		#elif MC_VER < MC_1_19_4
-		return sprite.getWidth();
-		#else
-		return sprite.contents().width();
-		#endif
+		for (int i = 0; i < quadList.size(); i++)
+		{
+			// When tinted and untinted quads mix 
+			// (IE grass block sides where a tinted grass overlay covers untinted dirt) 
+			// the untinted quad is used since
+			// tinting can only be applied to the whole face texture,
+			// this matches how flat color resolution handles those faces.
+			if (!isQuadTinted(quadList.get(i)))
+			{
+				return quadList.get(i);
+			}
+		}
+		
+		return quadList.get(0);
 	}
-	private static int getSpriteHeight(TextureAtlasSprite sprite)
+	
+	private static TextureAtlasSprite getQuadSprite(BakedQuad quad)
 	{
 		#if MC_VER <= MC_1_12_2
-		return sprite.getIconHeight();
-		#elif MC_VER < MC_1_19_4
-		return sprite.getHeight();
+		return quad.getSprite();
+		#elif MC_VER < MC_1_17_1
+		return quad.sprite;
+		#elif MC_VER < MC_1_21_5
+		return quad.getSprite();
+		#elif MC_VER <= MC_1_21_11
+		return quad.sprite();
 		#else
-		return sprite.contents().height();
+		return quad.materialInfo().sprite();
 		#endif
 	}
 	
-	private static float getSpriteMinU(TextureAtlasSprite sprite)
+	private static boolean isQuadTinted(BakedQuad quad)
 	{
 		#if MC_VER <= MC_1_12_2
-		return sprite.getMinU();
+		return quad.hasTintIndex();
+		#elif MC_VER <= MC_1_21_11
+		return quad.isTinted();
 		#else
-		return sprite.getU0();
-		#endif
-	}
-	private static float getSpriteMaxU(TextureAtlasSprite sprite)
-	{
-		#if MC_VER <= MC_1_12_2
-		return sprite.getMaxU();
-		#else
-		return sprite.getU1();
-		#endif
-	}
-	private static float getSpriteMinV(TextureAtlasSprite sprite)
-	{
-		#if MC_VER <= MC_1_12_2
-		return sprite.getMinV();
-		#else
-		return sprite.getV0();
-		#endif
-	}
-	private static float getSpriteMaxV(TextureAtlasSprite sprite)
-	{
-		#if MC_VER <= MC_1_12_2
-		return sprite.getMaxV();
-		#else
-		return sprite.getV1();
+		return quad.materialInfo().isTinted();
 		#endif
 	}
 	

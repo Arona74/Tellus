@@ -24,7 +24,6 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 #if MC_VER < MC_1_17_1
 #elif MC_VER < MC_1_21_3
 #else
-import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import net.minecraft.client.renderer.texture.SpriteContents;
 #endif
 
@@ -76,15 +75,61 @@ public class TextureAtlasSpriteWrapper
         #endif
 	}
 	
-	private static int convertRgbaToArgb(int rgba)
+	
+	
+	public static int getWidth(TextureAtlasSprite texture)
 	{
-		int r = (rgba & 0xFF000000) >>> 24;
-		int g = (rgba & 0x00FF0000) >>> 16;
-		int b = (rgba & 0x0000FF00) >>> 8;
-		int a = (rgba & 0x000000FF);
-		return ColorUtil.argbToInt(a, r, g, b);
+		#if MC_VER <= MC_1_12_2
+		return texture.getIconWidth();
+        #elif MC_VER < MC_1_19_4
+		return texture.getWidth();
+        #else
+		return texture.contents().width();
+        #endif
+	}
+	public static int getHeight(TextureAtlasSprite texture)
+	{
+		#if MC_VER <= MC_1_12_2
+		return texture.getIconHeight();
+        #elif MC_VER < MC_1_19_4
+		return texture.getHeight();
+        #else
+		return texture.contents().height();
+        #endif
 	}
 	
+	public static float getMinU(TextureAtlasSprite sprite)
+	{
+		#if MC_VER <= MC_1_12_2
+		return sprite.getMinU();
+		#else
+		return sprite.getU0();
+		#endif
+	}
+	public static float getMaxU(TextureAtlasSprite sprite)
+	{
+		#if MC_VER <= MC_1_12_2
+		return sprite.getMaxU();
+		#else
+		return sprite.getU1();
+		#endif
+	}
 	
+	public static float getMinV(TextureAtlasSprite sprite)
+	{
+		#if MC_VER <= MC_1_12_2
+		return sprite.getMinV();
+		#else
+		return sprite.getV0();
+		#endif
+	}
+	public static float getMaxV(TextureAtlasSprite sprite)
+	{
+		#if MC_VER <= MC_1_12_2
+		return sprite.getMaxV();
+		#else
+		return sprite.getV1();
+		#endif
+	}
 	
 }
