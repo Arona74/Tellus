@@ -36,7 +36,7 @@ import com.seibel.distanthorizons.core.wrapperInterfaces.render.AbstractDhRender
 import com.seibel.distanthorizons.coreapi.ModInfo;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
-import org.lwjgl.opengl.GL32;
+import org.lwjgl.opengl.GL33;
 import org.lwjgl.opengl.GLCapabilities;
 import org.lwjgl.opengl.GLUtil;
 
@@ -146,7 +146,7 @@ public class GLProxy
 		}
 		
 		LOGGER.info("Creating [" + GLProxy.class.getSimpleName() + "]... If this is the last message you see there must have been an OpenGL error.");
-		LOGGER.info("Lod Render OpenGL version [" + GL32.glGetString(GL32.GL_VERSION) + "].");
+		LOGGER.info("Lod Render OpenGL version [" + GL33.glGetString(GL33.GL_VERSION) + "].");
 		
 		
 		
@@ -158,8 +158,8 @@ public class GLProxy
 		// get Minecraft's capabilities
 		this.glCapabilities = GL.getCapabilities();
 		
-		// crash the game if the GPU doesn't support OpenGL 3.2
-		if (!this.glCapabilities.OpenGL32)
+		// crash the game if the GPU doesn't support OpenGL 3.3
+		if (!this.glCapabilities.OpenGL33)
 		{
 			String supportedVersionInfo = this.getFailedVersionInfo(this.glCapabilities);
 			
@@ -204,7 +204,7 @@ public class GLProxy
 		this.instancedArraysSupported = this.glCapabilities.GL_ARB_instanced_arrays;
 		
 		// get the best automatic upload method
-		String vendor = GL32.glGetString(GL32.GL_VENDOR).toUpperCase(); // example return: "NVIDIA CORPORATION"
+		String vendor = GL33.glGetString(GL33.GL_VENDOR).toUpperCase(); // example return: "NVIDIA CORPORATION"
 		if (EPlatform.get() != EPlatform.MACOS)
 		{
 			if (vendor.contains("NVIDIA") || vendor.contains("GEFORCE"))
@@ -359,7 +359,7 @@ public class GLProxy
 	private String getFailedVersionInfo(GLCapabilities c)
 	{
 		return "Your OpenGL support:\n" +
-				"openGL version 3.2+: [" + c.OpenGL32 + "] <- REQUIRED\n" +
+				"openGL version 3.3+: [" + c.OpenGL33 + "] <- REQUIRED\n" +
 				"Vertex Attribute Buffer Binding: [" + (c.glVertexAttribBinding != 0) + "] <- optional improvement\n" +
 				"Buffer Storage: [" + (c.glBufferStorage != 0) + "] <- optional improvement\n" +
 				"If you noticed that your computer supports higher OpenGL versions"
@@ -370,7 +370,7 @@ public class GLProxy
 	private String versionInfoToString(GLCapabilities c)
 	{
 		return "Your OpenGL support:\n" +
-				"openGL version 3.2+: [" + c.OpenGL32 + "] <- REQUIRED\n" +
+				"openGL version 3.3+: [" + c.OpenGL33 + "] <- REQUIRED\n" +
 				"Vertex Attribute Buffer Binding: [" + (c.glVertexAttribBinding != 0) + "] <- optional improvement\n" +
 				"Buffer Storage: [" + (c.glBufferStorage != 0) + "] <- optional improvement\n";
 	}

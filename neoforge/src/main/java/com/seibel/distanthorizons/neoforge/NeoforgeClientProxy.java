@@ -48,7 +48,7 @@ import com.seibel.distanthorizons.common.wrappers.chunk.ChunkWrapper;
 import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import org.lwjgl.opengl.GL32;
+import org.lwjgl.opengl.GL33;
 
 import java.util.concurrent.AbstractExecutorService;
 
@@ -175,7 +175,7 @@ public class NeoforgeClientProxy implements AbstractModInitializer.IEventProxy
 				// should generally only need to be set once per game session
 				// allows DH to render directly to Optifine's level frame buffer,
 				// allowing better shader support
-				MinecraftRenderWrapper.INSTANCE.finalLevelFrameBufferId = GL32.glGetInteger(GL32.GL_FRAMEBUFFER_BINDING);
+				MinecraftRenderWrapper.INSTANCE.finalLevelFrameBufferId = GL33.glGetInteger(GL33.GL_FRAMEBUFFER_BINDING);
 			}
 			catch (Exception | Error e)
 			{
@@ -234,7 +234,7 @@ public class NeoforgeClientProxy implements AbstractModInitializer.IEventProxy
 			// should generally only need to be set once per game session
 			// allows DH to render directly to Optifine's level frame buffer,
 			// allowing better shader support
-			MinecraftRenderWrapper.INSTANCE.finalLevelFrameBufferId = GL32.glGetInteger(GL32.GL_FRAMEBUFFER_BINDING);
+			MinecraftRenderWrapper.INSTANCE.finalLevelFrameBufferId = GL33.glGetInteger(GL33.GL_FRAMEBUFFER_BINDING);
 		}
 		catch (Exception | Error e)
 		{

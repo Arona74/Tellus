@@ -25,7 +25,7 @@ import com.seibel.distanthorizons.core.util.math.DhVec3f;
 import net.minecraft.client.renderer.RenderType;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Matrix4f;
-import org.lwjgl.opengl.GL32;
+import org.lwjgl.opengl.GL33;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 #elif MC_VER < MC_1_21_6
 import com.seibel.distanthorizons.core.util.math.DhMat4f;
@@ -152,7 +152,7 @@ public class MixinLevelRenderer
 		#if MC_VER <= MC_1_16_5
 	    // get the matrices from the OpenGL fixed pipeline
 	    float[] mcProjMatrixRaw = new float[16];
-	    GL32.glGetFloatv(GL32.GL_PROJECTION_MATRIX, mcProjMatrixRaw);
+	    GL33.glGetFloatv(GL33.GL_PROJECTION_MATRIX, mcProjMatrixRaw);
 	    ClientApi.RENDER_STATE.mcProjectionMatrix = new DhMat4f(mcProjMatrixRaw);
 	    ClientApi.RENDER_STATE.mcProjectionMatrix.transpose();
 	    
