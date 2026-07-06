@@ -67,7 +67,6 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 	public int uEarthRadius = -1;
 	public int uLightMap = -1;
 	public int uBlockAtlas = -1;
-	public int uTexturedLodsEnabled = -1;
 	
 	// fragment shader uniforms
 	public int uClipDistance = -1;
@@ -94,8 +93,8 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 	public GlDhTerrainShaderProgram()
 	{
 		super(
-			"assets/distanthorizons/shaders/shared/gl/standard.vert",
-			"assets/distanthorizons/shaders/shared/gl/flat_shaded.frag",
+			"assets/distanthorizons/shaders/lod/gl/vert.vert",
+			"assets/distanthorizons/shaders/lod/gl/frag.frag",
 			new String[]{"vPosition", "color", "irisData"}
 		);
 	}
@@ -117,7 +116,6 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 		
 		this.uLightMap = this.getUniformLocation("uLightMap");
 		this.uBlockAtlas = this.getUniformLocation("uBlockAtlas");
-		this.uTexturedLodsEnabled = this.getUniformLocation("uTexturedLodsEnabled");
 		
 		// Fog/Clip Uniforms
 		this.uClipDistance = this.getUniformLocation("uClipDistance");
@@ -215,7 +213,6 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 		this.setUniform(this.uLightMap, LightMapWrapper.GL_BOUND_INDEX);
 		
 		boolean texturedLodsEnabled = Config.Client.Advanced.Graphics.Quality.enableTexturedLods.get();
-		this.setUniform(this.uTexturedLodsEnabled, texturedLodsEnabled);
 		if (texturedLodsEnabled)
 		{
 			this.setUniform(this.uBlockAtlas, GlBlockTextureAtlas.GL_BOUND_INDEX);

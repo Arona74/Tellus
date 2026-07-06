@@ -25,8 +25,8 @@ public class BlazeBlockTextureAtlas {}
 #else
 
 import com.seibel.distanthorizons.core.dataObjects.render.textures.BlockTextureRegistry;
-import com.seibel.distanthorizons.core.util.objects.pooling.PhantomArrayList.PhantomArrayListCheckout;
-import com.seibel.distanthorizons.core.util.objects.pooling.PhantomArrayList.PhantomArrayListPool;
+import com.seibel.distanthorizons.core.render.AbstractBlockTextureAtlas;
+import org.lwjgl.opengl.GL32;
 
 import java.nio.ByteBuffer;
 
@@ -43,26 +43,36 @@ import java.nio.ByteBuffer;
  * @see BlockTextureRegistry
  * @see com.seibel.distanthorizons.common.render.openGl.terrain.GlBlockTextureAtlas
  */
-public class BlazeBlockTextureAtlas
+public class BlazeBlockTextureAtlas extends AbstractBlockTextureAtlas
 {
 	public static final BlazeBlockTextureAtlas INSTANCE = new BlazeBlockTextureAtlas();
 	
-	/**
-	 * Must match the tile lookup in the Blaze LOD fragment shader. <br>
-	 * 256 tiles * 16 pixels = a constant 4096 pixel wide texture,
-	 * holding every possible tile id at 4096 pixels tall.
-	 */
-	public static final int TILES_PER_ROW = 256;
-	
-	/** how many tile rows the atlas starts with and grows by, 1MB of texture per step */
-	private static final int ALLOCATION_ROW_COUNT = 16;
-	
-	private static final PhantomArrayListPool ARRAY_LIST_POOL = new PhantomArrayListPool("BlazeBlockTextureAtlas");
-	
-	
 	private final BlazeTextureWrapper textureWrapper = BlazeTextureWrapper.createTextureAtlas("BlockTextureAtlas");
-	private int allocatedTileCount = 0;
-	private int uploadedTileCount = 0;
+	
+	
+	
+	//=============//
+	// constructor //
+	//=============//
+	//region
+	
+	private BlazeBlockTextureAtlas() { }
+	
+	//endregion
+	
+	
+	
+	//==================//
+	// texture handling //
+	//==================//
+	//region
+	
+	@Override 
+	protected void tryCreateOrResize(int width, int height) { textureWrapper.tryCreateOrResize(width, height); }
+	
+	public IDhBlazeTexture getTextureWrapper() { return this.textureWrapper; }
+	
+	//endregion
 	
 	
 	
@@ -71,73 +81,25 @@ public class BlazeBlockTextureAtlas
 	//===========//
 	//region
 	
-	/**
-	 * Uploads any newly registered tiles to the GPU,
-	 * must be called on the render thread outside an active render pass.
-	 */
-	public void uploadPendingTiles()
+	@Override
+	protected void beforeWriteToTexture() { /* no setup required */ }
+	
+	@Override 
+	protected void writeToTexture(ByteBuffer pixelBuffer, int destinationX, int destinationY, int tileWidth, int tileHeight)
 	{
-		int totalTileCount = BlockTextureRegistry.INSTANCE.getTileCount();
-		if (totalTileCount == this.uploadedTileCount)
-		{
-			return;
-		}
-		
-		if (totalTileCount > this.allocatedTileCount)
-		{
-			this.growAtlas(totalTileCount);
-		}
-		
-		BlockTextureRegistry.PendingTiles pendingTiles = BlockTextureRegistry.INSTANCE.getAndClearPendingUploadTiles();
-		if (pendingTiles == null)
-		{
-			return;
-		}
-		
-		try(PhantomArrayListCheckout checkout = ARRAY_LIST_POOL.checkoutByteBuffers(1))
-		{
-			ByteBuffer pixelBuffer = checkout.getByteBuffer(0, BlockTextureRegistry.TILE_BYTE_COUNT);
-			for (int i = 0; i < pendingTiles.tilePixels.length; i++)
-			{
-				pixelBuffer.clear();
-				pixelBuffer.put(pendingTiles.tilePixels[i]);
-				pixelBuffer.flip();
-				
-				int tileId = pendingTiles.firstTileId + i;
-				this.textureWrapper.writeToTexture(
-					pixelBuffer,
-					(tileId % TILES_PER_ROW) * BlockTextureRegistry.TILE_WIDTH, // x
-					(tileId / TILES_PER_ROW) * BlockTextureRegistry.TILE_WIDTH, // y
-					BlockTextureRegistry.TILE_WIDTH, // width
-					BlockTextureRegistry.TILE_WIDTH	// height
-				);
-			}
-		}
-		this.uploadedTileCount = pendingTiles.firstTileId + pendingTiles.tilePixels.length;
+		this.textureWrapper.writeToTexture(
+			pixelBuffer,
+			destinationX, // x
+			destinationY, // y
+			BlockTextureRegistry.TILE_HEIGHT_AND_WIDTH, // width
+			BlockTextureRegistry.TILE_HEIGHT_AND_WIDTH // height
+		);
 	}
 	
-	private void growAtlas(int minTileCount)
-	{
-		int newRowCount = Math.max(this.allocatedTileCount / TILES_PER_ROW, ALLOCATION_ROW_COUNT);
-		while (newRowCount * TILES_PER_ROW < minTileCount)
-		{
-			newRowCount *= 2;
-		}
-		
-		int width = TILES_PER_ROW * BlockTextureRegistry.TILE_WIDTH;
-		int height = newRowCount * BlockTextureRegistry.TILE_WIDTH;
-		textureWrapper.tryCreateOrResize(width, height);
-		
-		this.allocatedTileCount = newRowCount * TILES_PER_ROW;
-		// all tiles need to be re-uploaded into the new texture
-		this.uploadedTileCount = 0;
-		BlockTextureRegistry.INSTANCE.resetPendingUploads();
-	}
+	@Override
+	protected void afterWriteToTexture() { /* no cleanup required */ }
 	
 	//endregion
-	
-	
-	public IDhBlazeTexture getTextureWrapper() { return this.textureWrapper; }
 	
 	
 	

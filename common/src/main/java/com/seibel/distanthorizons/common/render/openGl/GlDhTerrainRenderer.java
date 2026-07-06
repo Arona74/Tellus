@@ -12,9 +12,6 @@ public class GlDhTerrainRenderer implements IDhTerrainRenderer
 {
 	public static final GlDhTerrainRenderer INSTANCE = new GlDhTerrainRenderer();
 	
-	/** holds the block textures used when textured LODs are enabled */
-	public final GlBlockTextureAtlas blockTextureAtlas = new GlBlockTextureAtlas();
-	
 	private GlDhTerrainShaderProgram terrainShaderProgram = null;
 	
 	

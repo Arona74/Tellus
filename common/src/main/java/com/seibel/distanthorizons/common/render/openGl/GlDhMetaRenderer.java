@@ -10,6 +10,7 @@ import com.seibel.distanthorizons.common.render.openGl.glObject.GLProxy;
 import com.seibel.distanthorizons.common.render.openGl.glObject.GlDhFramebuffer;
 import com.seibel.distanthorizons.common.render.openGl.glObject.texture.*;
 import com.seibel.distanthorizons.common.render.openGl.postProcessing.apply.GlDhApplyShader;
+import com.seibel.distanthorizons.common.render.openGl.terrain.GlBlockTextureAtlas;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftGLWrapper;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
 import com.seibel.distanthorizons.core.config.Config;
@@ -116,8 +117,8 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		
 		if (Config.Client.Advanced.Graphics.Quality.enableTexturedLods.get())
 		{
-			GlDhTerrainRenderer.INSTANCE.blockTextureAtlas.uploadPendingTiles();
-			GlDhTerrainRenderer.INSTANCE.blockTextureAtlas.bind();
+			GlBlockTextureAtlas.INSTANCE.uploadPendingTiles();
+			GlBlockTextureAtlas.INSTANCE.bind();
 		}
 	}
 	private void setGLState(
@@ -379,7 +380,7 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		this.unbindLightmap();
 		if (Config.Client.Advanced.Graphics.Quality.enableTexturedLods.get())
 		{
-			GlDhTerrainRenderer.INSTANCE.blockTextureAtlas.unbind();
+			GlBlockTextureAtlas.INSTANCE.unbind();
 		}
 		this.shaderProgramForThisFrame.unbind();
 	}
