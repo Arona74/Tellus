@@ -828,6 +828,7 @@ public class ClientBlockStateTextureCache
 		}
 		
 		File outputFile = new File(outputPath);
+		outputFile.mkdirs();
 		if (!ImageIO.write(image, "png", outputFile))
 		{
 			throw new IOException("No PNG writer found, javax.imageio may not be available.");
