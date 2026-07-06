@@ -182,9 +182,6 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 			
 			profiler.popPush("vert share uniforms");
 			{
-				DhMat4f combinedMatrix = new DhMat4f(renderEventParam.dhProjectionMatrix);
-				combinedMatrix.multiply(renderEventParam.dhModelViewMatrix);
-				
 				float earthCurveRatio = Config.Client.Advanced.Graphics.Experimental.earthCurveRatio.get();
 				if (earthCurveRatio < -1.0f || earthCurveRatio > 1.0f)
 				{
@@ -212,7 +209,7 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 						(float) renderEventParam.exactCameraPosition.x,
 						(float) renderEventParam.exactCameraPosition.y,
 						(float) renderEventParam.exactCameraPosition.z) // uCameraPos
-					.putMat4f(combinedMatrix) // uCombinedMatrix
+					.putMat4f(renderEventParam.dhMvmProjMatrix) // uCombinedMatrix
 					.finishAndUpload();
 			}
 			
