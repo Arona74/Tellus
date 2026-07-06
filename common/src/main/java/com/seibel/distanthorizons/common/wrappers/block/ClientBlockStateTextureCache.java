@@ -211,12 +211,11 @@ public class ClientBlockStateTextureCache
 		
 		return faceTextures;
 	}
-	
 	private static BlockFaceTexture bakeFaceTexture(BlockStateWrapper blockStateWrapper, EDhDirection dhDirection)
 	{
-		//==============//
-		// quad lookup  //
-		//==============//
+		//=============//
+		// quad lookup //
+		//=============//
 		
 		ArrayList<BakedQuad> quadList = new ArrayList<>();
 		try
@@ -248,8 +247,7 @@ public class ClientBlockStateTextureCache
 				// Faces with culled quads cover the whole face (IE full cubes),
 				// copying the quad's sprite directly is both more reliable
 				// and more accurate than rasterizing.
-				BlockFaceTexture texture = bakeSpriteTexture(quadSprite, isQuadTinted);
-				return texture; 
+				return bakeSpriteTexture(quadSprite, isQuadTinted);
 			}
 			
 			// unculled quads (IE fence posts)
@@ -273,22 +271,27 @@ public class ClientBlockStateTextureCache
 			return bakeSpriteTexture(getParticleSprite(blockStateWrapper), false);
 		}
 		
-		
-		
+		return createTextureByRasterizingQuads(blockStateWrapper, dhDirection, quadList);
+	}
+	
+	/** renders the given quads to a {@link BlockFaceTexture} to simulate the camera looking directly at the block */
+	private static BlockFaceTexture createTextureByRasterizingQuads(BlockStateWrapper blockStateWrapper, EDhDirection dhDirection, ArrayList<BakedQuad> quadList)
+	{
 		//===============//
 		// quad decoding //
 		//===============//
+		//region
 		
 		ArrayList<QuadGeometry> geometryList = new ArrayList<>(quadList.size());
 		boolean anyQuadTinted = false;
 		boolean anyQuadUntinted = false;
 		for (int quadIndex = 0; quadIndex < quadList.size(); quadIndex++)
 		{
-			QuadGeometry geometry = decodeQuad(quadList.get(quadIndex), dhDirection);
-			geometryList.add(geometry);
+			QuadGeometry quadGeometry = decodeQuad(quadList.get(quadIndex), dhDirection);
+			geometryList.add(quadGeometry);
 			
-			anyQuadTinted |= geometry.tinted;
-			anyQuadUntinted |= !geometry.tinted;
+			anyQuadTinted |= quadGeometry.tinted;
+			anyQuadUntinted |= !quadGeometry.tinted;
 		}
 		
 		// Tinting can only be applied to the texture as a whole,
@@ -298,22 +301,25 @@ public class ClientBlockStateTextureCache
 		boolean skipTintedQuads = anyQuadTinted && anyQuadUntinted;
 		boolean textureTinted = anyQuadTinted && !anyQuadUntinted;
 		
-		// quads are drawn back to front so quads closer
-		// to the viewed face overwrite the ones behind them
+		// quads are drawn back to front
 		geometryList.sort(Comparator.comparingDouble(QuadGeometry::getAverageDepth));
+		
+		//endregion
 		
 		
 		
 		//===============//
 		// rasterization //
 		//===============//
+		//region
 		
 		int[] pixels = new int[TEXTURE_WIDTH_AND_HEIGHT * TEXTURE_WIDTH_AND_HEIGHT];
 		boolean anyPixelDrawn = false;
 		for (int geometryIndex = 0; geometryIndex < geometryList.size(); geometryIndex++)
 		{
 			QuadGeometry geometry = geometryList.get(geometryIndex);
-			if (skipTintedQuads && geometry.tinted)
+			if (skipTintedQuads 
+				&& geometry.tinted)
 			{
 				continue;
 			}
@@ -323,11 +329,13 @@ public class ClientBlockStateTextureCache
 		
 		if (!anyPixelDrawn)
 		{
-			// nothing of this block is visible from this direction,
+			// nothing is visible from this direction,
 			// fall back to the particle texture since LODs expect
-			// every face of a non-air block to be renderable
+			// every face to be renderable
 			return bakeSpriteTexture(getParticleSprite(blockStateWrapper), false);
 		}
+		
+		//endregion
 		
 		return new BlockFaceTexture(TEXTURE_WIDTH_AND_HEIGHT, TEXTURE_WIDTH_AND_HEIGHT, pixels, textureTinted);
 	}
@@ -385,15 +393,15 @@ public class ClientBlockStateTextureCache
 	}
 	
 	/** @return true if at least one pixel was drawn */
-	private static boolean rasterizeTriangle(QuadGeometry geometry, int vertexA, int vertexB, int vertexC, int[] pixels)
+	private static boolean rasterizeTriangle(QuadGeometry geometry, int vertexIndexA, int vertexIndexB, int vertexIndexC, int[] pixels)
 	{
 		// face space positions, in the range [0,1] for anything on the face
-		float faceAU = geometry.faceU[vertexA];
-		float faceAV = geometry.faceV[vertexA];
-		float faceBU = geometry.faceU[vertexB];
-		float faceBV = geometry.faceV[vertexB];
-		float faceCU = geometry.faceU[vertexC];
-		float faceCV = geometry.faceV[vertexC];
+		float faceAU = geometry.faceUByVertex[vertexIndexA];
+		float faceAV = geometry.faceVByVertex[vertexIndexA];
+		float faceBU = geometry.faceUByVertex[vertexIndexB];
+		float faceBV = geometry.faceVByVertex[vertexIndexB];
+		float faceCU = geometry.faceUByVertex[vertexIndexC];
+		float faceCV = geometry.faceVByVertex[vertexIndexC];
 		
 		// twice the triangle's signed area,
 		// also the denominator for barycentric weights
@@ -406,8 +414,10 @@ public class ClientBlockStateTextureCache
 		
 		int spriteWidth = TextureAtlasSpriteWrapper.getWidth(geometry.sprite);
 		int spriteHeight = TextureAtlasSpriteWrapper.getHeight(geometry.sprite);
-		if (spriteWidth <= 0 || spriteHeight <= 0)
+		if (spriteWidth <= 0 
+			|| spriteHeight <= 0)
 		{
+			// no texture to draw
 			return false;
 		}
 		
@@ -430,17 +440,19 @@ public class ClientBlockStateTextureCache
 				float weightB = (((sampleU - faceAU) * (faceCV - faceAV)) - ((sampleV - faceAV) * (faceCU - faceAU))) / area;
 				float weightC = (((faceBU - faceAU) * (sampleV - faceAV)) - ((faceBV - faceAV) * (sampleU - faceAU))) / area;
 				float weightA = 1.0f - weightB - weightC;
-				if (weightA < 0.0f || weightB < 0.0f || weightC < 0.0f)
+				if (weightA < 0.0f 
+					|| weightB < 0.0f 
+					|| weightC < 0.0f)
 				{
 					continue;
 				}
 				
 				// interpolate the sprite coordinates
-				float spriteU = (weightA * geometry.spriteU[vertexA]) + (weightB * geometry.spriteU[vertexB]) + (weightC * geometry.spriteU[vertexC]);
-				float spriteV = (weightA * geometry.spriteV[vertexA]) + (weightB * geometry.spriteV[vertexB]) + (weightC * geometry.spriteV[vertexC]);
+				float spriteU = (weightA * geometry.spriteUByVertex[vertexIndexA]) + (weightB * geometry.spriteUByVertex[vertexIndexB]) + (weightC * geometry.spriteUByVertex[vertexIndexC]);
+				float spriteV = (weightA * geometry.spriteVByVertex[vertexIndexA]) + (weightB * geometry.spriteVByVertex[vertexIndexB]) + (weightC * geometry.spriteVByVertex[vertexIndexC]);
 				
-				int texelX = Math.min(Math.max((int) (spriteU * spriteWidth), 0), spriteWidth - 1);
-				int texelY = Math.min(Math.max((int) (spriteV * spriteHeight), 0), spriteHeight - 1);
+				int texelX = Math.clamp((int) (spriteU * spriteWidth), 0, spriteWidth - 1);
+				int texelY = Math.clamp((int) (spriteV * spriteHeight), 0, spriteHeight - 1);
 				
 				int argbSourceColor = TextureAtlasSpriteWrapper.getPixelARGB(geometry.sprite, 0, texelX, texelY);
 				if (ColorUtil.getAlpha(argbSourceColor) == 0)
@@ -490,31 +502,6 @@ public class ClientBlockStateTextureCache
 	// quad decoding //
 	//===============//
 	//region
-	
-	/**
-	 * A {@link BakedQuad} converted into the coordinate space of the face it's baked onto. <br><br>
-	 *
-	 * Face coordinates follow vanilla's block texture orientation:
-	 * (0,0) is the face's top left corner when looking at the face from outside the block,
-	 * with U increasing to the right and V increasing downward. <br>
-	 * Depth increases toward the viewer, IE a depth of 1 touches the viewed face.
-	 */
-	private static class QuadGeometry
-	{
-		public final float[] faceU = new float[4];
-		public final float[] faceV = new float[4];
-		public final float[] depth = new float[4];
-		
-		/** sprite local texture coordinates in the range [0,1] */
-		public final float[] spriteU = new float[4];
-		public final float[] spriteV = new float[4];
-		
-		public TextureAtlasSprite sprite;
-		public boolean tinted;
-		
-		public double getAverageDepth()
-		{ return (this.depth[0] + this.depth[1] + this.depth[2] + this.depth[3]) / 4.0; }
-	}
 	
 	private static QuadGeometry decodeQuad(BakedQuad quad, EDhDirection dhDirection)
 	{
@@ -568,6 +555,7 @@ public class ClientBlockStateTextureCache
 			v = UVPair.unpackV(packedUv);
 			#endif
 			
+			
 			#if MC_VER <= MC_1_21_11
 			// vertex UVs are texture atlas coordinates and
 			// need to be converted into sprite local coordinates
@@ -575,23 +563,26 @@ public class ClientBlockStateTextureCache
 			float maxU = getMaxU(geometry.sprite);
 			float minV = getMinV(geometry.sprite);
 			float maxV = getMaxV(geometry.sprite);
-			geometry.spriteU[vertexIndex] = (maxU != minU) ? ((u - minU) / (maxU - minU)) : 0.0f;
-			geometry.spriteV[vertexIndex] = (maxV != minV) ? ((v - minV) / (maxV - minV)) : 0.0f;
+			geometry.spriteUByVertex[vertexIndex] = (maxU != minU) ? ((u - minU) / (maxU - minU)) : 0.0f;
+			geometry.spriteVByVertex[vertexIndex] = (maxV != minV) ? ((v - minV) / (maxV - minV)) : 0.0f;
 			#else
 			// vertex UVs are already sprite local coordinates,
 			// the renderer looks the sprite up via the quad's material instead of the vertex data
-			geometry.spriteU[vertexIndex] = u;
-			geometry.spriteV[vertexIndex] = v;
+			geometry.spriteUByVertex[vertexIndex] = u;
+			geometry.spriteVByVertex[vertexIndex] = v;
 			#endif
 			
-			projectOntoFace(dhDirection, x, y, z, geometry, vertexIndex);
+			
+			projectOntoQuadFace(dhDirection, x, y, z, geometry, vertexIndex);
 		}
 		
 		return geometry;
 	}
-	
 	/** Converts a block space position into the face space described in {@link QuadGeometry}. */
-	private static void projectOntoFace(EDhDirection dhDirection, float x, float y, float z, QuadGeometry geometry, int vertexIndex)
+	private static void projectOntoQuadFace(
+		EDhDirection dhDirection, 
+		float x, float y, float z, 
+		QuadGeometry geometry, int vertexIndex)
 	{
 		float faceU;
 		float faceV;
@@ -632,11 +623,54 @@ public class ClientBlockStateTextureCache
 				throw new IllegalArgumentException("No face projection for direction [" + dhDirection + "].");
 		}
 		
-		geometry.faceU[vertexIndex] = faceU;
-		geometry.faceV[vertexIndex] = faceV;
-		geometry.depth[vertexIndex] = depth;
+		geometry.faceUByVertex[vertexIndex] = faceU;
+		geometry.faceVByVertex[vertexIndex] = faceV;
+		geometry.depthByVertex[vertexIndex] = depth;
 	}
 	
+	//================//
+	// helper classes //
+	//================//
+	//region
+	
+	/**
+	 * A Minecraft {@link BakedQuad} converted into the coordinate 
+	 * space of the face it's baked onto.
+	 */
+	private static class QuadGeometry
+	{
+		/** 
+		 * In the range [0,1] with (0,0) being the face's top left corner. <br>
+		 * U increases to the right. <br>
+		 */
+		public final float[] faceUByVertex = new float[4];
+		/**
+		 * In the range [0,1] with (0,0) being the face's top left corner. <br>
+		 * V increases downward.
+		 */
+		public final float[] faceVByVertex = new float[4];
+		
+		/** 
+		 * Increases as it moves towards the viewer. <br>
+		 * A depth of 1 
+		 */
+		public final float[] depthByVertex = new float[4];
+		
+		/** sprite local texture coordinates in the range [0,1] */
+		public final float[] spriteUByVertex = new float[4];
+		/** sprite local texture coordinates in the range [0,1] */
+		public final float[] spriteVByVertex = new float[4];
+		
+		
+		public TextureAtlasSprite sprite;
+		public boolean tinted;
+		
+		
+		public double getAverageDepth()
+		{ return (this.depthByVertex[0] + this.depthByVertex[1] + this.depthByVertex[2] + this.depthByVertex[3]) / 4.0; }
+	}
+	
+	//endregion
 	//endregion
 	
 	
