@@ -212,7 +212,7 @@ public class GlDhTerrainShaderProgram extends GlShaderProgram implements IDhApiS
 		
 		this.setUniform(this.uLightMap, LightMapWrapper.GL_BOUND_INDEX);
 		
-		boolean texturedLodsEnabled = Config.Client.Advanced.Graphics.Quality.enableTexturedLods.get();
+		boolean texturedLodsEnabled = Config.Client.Advanced.Graphics.Texture.enableTexturedLods.get();
 		if (texturedLodsEnabled)
 		{
 			this.setUniform(this.uBlockAtlas, GlBlockTextureAtlas.GL_BOUND_INDEX);

@@ -477,7 +477,7 @@ public class BlockStateWrapper implements IBlockStateWrapper
 				boolean renderBlockTexture = true;
 				
 				// get block resource names
-				String blockNamesCsv = Config.Client.Advanced.Graphics.Quality.blocksDontRenderTextureCsv.get();
+				String blockNamesCsv = Config.Client.Advanced.Graphics.Texture.blocksDontRenderTextureCsv.get();
 				blockNamesCsv = blockNamesCsv.toLowerCase(); // lowercase to allow for case-insensitive checking
 				List<String> blockNameList = Arrays.asList(blockNamesCsv.split(",")); // duplicates could happen, but that isn't a problem since we'd just end up checking the same block twice, not a big deal
 				
@@ -505,7 +505,7 @@ public class BlockStateWrapper implements IBlockStateWrapper
 				// all side-rendered blocks have to easily check against
 				
 				// get block resource names
-				String sideBlockNamesCsv = Config.Client.Advanced.Graphics.Quality.blocksDontUseSideTextureCsv.get();
+				String sideBlockNamesCsv = Config.Client.Advanced.Graphics.Texture.blocksDontUseSideTextureCsv.get();
 				sideBlockNamesCsv = sideBlockNamesCsv.toLowerCase(); // lowercase to allow for case-insensitive checking
 				List<String> sideBlockNameList = Arrays.asList(sideBlockNamesCsv.split(",")); // duplicates could happen, but that isn't a problem since we'd just end up checking the same block twice, not a big deal
 				
@@ -537,7 +537,7 @@ public class BlockStateWrapper implements IBlockStateWrapper
 					
 					
 					// get block resource names
-					String sideBlockTagsCsv = Config.Client.Advanced.Graphics.Quality.blockTagsDontUseSideTextureCsv.get();
+					String sideBlockTagsCsv = Config.Client.Advanced.Graphics.Texture.blockTagsDontUseSideTextureCsv.get();
 					sideBlockTagsCsv = sideBlockTagsCsv.toLowerCase(); // lowercase to allow for case-insensitive checking
 					List<String> sideBlockTagList = Arrays.asList(sideBlockTagsCsv.split(",")); // duplicates could happen, but that isn't a problem since we'd just end up checking the same block twice, not a big deal
 					
