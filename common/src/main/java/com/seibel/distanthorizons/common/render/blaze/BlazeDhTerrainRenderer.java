@@ -111,8 +111,8 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 			pipelineBuilder.withSampler("uLightMap");
 			pipelineBuilder.withSampler("uBlockAtlas");
 			
-			pipelineBuilder.withVertexShader("lod/blaze/vert");
-			pipelineBuilder.withFragmentShader("lod/blaze/frag");
+			pipelineBuilder.withVertexShader("terrain/blaze/vert");
+			pipelineBuilder.withFragmentShader("terrain/blaze/frag");
 			
 			pipelineBuilder.withUniformBuffer("vertUniqueUniformBlock");
 			pipelineBuilder.withUniformBuffer("vertSharedUniformBlock");
