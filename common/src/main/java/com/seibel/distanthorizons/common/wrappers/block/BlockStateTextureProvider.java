@@ -49,7 +49,7 @@ public class BlockStateTextureProvider implements IBlockStateFaceTextureProvider
 	}
 	
 	@Override
-	public void clearCache() 
+	public void clear() 
 	{
 		ClientBlockStateTextureCache.clearCache();
 		ClientBlockStateColorCache.clearCachedTints();

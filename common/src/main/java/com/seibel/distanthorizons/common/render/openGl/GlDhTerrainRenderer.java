@@ -29,6 +29,7 @@ public class GlDhTerrainRenderer implements IDhTerrainRenderer
 	//endregion
 	
 	
+	
 	//=========//
 	// getters //
 	//=========//
@@ -44,7 +45,6 @@ public class GlDhTerrainRenderer implements IDhTerrainRenderer
 		
 		return this.terrainShaderProgram;
 	}
-	
 	
 	//endregion
 	
