@@ -299,7 +299,8 @@ public class BlazeDhTerrainRenderer implements IDhTerrainRenderer
 						for (int i = 0; i < bufferWrapperList.length; i++)
 						{
 							BlazeVertexBufferWrapper bufferWrapper = (BlazeVertexBufferWrapper) bufferWrapperList[i];
-							if (!bufferWrapper.uploaded
+							if (bufferWrapper == null // not sure how a buffer could be null here, but this did happen at least once 
+								|| !bufferWrapper.uploaded
 								|| bufferWrapper.vertexCount == 0)
 							{
 								continue;
