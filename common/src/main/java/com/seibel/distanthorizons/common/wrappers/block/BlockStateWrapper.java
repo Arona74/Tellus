@@ -145,6 +145,8 @@ public class BlockStateWrapper implements IBlockStateWrapper
 	private final boolean isBeaconBlock; 
 	private final boolean isBeaconBaseBlock;
 	private final boolean allowsBeaconBeamPassage;
+	private final boolean renderTexture;
+	private final boolean useBottomTextureForSides;
 	private final boolean isSolid;
 	private final boolean isLiquid;
 	private final boolean allowApiColorOverride;
@@ -465,6 +467,103 @@ public class BlockStateWrapper implements IBlockStateWrapper
 				allowsBeaconBeamPassage = true;
 			}
 			this.allowsBeaconBeamPassage = allowsBeaconBeamPassage;
+		}
+		
+		
+		// texture handling //
+		{
+			// texture ignoring //
+			{
+				boolean renderBlockTexture = true;
+				
+				// get block resource names
+				String blockNamesCsv = Config.Client.Advanced.Graphics.Quality.blocksDontRenderTextureCsv.get();
+				blockNamesCsv = blockNamesCsv.toLowerCase(); // lowercase to allow for case-insensitive checking
+				List<String> blockNameList = Arrays.asList(blockNamesCsv.split(",")); // duplicates could happen, but that isn't a problem since we'd just end up checking the same block twice, not a big deal
+				
+				// check this block against the expected list
+				for (int i = 0; i < blockNameList.size(); i++)
+				{
+					String baseBlockName = blockNameList.get(i);
+					if (lowerCaseSerial.contains(baseBlockName))
+					{
+						renderBlockTexture = false;
+						break;
+					}
+				}
+				
+				this.renderTexture = renderBlockTexture;
+			}
+			
+			
+			// side texture ignoring //
+			
+			// check for specific block names
+			boolean isSideIgnoreBlock = false;
+			{
+				// checking for specific block names is necessary since there isn't a single tag
+				// all side-rendered blocks have to easily check against
+				
+				// get block resource names
+				String sideBlockNamesCsv = Config.Client.Advanced.Graphics.Quality.blocksDontUseSideTextureCsv.get();
+				sideBlockNamesCsv = sideBlockNamesCsv.toLowerCase(); // lowercase to allow for case-insensitive checking
+				List<String> sideBlockNameList = Arrays.asList(sideBlockNamesCsv.split(",")); // duplicates could happen, but that isn't a problem since we'd just end up checking the same block twice, not a big deal
+				
+				// check this block against the expected list
+				for (int i = 0; i < sideBlockNameList.size(); i++)
+				{
+					String baseBlockName = sideBlockNameList.get(i);
+					if (lowerCaseSerial.contains(baseBlockName))
+					{
+						isSideIgnoreBlock = true;
+						break;
+					}
+				}
+			}
+			
+			// check for block tags on newer MC versions
+			boolean hasSideIgnoreTags = false;
+			{
+				#if MC_VER <= MC_1_18_2
+				#else
+				if (blockState != null)
+				{
+					Stream<TagKey<Block>> tags;
+					#if MC_VER <= MC_1_21_11
+					tags = blockState.getTags();
+					#else
+					tags = blockState.tags();
+					#endif
+					
+					
+					// get block resource names
+					String sideBlockTagsCsv = Config.Client.Advanced.Graphics.Quality.blockTagsDontUseSideTextureCsv.get();
+					sideBlockTagsCsv = sideBlockTagsCsv.toLowerCase(); // lowercase to allow for case-insensitive checking
+					List<String> sideBlockTagList = Arrays.asList(sideBlockTagsCsv.split(",")); // duplicates could happen, but that isn't a problem since we'd just end up checking the same block twice, not a big deal
+					
+					
+					hasSideIgnoreTags = tags.anyMatch((TagKey<Block> tag) ->
+					{
+						String lowerTag = tag.location().getPath().toLowerCase();
+						
+						for (int i = 0; i < sideBlockTagList.size(); i++)
+						{
+							String sideBlockTag = sideBlockTagList.get(i);
+							if (lowerTag.contains(sideBlockTag))
+							{
+								return true;
+							}
+						}
+						
+						return false;
+					});
+					
+				}
+				#endif
+			}
+			
+			this.useBottomTextureForSides = hasSideIgnoreTags || isSideIgnoreBlock;
+			
 		}
 		
 		
@@ -1099,28 +1198,20 @@ public class BlockStateWrapper implements IBlockStateWrapper
 		#endif
 	}
 	
-	@Override
-	public boolean isSolid() { return this.isSolid; }
-	@Override
-	public boolean isLiquid() { return this.isLiquid; }
-	@Override
-	public boolean isBeaconBlock() { return this.isBeaconBlock; }
-	@Override
-	public boolean isBeaconBaseBlock() { return this.isBeaconBaseBlock; }
-	@Override
-	public boolean isBeaconTintBlock() { return this.beaconTintColor != null; }
-	@Override
-	public boolean allowsBeaconBeamPassage() { return this.allowsBeaconBeamPassage; }
-	@Override
-	public boolean allowApiColorOverride() { return this.allowApiColorOverride; }
+	@Override public boolean isSolid() { return this.isSolid; }
+	@Override public boolean isLiquid() { return this.isLiquid; }
+	@Override public boolean isBeaconBlock() { return this.isBeaconBlock; }
+	@Override public boolean isBeaconBaseBlock() { return this.isBeaconBaseBlock; }
+	@Override public boolean isBeaconTintBlock() { return this.beaconTintColor != null; }
+	@Override public boolean allowsBeaconBeamPassage() { return this.allowsBeaconBeamPassage; }
+	@Override public boolean allowApiColorOverride() { return this.allowApiColorOverride; }
+	@Override public boolean renderTexture() { return this.renderTexture; }
+	@Override public boolean useBottomTextureForSides() { return this.useBottomTextureForSides; }
 	
-	@Override
-	public Color getMapColor() { return this.mapColor; }
-	@Override
-	public Color getBeaconTintColor() { return this.beaconTintColor; }
+	@Override public Color getMapColor() { return this.mapColor; }
+	@Override public Color getBeaconTintColor() { return this.beaconTintColor; }
 	
-	@Override
-	public byte getMaterialId() { return this.blockMaterialId; }
+	@Override public byte getMaterialId() { return this.blockMaterialId; }
 	
 	//endregion
 	

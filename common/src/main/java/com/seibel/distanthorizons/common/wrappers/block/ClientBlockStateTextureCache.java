@@ -164,6 +164,20 @@ public class ClientBlockStateTextureCache
 	{
 		BlockFaceTexture[] faceTextures = new BlockFaceTexture[FACE_DIRECTIONS.length];
 		
+		
+		// only render textures if requested
+		// done to handle some modeled blocks that don't rasterize well (like bamboo)
+		if (!blockStateWrapper.renderTexture())
+		{
+			for (int faceIndex = 0; faceIndex < faceTextures.length; faceIndex++)
+			{
+				// just use the invisible color for each direction
+				faceTextures[faceIndex] = BlockFaceTexture.createSolidColor(ColorUtil.INVISIBLE);
+			}
+			return faceTextures;
+		}
+		
+		
 		try
 		{
 			// getQuads() and RANDOM aren't thread safe so all baking is done in a lock
@@ -222,18 +236,32 @@ public class ClientBlockStateTextureCache
 		try
 		{
 			List<BakedQuad> bakedQuads;
-			if (dhDirection != EDhDirection.UP)
+			
+			if (blockStateWrapper.useBottomTextureForSides()
+				&& dhDirection != EDhDirection.UP
+				&& dhDirection != EDhDirection.DOWN)
 			{
-				bakedQuads = QuadWrapper.getQuadsForDirection(blockStateWrapper.blockState, dhDirection);
+				// Some blocks like grass/paths/mycilum have non-repeating side textures
+				// which looks bad when repeated.
+				// In those cases we just use the bottom texture.
+				bakedQuads = QuadWrapper.getQuadsForDirection(blockStateWrapper.blockState, EDhDirection.DOWN);
 			}
 			else
 			{
-				// the top direction needs to get unculled quads for farm land to render properly
-				bakedQuads = QuadWrapper.getUnculledQuads(blockStateWrapper.blockState);
-				if (bakedQuads == null
-					|| bakedQuads.isEmpty())
+				if (dhDirection != EDhDirection.UP)
 				{
+					// non-up directions all get textures normally
 					bakedQuads = QuadWrapper.getQuadsForDirection(blockStateWrapper.blockState, dhDirection);
+				}
+				else
+				{
+					// the top direction needs to get unculled quads first for farm land to render properly
+					bakedQuads = QuadWrapper.getUnculledQuads(blockStateWrapper.blockState);
+					if (bakedQuads == null
+						|| bakedQuads.isEmpty())
+					{
+						bakedQuads = QuadWrapper.getQuadsForDirection(blockStateWrapper.blockState, dhDirection);
+					}
 				}
 			}
 			
