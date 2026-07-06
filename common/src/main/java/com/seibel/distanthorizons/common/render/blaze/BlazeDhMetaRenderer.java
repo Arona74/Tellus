@@ -110,7 +110,17 @@ public class BlazeDhMetaRenderer implements IDhMetaRenderer
 		this.dhDepthTextureWrapper.clearDepth(this.clearDepth);
 		
 		Color color = MC_RENDER.getSkyColor();
-		this.dhColorTextureWrapper.clearColor(ColorUtil.toColorInt(color)); 
+		
+		this.dhColorTextureWrapper.clearColor(
+			// alpha of 0 done as a check to make sure DH is only applied to MC's framebuffer
+			// where DH pixels were drawn
+			ColorUtil.argbToInt(
+				0,
+				color.getRed(),
+				color.getGreen(),
+				color.getBlue()
+			)
+		); 
 	}
 	
 	//endregion

@@ -406,12 +406,13 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 			|| renderParams.renderPass == EDhApiRenderPass.OPAQUE_AND_TRANSPARENT);
 		
 		
-		
 		GL32.glClearDepth(1.0);
 		
 		float[] clearColorValues = new float[4];
 		GL32.glGetFloatv(GL32.GL_COLOR_CLEAR_VALUE, clearColorValues);
-		GL32.glClearColor(clearColorValues[0], clearColorValues[1], clearColorValues[2], 1.0f);
+		// alpha of 0 done as a check to make sure DH is only applied to MC's framebuffer
+		// where DH pixels were drawn
+		GL32.glClearColor(clearColorValues[0], clearColorValues[1], clearColorValues[2], 0.0f);
 		
 		if (this.usingMcFramebuffer 
 			&& framebufferOverride == null)
