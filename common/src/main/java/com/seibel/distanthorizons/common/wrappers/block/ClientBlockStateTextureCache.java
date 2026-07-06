@@ -172,7 +172,8 @@ public class ClientBlockStateTextureCache
 			if (BlockStateWrapper.isAir(blockStateWrapper.blockState))
 			{
 				// Air shouldn't be rendered and is just here to capture the rare bug state where air's texture is requested.
-				Arrays.fill(faceTextures, BlockFaceTexture.createSolidColor(ColorUtil.INVISIBLE, false));
+				BlockFaceTexture invisibleTexture = BlockFaceTexture.createSolidColor(ColorUtil.INVISIBLE);
+				Arrays.fill(faceTextures, invisibleTexture);
 				return faceTextures;
 			}
 			
@@ -203,7 +204,7 @@ public class ClientBlockStateTextureCache
 		{
 			if (faceTextures[faceIndex] == null)
 			{
-				faceTextures[faceIndex] = BlockFaceTexture.createSolidColor(ColorUtil.HOT_PINK, false);
+				faceTextures[faceIndex] = BlockFaceTexture.createErrorGridTexture();
 			}
 		}
 		
@@ -268,7 +269,8 @@ public class ClientBlockStateTextureCache
 		{
 			// blocks without quads (IE blocks rendered via block entities like chests)
 			// fall back to their particle texture
-			return bakeSpriteTexture(getParticleSprite(blockStateWrapper), false);
+			TextureAtlasSprite particleSprite = getParticleSprite(blockStateWrapper);
+			return bakeSpriteTexture(particleSprite, false);
 		}
 		
 		return createTextureByRasterizingQuads(blockStateWrapper, dhDirection, quadList);
@@ -337,7 +339,7 @@ public class ClientBlockStateTextureCache
 		
 		//endregion
 		
-		return new BlockFaceTexture(TEXTURE_WIDTH_AND_HEIGHT, TEXTURE_WIDTH_AND_HEIGHT, pixels, textureTinted);
+		return BlockFaceTexture.createTexture(TEXTURE_WIDTH_AND_HEIGHT, TEXTURE_WIDTH_AND_HEIGHT, pixels, textureTinted);
 	}
 	
 	/** Copies the given sprite directly, used for blocks where rasterizing model quads isn't possible. */
@@ -345,7 +347,7 @@ public class ClientBlockStateTextureCache
 	{
 		if (sprite == null)
 		{
-			return BlockFaceTexture.createSolidColor(ColorUtil.HOT_PINK, false);
+			return BlockFaceTexture.createErrorGridTexture();
 		}
 		
 		int spriteWidth = TextureAtlasSpriteWrapper.getWidth(sprite);
@@ -353,7 +355,7 @@ public class ClientBlockStateTextureCache
 		if (spriteWidth <= 0 
 			|| spriteHeight <= 0)
 		{
-			return BlockFaceTexture.createSolidColor(ColorUtil.HOT_PINK, false);
+			return BlockFaceTexture.createErrorGridTexture();
 		}
 		
 		int[] pixels = new int[TEXTURE_WIDTH_AND_HEIGHT * TEXTURE_WIDTH_AND_HEIGHT];
@@ -366,7 +368,7 @@ public class ClientBlockStateTextureCache
 				pixels[(v * TEXTURE_WIDTH_AND_HEIGHT) + u] = TextureAtlasSpriteWrapper.getPixelARGB(sprite, 0, texelX, texelY);
 			}
 		}
-		return new BlockFaceTexture(TEXTURE_WIDTH_AND_HEIGHT, TEXTURE_WIDTH_AND_HEIGHT, pixels, tinted);
+		return BlockFaceTexture.createTexture(TEXTURE_WIDTH_AND_HEIGHT, TEXTURE_WIDTH_AND_HEIGHT, pixels, tinted);
 	}
 	
 	//endregion
@@ -784,7 +786,7 @@ public class ClientBlockStateTextureCache
 			String filePath = TEST_TEXTURE_OUTPUT_FOLDER_PATH + blockSerial + "_" + dir + ".png";
 			try
 			{
-				writeArgbPixelsToPng(faceTexture.argbPixels, filePath);
+				writeArgbPixelsToPng(faceTexture, filePath);
 			}
 			catch (Exception e)
 			{
@@ -793,7 +795,7 @@ public class ClientBlockStateTextureCache
 		}
 	}
 	
-	public static void writeArgbPixelsToPng(int[] pixels, String outputPath)
+	public static void writeArgbPixelsToPng(BlockFaceTexture faceTexture, String outputPath)
 		throws IOException
 	{
 		// Multiplies the output texture size by this many times.
@@ -801,15 +803,15 @@ public class ClientBlockStateTextureCache
 		int scale = 8;
 		
 		BufferedImage image = new BufferedImage(
-			TEXTURE_WIDTH_AND_HEIGHT * scale,
-			TEXTURE_WIDTH_AND_HEIGHT * scale, 
+			faceTexture.width * scale,
+			faceTexture.height * scale, 
 			BufferedImage.TYPE_INT_ARGB);
 		
-		for (int u = 0; u < TEXTURE_WIDTH_AND_HEIGHT; u++)
+		for (int u = 0; u < faceTexture.width; u++)
 		{
-			for (int v = 0; v < TEXTURE_WIDTH_AND_HEIGHT; v++)
+			for (int v = 0; v < faceTexture.height; v++)
 			{
-				int argb = pixels[(v * TEXTURE_WIDTH_AND_HEIGHT) + u];
+				int argb = faceTexture.argbPixels[(v * faceTexture.width) + u];
 				
 				// duplicate the same pixel "scale" times to make it larger
 				for (int uScale = 0; uScale < scale; uScale++)
