@@ -36,17 +36,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
-#if MC_VER <= MC_1_12_2
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.util.EnumFacing;
-#else
-import net.minecraft.world.level.block.state.BlockState;
-#endif
-
-#if MC_VER >= MC_1_19_2
-#else
-#endif
-
 #if MC_VER < MC_1_21_5
 import net.minecraft.client.renderer.block.model.BakedQuad;
 #elif MC_VER <= MC_1_21_11
@@ -111,11 +100,7 @@ public class ClientBlockStateTextureCache
 	 */
 	private static final ReentrantLock BAKE_LOCK = new ReentrantLock();
 	
-	#if MC_VER <= MC_1_12_2
-	private static final ConcurrentHashMap<IBlockState, BlockFaceTexture[]> TEXTURES_BY_BLOCK_STATE = new ConcurrentHashMap<>();
-	#else
-	private static final ConcurrentHashMap<BlockState, BlockFaceTexture[]> TEXTURES_BY_BLOCK_STATE = new ConcurrentHashMap<>();
-	#endif
+	private static final ConcurrentHashMap<BlockStateWrapper, BlockFaceTexture[]> TEXTURES_BY_BLOCK_WRAPPER = new ConcurrentHashMap<>();
 	
 	/** 
 	 * can be enabled to make sure the textures are being parsed
@@ -134,14 +119,14 @@ public class ClientBlockStateTextureCache
 	
 	public static BlockFaceTexture getFaceTexture(BlockStateWrapper blockStateWrapper, EDhDirection direction)
 	{
-		BlockFaceTexture[] faceTextures = TEXTURES_BY_BLOCK_STATE.computeIfAbsent(
-				blockStateWrapper.blockState,
-				(blockState) ->
+		BlockFaceTexture[] faceTextures = TEXTURES_BY_BLOCK_WRAPPER.computeIfAbsent(
+				blockStateWrapper,
+				(newBlockStateWrapper) ->
 				{
-					BlockFaceTexture[] blockFaceTextures = bakeAllFaceTextures(blockStateWrapper);
+					BlockFaceTexture[] blockFaceTextures = bakeAllFaceTextures(newBlockStateWrapper);
 					if (WRITE_TEXTURES_TO_FILE_FOR_DEBUGGING)
 					{
-						writeTopAndNorthTexturesToFile(blockStateWrapper, blockFaceTextures);
+						writeTopAndNorthTexturesToFile(newBlockStateWrapper, blockFaceTextures);
 					}
 					return blockFaceTextures;
 				});
@@ -149,7 +134,7 @@ public class ClientBlockStateTextureCache
 	}
 	
 	/** Should be called whenever MC's textures change, IE when resource packs are swapped. */
-	public static void clearCache() { TEXTURES_BY_BLOCK_STATE.clear(); }
+	public static void clearCache() { TEXTURES_BY_BLOCK_WRAPPER.clear(); }
 	
 	//endregion
 	
@@ -232,7 +217,7 @@ public class ClientBlockStateTextureCache
 		// quad lookup //
 		//=============//
 		
-		ArrayList<BakedQuad> quadList = new ArrayList<>();
+		ArrayList<BakedQuad> rasterQuadList = new ArrayList<>();
 		try
 		{
 			List<BakedQuad> bakedQuads;
@@ -265,26 +250,31 @@ public class ClientBlockStateTextureCache
 				}
 			}
 			
-			
-			if (bakedQuads != null 
-				&& !bakedQuads.isEmpty())
+			// try using the baked quads first if allowed
+			if (!blockStateWrapper.alwaysRasterizeTexture())
 			{
-				BakedQuad faceQuad = pickFaceQuad(bakedQuads);
-				TextureAtlasSprite quadSprite = getQuadSprite(faceQuad);
-				boolean isQuadTinted = isQuadTinted(faceQuad);	
-				
-				// Faces with culled quads cover the whole face (IE full cubes),
-				// copying the quad's sprite directly is both more reliable
-				// and more accurate than rasterizing.
-				return bakeSpriteTexture(quadSprite, isQuadTinted);
+				if (bakedQuads != null
+					&& !bakedQuads.isEmpty())
+				{
+					// Faces with culled quads cover the whole face (IE full cubes),
+					// copying the quad's sprite directly is both more reliable
+					// and more accurate than rasterizing.
+					
+					BakedQuad faceQuad = pickFaceQuad(bakedQuads);
+					TextureAtlasSprite quadSprite = getQuadSprite(faceQuad);
+					boolean isQuadTinted = isQuadTinted(faceQuad);
+					
+					return bakeSpriteTexture(quadSprite, isQuadTinted);
+				}
 			}
+			
 			
 			// unculled quads (IE fence posts)
 			// can be visible from every direction
 			List<BakedQuad> unculledQuads = QuadWrapper.getUnculledQuads(blockStateWrapper.blockState);
 			if (unculledQuads != null)
 			{
-				quadList.addAll(unculledQuads);
+				rasterQuadList.addAll(unculledQuads);
 			}
 		}
 		catch (Exception ignore)
@@ -293,7 +283,7 @@ public class ClientBlockStateTextureCache
 			// (i.e. AIR is somehow passed in)
 		}
 		
-		if (quadList.isEmpty())
+		if (rasterQuadList.isEmpty())
 		{
 			// blocks without quads (IE blocks rendered via block entities like chests)
 			// fall back to their particle texture
@@ -301,7 +291,7 @@ public class ClientBlockStateTextureCache
 			return bakeSpriteTexture(particleSprite, false);
 		}
 		
-		return createTextureByRasterizingQuads(blockStateWrapper, dhDirection, quadList);
+		return createTextureByRasterizingQuads(blockStateWrapper, dhDirection, rasterQuadList);
 	}
 	
 	/** renders the given quads to a {@link BlockFaceTexture} to simulate the camera looking directly at the block */
