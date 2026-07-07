@@ -133,8 +133,8 @@ public class MixinLevelRenderer
 		
 		#else
 		// get the matrices directly from MC
-		ClientApi.RENDER_STATE.mcModelViewMatrix = McObjectConverter.Convert(modelViewMatrixStack.last().pose());
-		ClientApi.RENDER_STATE.mcProjectionMatrix = McObjectConverter.Convert(projectionMatrix);
+		ClientApi.RENDER_STATE.mcModelViewMatrix = McObjectConverter.convert(modelViewMatrixStack.last().pose());
+		ClientApi.RENDER_STATE.mcProjectionMatrix = McObjectConverter.convert(projectionMatrix);
 		#endif
 		
 		
