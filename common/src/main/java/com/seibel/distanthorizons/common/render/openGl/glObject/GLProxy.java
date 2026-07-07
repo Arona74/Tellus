@@ -79,6 +79,13 @@ public class GLProxy
 		}
 	}
 	
+	/** 
+	 * disabled for now since GL 3.3 may not appear in the capabilities
+	 * on older MC versions (James found this issue on 1.17 and 1.20.6 specifically),
+	 * but may still be accessible for our needs. 
+	 */
+	private static final boolean CHECK_GL_VERSION_ON_STARTUP = false;
+	
 	public static final Set<String> LOGGED_GL_MESSAGES = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 	
 	
@@ -159,16 +166,19 @@ public class GLProxy
 		this.glCapabilities = GL.getCapabilities();
 		
 		// crash the game if the GPU doesn't support OpenGL 3.3
-		if (!this.glCapabilities.OpenGL33)
+		if (CHECK_GL_VERSION_ON_STARTUP)
 		{
-			String supportedVersionInfo = this.getFailedVersionInfo(this.glCapabilities);
-			
-			// See full requirement at above.
-			String errorMessage = ModInfo.READABLE_NAME + " was initializing " + GLProxy.class.getSimpleName()
+			if (!this.glCapabilities.OpenGL33)
+			{
+				String supportedVersionInfo = this.getFailedVersionInfo(this.glCapabilities);
+				
+				// See full requirement at above.
+				String errorMessage = ModInfo.READABLE_NAME + " was initializing " + GLProxy.class.getSimpleName()
 					+ " and discovered this GPU doesn't meet the OpenGL requirements. Sorry I couldn't tell you sooner :(\n" +
 					"Additional info:\n" + supportedVersionInfo;
-			IMinecraftClientWrapper MC = SingletonInjector.INSTANCE.get(IMinecraftClientWrapper.class);
-			MC.crashMinecraft(errorMessage, new UnsupportedOperationException("Distant Horizon OpenGL requirements not met"));
+				IMinecraftClientWrapper MC = SingletonInjector.INSTANCE.get(IMinecraftClientWrapper.class);
+				MC.crashMinecraft(errorMessage, new UnsupportedOperationException("Distant Horizon OpenGL requirements not met"));
+			}
 		}
 	 	LOGGER.info("minecraftGlCapabilities:\n" + this.versionInfoToString(this.glCapabilities));
 		
