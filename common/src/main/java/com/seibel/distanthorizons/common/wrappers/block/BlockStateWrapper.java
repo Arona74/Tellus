@@ -375,16 +375,7 @@ public class BlockStateWrapper implements IBlockStateWrapper
 			#else
 			if (blockState != null)
 			{
-				// check if this block has any tags 
-				
-				Stream<TagKey<Block>> tags;
-				#if MC_VER <= MC_1_21_11
-				tags = blockState.getTags();
-				#else
-				tags = blockState.tags();
-				#endif
-				
-				this.isBeaconBaseBlock = tags.anyMatch((TagKey<Block> tag) -> tag.location().getPath().toLowerCase().contains("beacon_base_blocks"));
+				this.isBeaconBaseBlock = blockTagInCsv(blockState, "beacon_base_blocks");
 			}
 			else
 			{
@@ -475,122 +466,28 @@ public class BlockStateWrapper implements IBlockStateWrapper
 		{
 			// texture ignoring //
 			{
-				boolean renderBlockTexture = true;
-				
-				// get block resource names
-				String blockNamesCsv = Config.Client.Advanced.Graphics.Texture.blocksDontRenderTextureCsv.get();
-				blockNamesCsv = blockNamesCsv.toLowerCase(); // lowercase to allow for case-insensitive checking
-				List<String> blockNameList = Arrays.asList(blockNamesCsv.split(",")); // duplicates could happen, but that isn't a problem since we'd just end up checking the same block twice, not a big deal
-				
-				// check this block against the expected list
-				for (int i = 0; i < blockNameList.size(); i++)
-				{
-					String baseBlockName = blockNameList.get(i);
-					if (lowerCaseSerial.contains(baseBlockName))
-					{
-						renderBlockTexture = false;
-						break;
-					}
-				}
-				
-				this.renderTexture = renderBlockTexture;
+				String dontTextureNamesCsv = Config.Client.Advanced.Graphics.Texture.blocksDontRenderTextureCsv.get();
+				this.renderTexture = !blockSerialInCsv(lowerCaseSerial, dontTextureNamesCsv);
 			}
 			
 			
 			// side texture ignoring //
 			{
-				// check for specific block names
-				boolean isSideIgnoreBlock = false;
-				{
-					// checking for specific block names is necessary since there isn't a single tag
-					// all side-rendered blocks have to easily check against
-					
-					// get block resource names
-					String sideBlockNamesCsv = Config.Client.Advanced.Graphics.Texture.blocksDontUseSideTextureCsv.get();
-					sideBlockNamesCsv = sideBlockNamesCsv.toLowerCase(); // lowercase to allow for case-insensitive checking
-					List<String> sideBlockNameList = Arrays.asList(sideBlockNamesCsv.split(",")); // duplicates could happen, but that isn't a problem since we'd just end up checking the same block twice, not a big deal
-					
-					// check this block against the expected list
-					for (int i = 0; i < sideBlockNameList.size(); i++)
-					{
-						String baseBlockName = sideBlockNameList.get(i);
-						if (lowerCaseSerial.contains(baseBlockName))
-						{
-							isSideIgnoreBlock = true;
-							break;
-						}
-					}
-				}
+				String sideBlockNamesCsv = Config.Client.Advanced.Graphics.Texture.blocksDontUseSideTextureCsv.get();
+				boolean isSideIgnoreBlock = blockSerialInCsv(lowerCaseSerial, sideBlockNamesCsv);
 				
-				// check for block tags on newer MC versions
-				boolean hasSideIgnoreTags = false;
-				{
-				#if MC_VER <= MC_1_18_2
-				#else
-					if (blockState != null)
-					{
-						Stream<TagKey<Block>> tags;
-					#if MC_VER <= MC_1_21_11
-					tags = blockState.getTags();
-					#else
-						tags = blockState.tags();
-					#endif
-						
-						
-						// get block resource names
-						String sideBlockTagsCsv = Config.Client.Advanced.Graphics.Texture.blockTagsDontUseSideTextureCsv.get();
-						sideBlockTagsCsv = sideBlockTagsCsv.toLowerCase(); // lowercase to allow for case-insensitive checking
-						List<String> sideBlockTagList = Arrays.asList(sideBlockTagsCsv.split(",")); // duplicates could happen, but that isn't a problem since we'd just end up checking the same block twice, not a big deal
-						
-						
-						hasSideIgnoreTags = tags.anyMatch((TagKey<Block> tag) ->
-						{
-							String lowerTag = tag.location().getPath().toLowerCase();
-							
-							for (int i = 0; i < sideBlockTagList.size(); i++)
-							{
-								String sideBlockTag = sideBlockTagList.get(i);
-								if (lowerTag.contains(sideBlockTag))
-								{
-									return true;
-								}
-							}
-							
-							return false;
-						});
-						
-					}
-				#endif
-				}
+				String dontUseSideTextureTagsCsv = Config.Client.Advanced.Graphics.Texture.blockTagsDontUseSideTextureCsv.get();
+				boolean hasSideIgnoreTags = blockTagInCsv(blockState, dontUseSideTextureTagsCsv);
 				
 				this.useBottomTextureForSides = hasSideIgnoreTags || isSideIgnoreBlock;
 			}
 			
 			
-			// force texture rasterization //
+			// always raster texture //
 			{
-				boolean rasterizeBlockTexture = false;
-				
-				// get block resource names
-				String blockNamesCsv = Config.Client.Advanced.Graphics.Texture.blocksAlwaysRasterizeTextureCsv.get();
-				blockNamesCsv = blockNamesCsv.toLowerCase(); // lowercase to allow for case-insensitive checking
-				List<String> blockNameList = Arrays.asList(blockNamesCsv.split(",")); // duplicates could happen, but that isn't a problem since we'd just end up checking the same block twice, not a big deal
-				
-				// check this block against the expected list
-				for (int i = 0; i < blockNameList.size(); i++)
-				{
-					String baseBlockName = blockNameList.get(i);
-					if (lowerCaseSerial.contains(baseBlockName))
-					{
-						rasterizeBlockTexture = true;
-						break;
-					}
-				}
-				
-				this.alwaysRasterizeTexture = rasterizeBlockTexture;
+				String alwaysRasterNamesCsv = Config.Client.Advanced.Graphics.Texture.blocksAlwaysRasterizeTextureCsv.get();
+				this.alwaysRasterizeTexture = blockSerialInCsv(lowerCaseSerial, alwaysRasterNamesCsv);
 			}
-			
-			
 		}
 		
 		
@@ -983,6 +880,79 @@ public class BlockStateWrapper implements IBlockStateWrapper
 		}
 		
 		return propagatesSkyLightDown;
+	}
+	
+	#if MC_VER <= MC_1_12_2
+	private static boolean blockTagInCsv(@Nullable IBlockState blockState, String blockTagsCsv)
+	#else
+	private static boolean blockTagInCsv(@Nullable BlockState blockState, String blockTagsCsv)
+	#endif
+	{
+		// should only trigger for air
+		if (blockState == null)
+		{
+			return false;
+		}
+		
+		
+		
+		#if MC_VER <= MC_1_18_2
+		// tags aren't present in MC 1.17 and older
+		return false;
+		#else
+		
+		Stream<TagKey<Block>> tags;
+		#if MC_VER <= MC_1_21_11
+		tags = blockState.getTags();
+		#else
+		tags = blockState.tags();
+		#endif
+		
+		
+		blockTagsCsv = blockTagsCsv.toLowerCase(); // lowercase to allow for case-insensitive checking
+		List<String> sideBlockTagList = Arrays.asList(blockTagsCsv.split(",")); // duplicates could happen, but that isn't a problem since we'd just end up checking the same block twice, not a big deal
+		
+		
+		boolean tagMatches = tags.anyMatch((TagKey<Block> tag) ->
+		{
+			String lowerTag = tag.location().getPath().toLowerCase();
+			
+			for (int i = 0; i < sideBlockTagList.size(); i++)
+			{
+				String sideBlockTag = sideBlockTagList.get(i);
+				if (lowerTag.contains(sideBlockTag))
+				{
+					return true;
+				}
+			}
+			
+			return false;
+		});
+		
+		return tagMatches;
+		#endif
+	}
+	
+	private static boolean blockSerialInCsv(String lowerCaseSerial, String blockNameCsv)
+	{
+		boolean blockMatches = false;
+		
+		// get block resource names
+		blockNameCsv = blockNameCsv.toLowerCase(); // lowercase to allow for case-insensitive checking
+		List<String> blockNameList = Arrays.asList(blockNameCsv.split(",")); // duplicates could happen, but that isn't a problem since we'd just end up checking the same block twice, not a big deal
+		
+		// check this block against the expected list
+		for (int i = 0; i < blockNameList.size(); i++)
+		{
+			String baseBlockName = blockNameList.get(i);
+			if (lowerCaseSerial.contains(baseBlockName))
+			{
+				blockMatches = true;
+				break;
+			}
+		}
+		
+		return blockMatches;
 	}
 	
 	//endregion
