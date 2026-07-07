@@ -52,7 +52,7 @@ public class TextureAtlasSpriteWrapper
 			x += sprite.animatedTexture.getFrameX(frameIndex) * sprite.width;
 			y += sprite.animatedTexture.getFrameY(frameIndex) * sprite.height;
 		}
-		int rbga = sprite.mainImage[0].getPixelRGBA(x, y);
+		int rgba = sprite.mainImage[0].getPixelRGBA(x, y);
 		return convertRgbaToArgb(rgba);
 		#elif MC_VER < MC_1_21_3
 		if (sprite.contents().animatedTexture != null)
@@ -76,6 +76,7 @@ public class TextureAtlasSpriteWrapper
         #endif
 	}
 	
+	// used for some MC versions
 	private static int convertRgbaToArgb(int rgba)
 	{
 		int r = (rgba & 0x000000FF);
