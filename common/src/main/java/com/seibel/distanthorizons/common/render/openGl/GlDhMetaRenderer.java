@@ -10,6 +10,7 @@ import com.seibel.distanthorizons.common.render.openGl.glObject.GLProxy;
 import com.seibel.distanthorizons.common.render.openGl.glObject.GlDhFramebuffer;
 import com.seibel.distanthorizons.common.render.openGl.glObject.texture.*;
 import com.seibel.distanthorizons.common.render.openGl.postProcessing.apply.GlDhApplyShader;
+import com.seibel.distanthorizons.common.render.openGl.terrain.GlBlockTextureAtlas;
 import com.seibel.distanthorizons.common.wrappers.minecraft.MinecraftGLWrapper;
 import com.seibel.distanthorizons.common.wrappers.misc.LightMapWrapper;
 import com.seibel.distanthorizons.core.config.Config;
@@ -21,6 +22,7 @@ import com.seibel.distanthorizons.core.render.DhApiRenderProxy;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.misc.ILightMapWrapper;
+import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IIrisAccessor;
 import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IOptifineAccessor;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhMetaRenderer;
 import com.seibel.distanthorizons.coreapi.DependencyInjection.ApiEventInjector;
@@ -46,6 +48,7 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 	private static final MinecraftGLWrapper GLMC = MinecraftGLWrapper.INSTANCE;
 	
 	private static final IOptifineAccessor OPTIFINE_ACCESSOR = ModAccessorInjector.INSTANCE.get(IOptifineAccessor.class);
+	private static final IIrisAccessor IRIS_ACCESSOR = ModAccessorInjector.INSTANCE.get(IIrisAccessor.class);
 	
 	
 	private int activeFramebufferId = -1;
@@ -113,6 +116,13 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		this.setGLState(renderParams, firstPass);
 		
 		this.bindLightmap(renderParams.lightmap);
+		
+		if (Config.Client.Advanced.Graphics.Texture.enableTexturedLods.get()
+			&& irisShadersInactive())
+		{
+			GlBlockTextureAtlas.INSTANCE.uploadPendingTiles();
+			GlBlockTextureAtlas.INSTANCE.bind();
+		}
 	}
 	private void setGLState(
 		DhApiRenderParam renderEventParam,
@@ -395,6 +405,11 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		GLMC.glBlendFuncSeparate(GL33.GL_SRC_ALPHA, GL33.GL_ONE, GL33.GL_ONE, GL33.GL_ZERO);
 		#endif
 		this.unbindLightmap();
+		if (Config.Client.Advanced.Graphics.Texture.enableTexturedLods.get()
+			&& irisShadersInactive())
+		{
+			GlBlockTextureAtlas.INSTANCE.unbind();
+		}
 		this.shaderProgramForThisFrame.unbind();
 	}
 	
@@ -425,7 +440,9 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		
 		float[] clearColorValues = new float[4];
 		GL33.glGetFloatv(GL33.GL_COLOR_CLEAR_VALUE, clearColorValues);
-		GL33.glClearColor(clearColorValues[0], clearColorValues[1], clearColorValues[2], 1.0f);
+		// alpha of 0 done as a check to make sure DH is only applied to MC's framebuffer
+		// where DH pixels were drawn
+		GL33.glClearColor(clearColorValues[0], clearColorValues[1], clearColorValues[2], 0.0f);
 		
 		if (this.usingMcFramebuffer 
 			&& framebufferOverride == null)
@@ -497,6 +514,12 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		#else
 		GLMC.glBindTexture(0);
 		#endif
+	}
+	
+	private boolean irisShadersInactive()
+	{
+		return !(IRIS_ACCESSOR != null
+			&& IRIS_ACCESSOR.isShaderPackInUse());
 	}
 	
 	//endregion

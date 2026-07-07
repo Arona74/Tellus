@@ -167,8 +167,8 @@ public class BlazeDhSsaoRenderer implements IDhSsaoRenderer
 		
 		
 		// textures
-		this.ssaoColorTextureWrapper.tryCreateOrResize();
-		this.ssaoDepthTextureWrapper.tryCreateOrResize();
+		this.ssaoColorTextureWrapper.tryCreateOrResizeToScreenSize();
+		this.ssaoDepthTextureWrapper.tryCreateOrResizeToScreenSize();
 		
 		// frag uniforms
 		{

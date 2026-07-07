@@ -393,16 +393,11 @@ public abstract class AbstractModInitializer
 		{
 			// get the currently selected rendering API
 			EDhApiRenderingEngine renderApi = Config.Client.Advanced.Graphics.Experimental.renderingEngine.get();
-			if (renderApi == EDhApiRenderingEngine.AUTO)
-			{
-				IVersionConstants versionConstants = SingletonInjector.INSTANCE.get(IVersionConstants.class);
-				renderApi = versionConstants.getDefaultRenderingEngine();
-			}
 			
 			// Iris only supports native OpenGL
-			if (renderApi != EDhApiRenderingEngine.OPEN_GL)
+			if (renderApi == EDhApiRenderingEngine.BLAZE_3D)
 			{
-				String irisUnsupportedMessage = "Iris doesn't support DH when using the ["+ EDhApiRenderingEngine.BLAZE_3D+"] rendering engine, this will need to be fixed on Iris end. As a temporary fix please change the rendering engine to ["+ EDhApiRenderingEngine.OPEN_GL+"] in the DH config file.";
+				String irisUnsupportedMessage = "Iris doesn't support DH when using the ["+ EDhApiRenderingEngine.BLAZE_3D+"] rendering engine, this will need to be fixed on Iris end. As a temporary fix please change the rendering engine to ["+ EDhApiRenderingEngine.OPEN_GL+"] or ["+ EDhApiRenderingEngine.AUTO+"] in the DH config file.";
 				LOGGER.fatal(irisUnsupportedMessage);
 				NativeDialogUtil.showDialog(ModInfo.READABLE_NAME, irisUnsupportedMessage, "ok", "error");
 				
@@ -410,6 +405,12 @@ public abstract class AbstractModInitializer
 				String errorMessage = "loading Distant Horizons. "+irisUnsupportedMessage;
 				String exceptionError = "Distant Horizons conditional mod config Exception";
 				mc.crashMinecraft(errorMessage, new Exception(exceptionError));
+			}
+			else if (renderApi == EDhApiRenderingEngine.AUTO)
+			{
+				Config.Client.Advanced.Graphics.Experimental.renderingEngine.setApiValue(EDhApiRenderingEngine.OPEN_GL);
+				
+				LOGGER.warn("Changing Distant Horizons' rendering engine to ["+EDhApiRenderingEngine.OPEN_GL+"] to allow for Iris rendering. This renderer will be unavailable once Minecraft moves to Vulkan and must be fixed on Iris' end.");
 			}
 		}
 		

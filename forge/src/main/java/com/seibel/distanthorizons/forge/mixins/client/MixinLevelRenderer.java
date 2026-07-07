@@ -129,7 +129,7 @@ public class MixinLevelRenderer
 		ClientApi.RENDER_STATE.mcProjectionMatrix = new DhMat4f(mcProjMatrixRaw);
 		ClientApi.RENDER_STATE.mcProjectionMatrix.transpose();
 		
-		ClientApi.RENDER_STATE.mcModelViewMatrix = McObjectConverter.Convert(matrixStackIn.last().pose());
+		ClientApi.RENDER_STATE.mcModelViewMatrix = McObjectConverter.convert(matrixStackIn.last().pose());
 		
 		#else
 		// get the matrices directly from MC

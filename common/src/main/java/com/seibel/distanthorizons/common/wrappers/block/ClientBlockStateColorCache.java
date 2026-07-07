@@ -19,11 +19,10 @@
 
 package com.seibel.distanthorizons.common.wrappers.block;
 
-import com.seibel.distanthorizons.api.interfaces.block.IDhApiBlockStateWrapper;
-import com.seibel.distanthorizons.api.interfaces.world.IDhApiLevelWrapper;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBlockColorOverrideEvent;
 import com.seibel.distanthorizons.common.wrappers.McObjectConverter;
 import com.seibel.distanthorizons.core.dataObjects.fullData.sources.FullDataSourceV2;
+import com.seibel.distanthorizons.core.enums.EDhDirection;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPos;
 import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPosMutable;
@@ -43,7 +42,6 @@ import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.renderer.color.BlockColors;
 import net.minecraft.util.math.BlockPos;
 #else
-import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.SlabType;
@@ -54,18 +52,12 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
-#if MC_VER >= MC_1_19_2
-import net.minecraft.util.RandomSource;
-#else
-#endif
-
 #if MC_VER < MC_1_21_5
 import net.minecraft.client.renderer.block.model.BakedQuad;
 #elif MC_VER <= MC_1_21_11
 import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 #else
-import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.BlockPos;
 import net.minecraft.client.color.block.BlockTintSource;
@@ -114,40 +106,20 @@ public class ClientBlockStateColorCache
 	
 	
 	/** This is the order each direction on a block is processed when attempting to get the texture/color */
-	#if MC_VER <= MC_1_12_2
-	private static final @Nullable EnumFacing[] COLOR_RESOLUTION_DIRECTION_ORDER = 
+	private static final @Nullable EDhDirection[] COLOR_RESOLUTION_DIRECTION_ORDER = 
 		{
-			EnumFacing.UP,
+			EDhDirection.UP,
 			null, // null represents "unculled" faces, IE the top of farmland
-			EnumFacing.NORTH,
-			EnumFacing.EAST,
-			EnumFacing.WEST,
-			EnumFacing.SOUTH,
-			EnumFacing.DOWN
+			EDhDirection.NORTH,
+			EDhDirection.EAST,
+			EDhDirection.WEST,
+			EDhDirection.SOUTH,
+			EDhDirection.DOWN
 		};
-	#else
-	private static final @Nullable Direction[] COLOR_RESOLUTION_DIRECTION_ORDER = 
-		{
-			Direction.UP,
-			null, // null represents "unculled" faces, IE the top of farmland
-			Direction.NORTH,
-			Direction.EAST,
-			Direction.WEST,
-			Direction.SOUTH,
-			Direction.DOWN
-		};
-	#endif
 	
 	private static final int FLOWER_COLOR_SCALE = 5;
 	
 	
-	
-	#if MC_VER < MC_1_19_2
-	private static final Random RANDOM = new Random(0);
-	#else
-	/** Note: this object isn't thread safe and must be put in a lock */
-	private static final RandomSource RANDOM = RandomSource.create();
-	#endif
 	
 	private final IClientLevelWrapper clientLevelWrapper;
 	#if MC_VER <= MC_1_12_2
@@ -194,8 +166,8 @@ public class ClientBlockStateColorCache
 		};
 	
 	private static final float[] srgbToLinearTable = new float[] 
-		//region
 		{
+			//region
 			0.0f, 0.000303527f, 0.000607054f, 0.00091058103f, 0.001214108f, 0.001517635f, 0.0018211621f, 0.002124689f,
 			0.002428216f, 0.002731743f, 0.00303527f, 0.0033465356f, 0.003676507f, 0.004024717f, 0.004391442f,
 			0.0047769533f, 0.005181517f, 0.0056053917f, 0.0060488326f, 0.006512091f, 0.00699541f, 0.0074990317f,
@@ -300,11 +272,7 @@ public class ClientBlockStateColorCache
 				// look for the first non-empty direction
 				List<BakedQuad> quads = null;
 				
-				#if MC_VER <= MC_1_12_2 
-				EnumFacing direction; 
-				#else 
-				Direction direction;
-				#endif
+				EDhDirection direction;
 				
 				for (int i = 0; i < COLOR_RESOLUTION_DIRECTION_ORDER.length; i++)
 				{
@@ -327,11 +295,10 @@ public class ClientBlockStateColorCache
 						&& !(
 							#if MC_VER <= MC_1_12_2
 							this.blockState.getBlock() instanceof BlockRotatedPillar
-							&& direction == EnumFacing.UP
 							#else
 							this.blockState.getBlock() instanceof RotatedPillarBlock
-							&& direction == Direction.UP
 							#endif
+							&& direction == EDhDirection.UP
 							)
 						)
 					{
@@ -452,29 +419,19 @@ public class ClientBlockStateColorCache
 	
 	@Nullable
 	private List<BakedQuad> getUnculledQuads() throws Exception { return this.getQuadsForDirection(null); }
-	/** 
-	 * throws Exception is to document that rarely MC will throw errors if this method
-	 * is called on the wrong block (even though in that case it should just return null).
-	 */
 	@Nullable
-	#if MC_VER <= MC_1_12_2
-	private List<BakedQuad> getQuadsForDirection(@Nullable EnumFacing direction) throws Exception
-	#else
-	private List<BakedQuad> getQuadsForDirection(@Nullable Direction direction) throws Exception
-	#endif
+	private List<BakedQuad> getQuadsForDirection(@Nullable EDhDirection direction) throws Exception
 	{
+		//=========================//
+		// specific state handling //
+		//=========================//
+		//region
+		
 		#if MC_VER <= MC_1_12_2
 		IBlockState effectiveBlockState = this.blockState;
 		#else
 		BlockState effectiveBlockState = this.blockState;
 		#endif
-		
-		
-		
-		//=========================//
-		// specific state handling //
-		//=========================//
-		//region
 		
 		// if this block is a slab, use it's double variant so we can get the top face,
 		// otherwise the color will use the side, which isn't as accurate
@@ -510,52 +467,7 @@ public class ClientBlockStateColorCache
 		
 		
 		
-		//===============//
-		// quad handling //
-		//===============//
-		//region
-		
-		List<BakedQuad> quads;
-		
-		#if MC_VER <= MC_1_12_2
-		try {
-			quads = MC.getBlockRendererDispatcher().getModelForState(effectiveBlockState).getQuads(effectiveBlockState, direction, RANDOM.nextLong());
-		}
-		catch (Exception e)
-		{
-			quads = Collections.emptyList();
-		}
-		#elif MC_VER < MC_1_21_5
-		quads = MC.getModelManager().getBlockModelShaper().
-			getBlockModel(effectiveBlockState).getQuads(effectiveBlockState, direction, RANDOM);
-		#elif MC_VER <= MC_1_21_11
-		List<BlockModelPart> blockModelPartList = MC.getModelManager().getBlockModelShaper().
-			getBlockModel(effectiveBlockState).collectParts(RANDOM);
-		
-		quads = new ArrayList<>();
-		if (blockModelPartList != null)
-		{
-			for (int i = 0; i < blockModelPartList.size(); i++)
-			{
-				// if direction is null this will return the unculled quads
-				quads.addAll(blockModelPartList.get(i).getQuads(direction));
-			}
-		}
-		#else
-		List<BlockStateModelPart> blockModelPartList = new ArrayList<>();
-		MC.getModelManager().getBlockStateModelSet()
-			.get(effectiveBlockState).collectParts(RANDOM, blockModelPartList);
-		
-		quads = new ArrayList<>();
-		for (int i = 0; i < blockModelPartList.size(); i++)
-		{
-			// if direction is null this will return the unculled quads
-			quads.addAll(blockModelPartList.get(i).getQuads(direction));
-		}
-		#endif
-		
-		//endregion
-		
+		List<BakedQuad> quads = QuadWrapper.getQuadsForDirection(effectiveBlockState, direction);
 		return quads;
 	}
 	
@@ -573,28 +485,18 @@ public class ClientBlockStateColorCache
 		// Since EColorMode is set per block, you only need to check this once.
 		if (colorMode != EColorMode.Chisel)
 		{
-			// textures normally use u and v instead of x and y
-			for (int v = 0; v < getTextureHeight(texture); v++)
+			int textureHeight = TextureAtlasSpriteWrapper.getHeight(texture);
+			int textureWidth = TextureAtlasSpriteWrapper.getWidth(texture);
+			for (int v = 0; v < textureHeight; v++)
 			{
-				for (int u = 0; u < getTextureWidth(texture); u++)
+				for (int u = 0; u < textureWidth; u++)
 				{
-					//note: Minecraft color format is: 0xAA BB GG RR
-					//________ DH mod color format is: 0xAA RR GG BB
-					//OpenGL RGBA format native order: 0xRR GG BB AA
-					//_ OpenGL RGBA format Java Order: 0xAA BB GG RR
-					tempColor = TextureAtlasSpriteWrapper.getPixelRGBA(texture, 0, u, v);
+					tempColor = TextureAtlasSpriteWrapper.getPixelARGB(texture, 0, u, v);
 					
-					#if MC_VER <= MC_1_12_2
-					int b = (tempColor & 0x000000FF);
-					int g = (tempColor & 0x0000FF00) >>> 8;
-					int r = (tempColor & 0x00FF0000) >>> 16;
-					int a = (tempColor & 0xFF000000) >>> 24;
-					#else
-					int r = (tempColor & 0x000000FF);
-					int g = (tempColor & 0x0000FF00) >>> 8;
-					int b = (tempColor & 0x00FF0000) >>> 16;
-					int a = (tempColor & 0xFF000000) >>> 24;
-					#endif
+					int r = ColorUtil.getRed(tempColor);
+					int g = ColorUtil.getGreen(tempColor);
+					int b = ColorUtil.getBlue(tempColor);
+					int a = ColorUtil.getAlpha(tempColor);
 					
 					int scale = 1;
 					if (colorMode == EColorMode.Leaves)
@@ -649,26 +551,6 @@ public class ClientBlockStateColorCache
 			tempColor = ColorUtil.argbToInt(0, 255, 255, 255);
 		}
 		return tempColor;
-	}
-	private static int getTextureWidth(TextureAtlasSprite texture)
-	{
-		#if MC_VER <= MC_1_12_2
-		return texture.getIconWidth();
-        #elif MC_VER < MC_1_19_4
-		return texture.getWidth();
-        #else
-		return texture.contents().width();
-        #endif
-	}
-	private static int getTextureHeight(TextureAtlasSprite texture)
-	{
-		#if MC_VER <= MC_1_12_2
-		return texture.getIconHeight();
-        #elif MC_VER < MC_1_19_4
-		return texture.getHeight();
-        #else
-		return texture.contents().height();
-        #endif
 	}
 	/**
 	 * This method was suggested by IMS from the Iris/Sodium team. 
@@ -798,7 +680,7 @@ public class ClientBlockStateColorCache
 								.getBlockColors()
 								.getColor(this.blockState,
 										tintOverride, // tintOverride will save the result of this query to speed up future queries
-										McObjectConverter.Convert(blockPos),
+										McObjectConverter.convert(blockPos),
 										this.tintIndex);
 							#else
 							BlockTintSource tintSource = Minecraft.getInstance()
@@ -809,7 +691,7 @@ public class ClientBlockStateColorCache
 							// Example: cherry blossom leaves
 							if (tintSource != null)
 							{
-								BlockPos mcPos = McObjectConverter.Convert(blockPos);
+								BlockPos mcPos = McObjectConverter.convert(blockPos);
 								tintColor = tintSource.colorInWorld(this.blockState, tintOverride, mcPos);
 								if (tintColor == ClientBlockStateColorCache.INVALID_COLOR)
 								{
@@ -861,7 +743,7 @@ public class ClientBlockStateColorCache
 								.getBlockColors()
 								.getColor(this.blockState,
 										tintOverride,
-										McObjectConverter.Convert(blockPos),
+										McObjectConverter.convert(blockPos),
 										this.tintIndex);
 					}
 				}

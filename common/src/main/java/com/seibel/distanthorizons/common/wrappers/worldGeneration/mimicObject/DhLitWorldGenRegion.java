@@ -20,7 +20,6 @@
 package com.seibel.distanthorizons.common.wrappers.worldGeneration.mimicObject;
 
 #if MC_VER > MC_1_12_2
-import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -157,7 +156,7 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 			centerChunk);
 		#endif
 		
-		this.firstPos = McObjectConverter.Convert(chunkList.get(0).getPos());
+		this.firstPos = McObjectConverter.convert(chunkList.get(0).getPos());
 		this.serverLevel = serverLevel;
 		this.generator = generator;
 		this.lightEngine = lightEngine;
@@ -173,7 +172,7 @@ public class DhLitWorldGenRegion extends WorldGenRegion
 	@Override
 	public boolean ensureCanWrite(BlockPos blockPos)
 	{
-		DhChunkPos chunkPos = McObjectConverter.Convert(this.getCenter());
+		DhChunkPos chunkPos = McObjectConverter.convert(this.getCenter());
 		
 		int sectionCoordX = SectionPos.blockToSectionCoord(blockPos.getX());
 		int sectionCoordZ = SectionPos.blockToSectionCoord(blockPos.getZ());

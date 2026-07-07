@@ -326,7 +326,7 @@ public class InternalServerGenerator
 					{
 						if (InternalServerGenerator.this.updateManager != null)
 						{
-							InternalServerGenerator.this.updateManager.removePosToIgnore(McObjectConverter.Convert(neighborPos));
+							InternalServerGenerator.this.updateManager.removePosToIgnore(McObjectConverter.convert(neighborPos));
 						}
 					}
 				}, MS_TO_IGNORE_CHUNK_AFTER_COMPLETION);
@@ -380,7 +380,7 @@ public class InternalServerGenerator
 		// ignore chunk update events for this position
 		if (this.updateManager != null)
 		{
-			this.updateManager.addPosToIgnore(McObjectConverter.Convert(chunkPos));
+			this.updateManager.addPosToIgnore(McObjectConverter.convert(chunkPos));
 		}
 		
 		CompletableFuture<Chunk> future = new CompletableFuture<>();
@@ -417,7 +417,7 @@ public class InternalServerGenerator
 			// ignore chunk update events for this position
 			if (this.updateManager != null)
 			{
-				this.updateManager.addPosToIgnore(McObjectConverter.Convert(chunkPos));
+				this.updateManager.addPosToIgnore(McObjectConverter.convert(chunkPos));
 			}
 			
 			#if MC_VER < MC_1_21_5
@@ -508,7 +508,7 @@ public class InternalServerGenerator
 					{
 						if (InternalServerGenerator.this.updateManager != null)
 						{
-							InternalServerGenerator.this.updateManager.removePosToIgnore(McObjectConverter.Convert(chunkPos));
+							InternalServerGenerator.this.updateManager.removePosToIgnore(McObjectConverter.convert(chunkPos));
 						}
 					}
 				}, MS_TO_IGNORE_CHUNK_AFTER_COMPLETION);

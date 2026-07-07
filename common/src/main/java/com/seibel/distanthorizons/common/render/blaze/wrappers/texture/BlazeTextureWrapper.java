@@ -5,12 +5,14 @@ public class BlazeTextureWrapper {}
 
 #else
 
+import com.mojang.blaze3d.platform.NativeImage;
 import com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 
+import java.nio.ByteBuffer;
 import java.util.OptionalDouble;
 
 import com.mojang.blaze3d.systems.CommandEncoder;
@@ -19,7 +21,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.*;
 
 #if MC_VER <= MC_26_1_2
-
+import com.mojang.blaze3d.textures.TextureFormat;
 #else
 import com.mojang.blaze3d.GpuFormat;
 import org.joml.Vector4f;
@@ -42,6 +44,8 @@ public class BlazeTextureWrapper implements IDhBlazeTexture
 	public final GpuFormat textureFormat;
 	#endif
 	
+	private final FilterMode samplerFilterMode;
+	
 	public GpuTexture texture = null;
 	
 	private GpuTextureView textureView = null;
@@ -63,28 +67,40 @@ public class BlazeTextureWrapper implements IDhBlazeTexture
 	
 	public static BlazeTextureWrapper createDepth(String name) 
 	{ 
-		#if MC_VER <= MC_26_1_2
-		return new BlazeTextureWrapper(name, TextureFormat.DEPTH32);
-		#else
-		return new BlazeTextureWrapper(name, GpuFormat.D32_FLOAT);
-		#endif 
+		return new BlazeTextureWrapper(name, 
+			#if MC_VER <= MC_26_1_2 TextureFormat.DEPTH32,  
+			#else GpuFormat.D32_FLOAT,
+			#endif
+			FilterMode.LINEAR);
 	}
 	public static BlazeTextureWrapper createColor(String name) 
-	{ 
-		#if MC_VER <= MC_26_1_2
-		return new BlazeTextureWrapper(name, TextureFormat.RGBA8);
-		#else
-		return new BlazeTextureWrapper(name, GpuFormat.RGBA8_UNORM);
-		#endif 
+	{
+		return new BlazeTextureWrapper(name, 
+			#if MC_VER <= MC_26_1_2 TextureFormat.RGBA8,  
+			#else GpuFormat.RGBA8_UNORM,
+			#endif
+			FilterMode.LINEAR);
+	}
+	public static BlazeTextureWrapper createTextureAtlas(String name) 
+	{
+		return new BlazeTextureWrapper(name, 
+			#if MC_VER <= MC_26_1_2 TextureFormat.RGBA8,  
+			#else GpuFormat.RGBA8_UNORM,
+			#endif
+			// nearest filtering keeps the blocky look and prevents
+			// texels bleeding between adjacent tiles in the grid
+			FilterMode.NEAREST);
 	}
 	
 	private BlazeTextureWrapper(
 		String name, 
-		#if MC_VER <= MC_26_1_2 TextureFormat #else GpuFormat #endif textureFormat
+		#if MC_VER <= MC_26_1_2 TextureFormat #else GpuFormat #endif textureFormat,
+		FilterMode samplerFilterMode
 		)
 	{
 		this.name = name;
 		this.textureFormat = textureFormat;
+		this.samplerFilterMode = samplerFilterMode;
 	}
 	
 	//endregion
@@ -107,6 +123,40 @@ public class BlazeTextureWrapper implements IDhBlazeTexture
 	
 	
 	
+	//========//
+	// upload //
+	//========//
+	//region
+	
+	public void writeToTexture(
+		ByteBuffer pixelBuffer, 
+		int destinationX, int destinationY, 
+		int width, int height)
+	{
+		#if MC_VER <= MC_26_1_2
+		COMMAND_ENCODER.writeToTexture(
+			this.texture,
+			pixelBuffer,
+			NativeImage.Format.RGBA,
+			/*mipLevel*/ 0, /*depthOrLayer*/ 0,
+			destinationX, destinationY,
+			width, height
+		); 
+		#else
+		COMMAND_ENCODER.writeToTexture(
+			this.texture,
+			pixelBuffer,
+			/*mipLevel*/ 0, /*depthOrLayer*/ 0,
+			destinationX, destinationY,
+			width, height
+		); 
+		#endif
+	}
+	
+	//endregion
+	
+	
+	
 	//=======//
 	// setup //
 	//=======//
@@ -116,20 +166,23 @@ public class BlazeTextureWrapper implements IDhBlazeTexture
 	 * does nothing if the texture is already created and the correct size 
 	 * @return true if the texture was (re)created
 	 */
-	public boolean tryCreateOrResize()
-	{
-		boolean textureChanged = this.tryCreateTexture();
-		this.tryCreateSampler();
-		return textureChanged;
-	}
-	private boolean tryCreateTexture()
+	public boolean tryCreateOrResizeToScreenSize()
 	{
 		int viewWidth = MC_RENDER.getTargetFramebufferViewportWidth();
 		int viewHeight = MC_RENDER.getTargetFramebufferViewportHeight();
-		
+		return this.tryCreateOrResize(viewWidth, viewHeight);
+	}
+	public boolean tryCreateOrResize(int width, int height)
+	{
+		boolean textureChanged = this.tryCreateTexture(width, height);
+		this.tryCreateSampler();
+		return textureChanged;
+	}
+	private boolean tryCreateTexture(int width, int height)
+	{
 		if (this.texture != null
-			&& this.width == viewWidth
-			&& this.height == viewHeight)
+			&& this.width == width
+			&& this.height == height)
 		{
 			// no changes needed
 			return false;
@@ -142,10 +195,11 @@ public class BlazeTextureWrapper implements IDhBlazeTexture
 			this.textureView.close();
 		}
 		
-		this.width = viewWidth;
-		this.height = viewHeight;
+		this.width = width;
+		this.height = height;
 		
-		int usage = GpuTexture.USAGE_COPY_DST
+		int usage = 
+			GpuTexture.USAGE_COPY_DST
 			| GpuTexture.USAGE_TEXTURE_BINDING
 			| GpuTexture.USAGE_COPY_SRC
 			| GpuTexture.USAGE_RENDER_ATTACHMENT;
@@ -154,7 +208,7 @@ public class BlazeTextureWrapper implements IDhBlazeTexture
 			this.name,
 			usage,
 			this.textureFormat,
-			viewWidth, viewHeight,
+			width, height,
 			/*depthOrLayers*/ 1, /*mipLevels*/ 1
 		);
 		this.textureView = GPU_DEVICE.createTextureView(this.texture);
@@ -167,7 +221,7 @@ public class BlazeTextureWrapper implements IDhBlazeTexture
 		{
 			this.textureSampler = GPU_DEVICE.createSampler(
 				AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE, // U,V
-				FilterMode.LINEAR, FilterMode.LINEAR, // minFilter, magFilter
+				this.samplerFilterMode, this.samplerFilterMode, // minFilter, magFilter
 				1, // maxAnisotropy 
 				OptionalDouble.empty() // maxLod
 			);

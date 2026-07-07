@@ -84,7 +84,7 @@ public class MixinGameRenderer
 		
 		#endif
 		
-		ClientApi.RENDER_STATE.mcProjectionMatrix = McObjectConverter.Convert(projectionMatrix);
+		ClientApi.RENDER_STATE.mcProjectionMatrix = McObjectConverter.convert(projectionMatrix);
 	}
 }
 #endif
