@@ -52,7 +52,7 @@ public class ForgeMixinPlugin extends AbstractDhMixinPlugin implements IMixinCon
 			);
 		}
 		
-		if (!this.shouldApplyMixin(ModChecker.INSTANCE, targetClassName, mixinClassName))
+		if (!this.shouldApplyDhMixin(targetClassName, mixinClassName))
 		{
 			return false;
 		}

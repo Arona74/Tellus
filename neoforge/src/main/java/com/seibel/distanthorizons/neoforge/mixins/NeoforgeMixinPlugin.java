@@ -58,7 +58,7 @@ public class NeoforgeMixinPlugin extends AbstractDhMixinPlugin implements IMixin
 		}
 		
 		
-		if (!this.shouldApplyMixin(ModChecker.INSTANCE, targetClassName, mixinClassName))
+		if (!this.shouldApplyDhMixin(targetClassName, mixinClassName))
 		{
 			return false;
 		}

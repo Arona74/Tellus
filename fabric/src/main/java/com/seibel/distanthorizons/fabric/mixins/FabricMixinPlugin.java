@@ -32,7 +32,7 @@ public class FabricMixinPlugin extends AbstractDhMixinPlugin implements IMixinCo
 			return FabricLoader.getInstance().isModLoaded(cleanedMixinName);
 		}
 		
-		if (!this.shouldApplyMixin(ModChecker.INSTANCE, targetClassName, mixinClassName))
+		if (!this.shouldApplyDhMixin(targetClassName, mixinClassName))
 		{
 			return false;
 		}

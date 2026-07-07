@@ -9,12 +9,31 @@ public abstract class AbstractDhMixinPlugin
 {
 	private static final DhLogger LOGGER = new DhLoggerBuilder().build();
 	
-	public boolean shouldApplyMixin(IModChecker modChecker, String targetClassName, String mixinClassName)
+	public boolean shouldApplyDhMixin(String targetClassName, String mixinClassName)
 	{
 		if (mixinClassName.endsWith("MixinImmersivePortalsRenderStates"))
 		{
-			boolean immersivePortalsPresent = modChecker.isModLoaded(IImmersivePortalsAccessor.CORE_MOD_ID)
-				|| modChecker.isModLoaded(IImmersivePortalsAccessor.MOD_ID);
+			boolean immersivePortalsPresent = false;
+			try
+			{
+				Thread.currentThread()
+					.getContextClassLoader()
+					.loadClass(IImmersivePortalsAccessor.INJECTION_CLASS);
+				immersivePortalsPresent = true;
+			}
+			catch (ClassNotFoundException ignore) { }
+			
+			if (!immersivePortalsPresent)
+			{
+				try
+				{
+					Thread.currentThread()
+						.getContextClassLoader()
+						.loadClass(IImmersivePortalsAccessor.INJECTION_CLASS_1_16);
+					immersivePortalsPresent = true;
+				}
+				catch (ClassNotFoundException ignore) { }
+			}
 			
 			if (!immersivePortalsPresent)
 			{
