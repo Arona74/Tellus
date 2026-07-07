@@ -75,6 +75,7 @@ import java.util.function.Consumer;
  * check out the ClientProxy.
  */
 @Mod(ModInfo.ID)
+@SuppressWarnings("deprecation") // FMLJavaModLoadingContext has been deprecated
 public class ForgeMain extends AbstractModInitializer
 {
 	public ForgeMain()
