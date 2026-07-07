@@ -107,8 +107,8 @@ public class ForgeMain extends AbstractModInitializer
 		IModChecker modChecker = SingletonInjector.INSTANCE.get(IModChecker.class);
 		
 		// We ideally want to detect imm_ptl_core, but 1.16.5 doesn't provide that mod id.
-		if (modChecker.isModLoaded("imm_ptl_core") 
-			|| modChecker.isModLoaded("immersive_portals"))
+		if (modChecker.isModLoaded(IImmersivePortalsAccessor.CORE_MOD_ID)
+			|| modChecker.isModLoaded(IImmersivePortalsAccessor.MOD_ID))
 		{
 			ModAccessorInjector.INSTANCE.bind(IImmersivePortalsAccessor.class, new ImmersivePortalsAccessorForge());
 		}

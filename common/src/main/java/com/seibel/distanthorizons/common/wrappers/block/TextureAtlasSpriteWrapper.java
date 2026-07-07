@@ -19,6 +19,7 @@
 
 package com.seibel.distanthorizons.common.wrappers.block;
 
+import com.seibel.distanthorizons.coreapi.util.ColorUtil;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 #if MC_VER < MC_1_17_1
@@ -73,6 +74,15 @@ public class TextureAtlasSpriteWrapper
 		int argb = content.originalImage.getPixel(x, y);
 		return argb;
         #endif
+	}
+	
+	private static int convertRgbaToArgb(int rgba)
+	{
+		int r = (rgba & 0x000000FF);
+		int g = (rgba & 0x0000FF00) >>> 8;
+		int b = (rgba & 0x00FF0000) >>> 16;
+		int a = (rgba & 0xFF000000) >>> 24;
+		return ColorUtil.argbToInt(a, r, g, b);
 	}
 	
 	
@@ -131,5 +141,7 @@ public class TextureAtlasSpriteWrapper
 		return sprite.getV1();
 		#endif
 	}
+	
+	
 	
 }

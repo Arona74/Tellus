@@ -15,6 +15,7 @@ import com.seibel.distanthorizons.core.generation.DhLightingEngine;
 import com.seibel.distanthorizons.core.level.IDhServerLevel;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
+import com.seibel.distanthorizons.core.pos.DhChunkPos;
 import com.seibel.distanthorizons.core.util.ExceptionUtil;
 import com.seibel.distanthorizons.core.util.LodUtil;
 import com.seibel.distanthorizons.core.util.TimerUtil;
@@ -49,6 +50,7 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
 #endif
 
 import java.util.*;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Function;
@@ -324,7 +326,7 @@ public class InternalServerGenerator
 					{
 						if (InternalServerGenerator.this.updateManager != null)
 						{
-							InternalServerGenerator.this.updateManager.removePosToIgnore(McObjectConverter.Convert(neighborPos));
+							InternalServerGenerator.this.updateManager.removePosToIgnore(McObjectConverter.convert(neighborPos));
 						}
 					}
 				}, MS_TO_IGNORE_CHUNK_AFTER_COMPLETION);
@@ -378,7 +380,7 @@ public class InternalServerGenerator
 		// ignore chunk update events for this position
 		if (this.updateManager != null)
 		{
-			this.updateManager.addPosToIgnore(McObjectConverter.Convert(chunkPos));
+			this.updateManager.addPosToIgnore(McObjectConverter.convert(chunkPos));
 		}
 		
 		CompletableFuture<Chunk> future = new CompletableFuture<>();

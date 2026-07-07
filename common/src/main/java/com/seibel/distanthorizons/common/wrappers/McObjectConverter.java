@@ -26,6 +26,8 @@ import com.seibel.distanthorizons.core.pos.blockPos.DhBlockPos;
 import com.seibel.distanthorizons.core.pos.DhChunkPos;
 import com.seibel.distanthorizons.core.util.math.DhMat4f;
 
+import org.jetbrains.annotations.Nullable;
+
 #if MC_VER <= MC_1_12_2
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
@@ -34,7 +36,6 @@ import net.minecraft.util.math.ChunkPos;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.ChunkPos;
-import org.jetbrains.annotations.Nullable;
 #endif
 
 /**

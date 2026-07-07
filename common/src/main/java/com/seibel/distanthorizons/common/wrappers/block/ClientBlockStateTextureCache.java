@@ -24,6 +24,7 @@ import com.seibel.distanthorizons.core.enums.EDhDirection;
 import com.seibel.distanthorizons.core.logging.DhLogger;
 import com.seibel.distanthorizons.core.logging.DhLoggerBuilder;
 import com.seibel.distanthorizons.coreapi.util.ColorUtil;
+import com.seibel.distanthorizons.coreapi.util.MathUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import org.jetbrains.annotations.Nullable;
@@ -35,6 +36,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.imageio.ImageIO;
 
 #if MC_VER < MC_1_21_5
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -45,8 +47,6 @@ import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import org.joml.Vector3fc;
-
-import javax.imageio.ImageIO;
 #endif
 
 /**
@@ -471,8 +471,8 @@ public class ClientBlockStateTextureCache
 				float spriteU = (weightA * geometry.spriteUByVertex[vertexIndexA]) + (weightB * geometry.spriteUByVertex[vertexIndexB]) + (weightC * geometry.spriteUByVertex[vertexIndexC]);
 				float spriteV = (weightA * geometry.spriteVByVertex[vertexIndexA]) + (weightB * geometry.spriteVByVertex[vertexIndexB]) + (weightC * geometry.spriteVByVertex[vertexIndexC]);
 				
-				int texelX = Math.clamp((int) (spriteU * spriteWidth), 0, spriteWidth - 1);
-				int texelY = Math.clamp((int) (spriteV * spriteHeight), 0, spriteHeight - 1);
+				int texelX = MathUtil.clamp(0, (int) (spriteU * spriteWidth), spriteWidth - 1);
+				int texelY = MathUtil.clamp(0, (int) (spriteV * spriteHeight), spriteHeight - 1);
 				
 				int argbSourceColor = TextureAtlasSpriteWrapper.getPixelARGB(geometry.sprite, 0, texelX, texelY);
 				if (ColorUtil.getAlpha(argbSourceColor) == 0)
@@ -579,10 +579,10 @@ public class ClientBlockStateTextureCache
 			#if MC_VER <= MC_1_21_11
 			// vertex UVs are texture atlas coordinates and
 			// need to be converted into sprite local coordinates
-			float minU = getMinU(geometry.sprite);
-			float maxU = getMaxU(geometry.sprite);
-			float minV = getMinV(geometry.sprite);
-			float maxV = getMaxV(geometry.sprite);
+			float minU = TextureAtlasSpriteWrapper.getMinU(geometry.sprite);
+			float maxU = TextureAtlasSpriteWrapper.getMaxU(geometry.sprite);
+			float minV = TextureAtlasSpriteWrapper.getMinV(geometry.sprite);
+			float maxV = TextureAtlasSpriteWrapper.getMaxV(geometry.sprite);
 			geometry.spriteUByVertex[vertexIndex] = (maxU != minU) ? ((u - minU) / (maxU - minU)) : 0.0f;
 			geometry.spriteVByVertex[vertexIndex] = (maxV != minV) ? ((v - minV) / (maxV - minV)) : 0.0f;
 			#else

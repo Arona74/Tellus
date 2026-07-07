@@ -106,18 +106,6 @@ public class ClientBlockStateColorCache
 	
 	
 	/** This is the order each direction on a block is processed when attempting to get the texture/color */
-	#if MC_VER <= MC_1_12_2
-	private static final @Nullable EnumFacing[] COLOR_RESOLUTION_DIRECTION_ORDER = 
-		{
-			EnumFacing.UP,
-			null, // null represents "unculled" faces, IE the top of farmland
-			EnumFacing.NORTH,
-			EnumFacing.EAST,
-			EnumFacing.WEST,
-			EnumFacing.SOUTH,
-			EnumFacing.DOWN
-		};
-	#else
 	private static final @Nullable EDhDirection[] COLOR_RESOLUTION_DIRECTION_ORDER = 
 		{
 			EDhDirection.UP,
@@ -128,7 +116,6 @@ public class ClientBlockStateColorCache
 			EDhDirection.SOUTH,
 			EDhDirection.DOWN
 		};
-	#endif
 	
 	private static final int FLOWER_COLOR_SCALE = 5;
 	
@@ -308,11 +295,10 @@ public class ClientBlockStateColorCache
 						&& !(
 							#if MC_VER <= MC_1_12_2
 							this.blockState.getBlock() instanceof BlockRotatedPillar
-							&& direction == EnumFacing.UP
 							#else
 							this.blockState.getBlock() instanceof RotatedPillarBlock
-							&& direction == EDhDirection.UP
 							#endif
+							&& direction == EDhDirection.UP
 							)
 						)
 					{
@@ -694,7 +680,7 @@ public class ClientBlockStateColorCache
 								.getBlockColors()
 								.getColor(this.blockState,
 										tintOverride, // tintOverride will save the result of this query to speed up future queries
-										McObjectConverter.Convert(blockPos),
+										McObjectConverter.convert(blockPos),
 										this.tintIndex);
 							#else
 							BlockTintSource tintSource = Minecraft.getInstance()
@@ -757,7 +743,7 @@ public class ClientBlockStateColorCache
 								.getBlockColors()
 								.getColor(this.blockState,
 										tintOverride,
-										McObjectConverter.Convert(blockPos),
+										McObjectConverter.convert(blockPos),
 										this.tintIndex);
 					}
 				}
