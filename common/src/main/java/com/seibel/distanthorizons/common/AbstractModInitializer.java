@@ -61,7 +61,7 @@ public abstract class AbstractModInitializer
 	//==================//
 	// abstract methods //
 	//==================//
-	//region
+	//region abstract methods
 	
 	protected abstract void createInitialSharedBindings();
 	protected abstract void createInitialClientBindings();
@@ -84,7 +84,7 @@ public abstract class AbstractModInitializer
 	//===================//
 	// initialize events //
 	//===================//
-	//region
+	//region initialize events
 	
 	public void onInitializeClient()
 	{
@@ -178,7 +178,7 @@ public abstract class AbstractModInitializer
 	//===========================//
 	// inner initializer methods //
 	//===========================//
-	//region
+	//region inner initializer methods
 	
 	private void startup()
 	{
@@ -290,7 +290,10 @@ public abstract class AbstractModInitializer
 	//======================//
 	// compatibility checks //
 	//======================//
-	//region
+	//region compatibility checks
+	
+	// TODO merge with ClientApi.detectAndSendBootTimeWarnings
+	//  probably put in a separate class
 	
 	/** 
 	 * Some mods will work with a few tweaks
@@ -302,12 +305,15 @@ public abstract class AbstractModInitializer
 	{
 		boolean showChatWarnings = Config.Common.Logging.Warning.showModCompatibilityWarningsOnStartup.get();
 		IModChecker modChecker = SingletonInjector.INSTANCE.get(IModChecker.class);
+		IVersionConstants versionConstants = SingletonInjector.INSTANCE.get(IVersionConstants.class);
 		
 		String startingString = "Partially Incompatible Distant Horizons mod detected: ";
 		
 		
 		
-		// Alex's caves
+		//==============//
+		// Alex's caves //
+		//==============//
 		//region
 		if (modChecker.isModLoaded("alexscaves"))
 		{
@@ -327,7 +333,13 @@ public abstract class AbstractModInitializer
 		}
 		//endregion
 		
+		
+		
+		//======//
+		// WWOO //
+		//======//
 		// William Wythers' Overhauled Overworld (WWOO)
+		
 		//region
 		if (modChecker.isModLoaded("wwoo"))
 		{
@@ -351,7 +363,11 @@ public abstract class AbstractModInitializer
 		}
 		//endregion
 		
+		
+		
+		//========//
 		// Chunky //
+		//========//
 		//region
 		
 		boolean chunkyPresent = false;
@@ -385,17 +401,21 @@ public abstract class AbstractModInitializer
 		
 		//endregion
 		
+		
+		
+		//======//
 		// iris //
+		//======//
 		//region
 		
 		IIrisAccessor iris = ModAccessorInjector.INSTANCE.get(IIrisAccessor.class);
 		if (iris != null)
 		{
 			// get the currently selected rendering API
-			EDhApiRenderingEngine renderApi = Config.Client.Advanced.Graphics.Experimental.renderingEngine.get();
+			EDhApiRenderingEngine renderEngine = Config.Client.Advanced.Graphics.Experimental.renderingEngine.get();
 			
 			// Iris only supports native OpenGL
-			if (renderApi == EDhApiRenderingEngine.BLAZE_3D)
+			if (renderEngine == EDhApiRenderingEngine.BLAZE_3D)
 			{
 				String irisUnsupportedMessage = "Iris doesn't support DH when using the ["+ EDhApiRenderingEngine.BLAZE_3D+"] rendering engine, this will need to be fixed on Iris end. As a temporary fix please change the rendering engine to ["+ EDhApiRenderingEngine.OPEN_GL+"] or ["+ EDhApiRenderingEngine.AUTO+"] in the DH config file.";
 				LOGGER.fatal(irisUnsupportedMessage);
@@ -406,11 +426,15 @@ public abstract class AbstractModInitializer
 				String exceptionError = "Distant Horizons conditional mod config Exception";
 				mc.crashMinecraft(errorMessage, new Exception(exceptionError));
 			}
-			else if (renderApi == EDhApiRenderingEngine.AUTO)
+			else if (renderEngine == EDhApiRenderingEngine.AUTO)
 			{
 				Config.Client.Advanced.Graphics.Experimental.renderingEngine.setApiValue(EDhApiRenderingEngine.OPEN_GL);
 				
-				LOGGER.warn("Changing Distant Horizons' rendering engine to ["+EDhApiRenderingEngine.OPEN_GL+"] to allow for Iris rendering. This renderer will be unavailable once Minecraft moves to Vulkan and must be fixed on Iris' end.");
+				EDhApiRenderingEngine recommendedEngine = versionConstants.getDefaultRenderingEngine();
+				if (recommendedEngine != EDhApiRenderingEngine.OPEN_GL)
+				{
+					LOGGER.warn("Changing Distant Horizons' rendering engine to [" + EDhApiRenderingEngine.OPEN_GL + "] to allow for Iris rendering. This renderer will be unavailable once Minecraft moves to Vulkan and must be fixed on Iris' end.");
+				}
 			}
 		}
 		
@@ -460,7 +484,7 @@ public abstract class AbstractModInitializer
 	//================//
 	// helper classes //
 	//================//
-	//region
+	//region helper classes
 	
 	public interface IEventProxy
 	{
