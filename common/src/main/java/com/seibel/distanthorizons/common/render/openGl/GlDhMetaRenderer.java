@@ -22,6 +22,7 @@ import com.seibel.distanthorizons.core.render.DhApiRenderProxy;
 import com.seibel.distanthorizons.core.render.RenderParams;
 import com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper;
 import com.seibel.distanthorizons.core.wrapperInterfaces.misc.ILightMapWrapper;
+import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IIrisAccessor;
 import com.seibel.distanthorizons.core.wrapperInterfaces.modAccessor.IOptifineAccessor;
 import com.seibel.distanthorizons.core.wrapperInterfaces.render.renderPass.IDhMetaRenderer;
 import com.seibel.distanthorizons.coreapi.DependencyInjection.ApiEventInjector;
@@ -47,6 +48,7 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 	private static final MinecraftGLWrapper GLMC = MinecraftGLWrapper.INSTANCE;
 	
 	private static final IOptifineAccessor OPTIFINE_ACCESSOR = ModAccessorInjector.INSTANCE.get(IOptifineAccessor.class);
+	private static final IIrisAccessor IRIS_ACCESSOR = ModAccessorInjector.INSTANCE.get(IIrisAccessor.class);
 	
 	
 	private int activeFramebufferId = -1;
@@ -115,7 +117,8 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		
 		this.bindLightmap(renderParams.lightmap);
 		
-		if (Config.Client.Advanced.Graphics.Texture.enableTexturedLods.get())
+		if (Config.Client.Advanced.Graphics.Texture.enableTexturedLods.get()
+			&& irisShadersInactive())
 		{
 			GlBlockTextureAtlas.INSTANCE.uploadPendingTiles();
 			GlBlockTextureAtlas.INSTANCE.bind();
@@ -378,7 +381,8 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		GLMC.glDepthFunc(previousDepthFunc);
 		#endif
 		this.unbindLightmap();
-		if (Config.Client.Advanced.Graphics.Texture.enableTexturedLods.get())
+		if (Config.Client.Advanced.Graphics.Texture.enableTexturedLods.get()
+			&& irisShadersInactive())
 		{
 			GlBlockTextureAtlas.INSTANCE.unbind();
 		}
@@ -485,6 +489,12 @@ public class GlDhMetaRenderer implements IDhMetaRenderer
 		#else
 		GLMC.glBindTexture(0);
 		#endif
+	}
+	
+	private boolean irisShadersInactive()
+	{
+		return !(IRIS_ACCESSOR != null
+			&& IRIS_ACCESSOR.isShaderPackInUse());
 	}
 	
 	//endregion
