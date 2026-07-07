@@ -43,6 +43,8 @@ import net.minecraft.client.renderer.block.model.BakedQuad;
 #elif MC_VER <= MC_1_21_11
 import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.block.model.BakedQuad;
+import org.joml.Vector3fc;
+import net.minecraft.client.model.geom.builders.UVPair;
 #else
 import net.minecraft.client.model.geom.builders.UVPair;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
@@ -556,7 +558,7 @@ public class ClientBlockStateTextureCache
 			z = Float.intBitsToFloat(vertexData[vertexOffset + 2]);
 			u = Float.intBitsToFloat(vertexData[vertexOffset + 4]);
 			v = Float.intBitsToFloat(vertexData[vertexOffset + 5]);
-			#elif MC_VER <= MC_1_21_11
+			#elif MC_VER <= MC_1_21_10
 			// 8 ints per vertex: x, y, z, color, u, v, lightmap, normal
 			int[] vertexData = quad.vertices();
 			int vertexOffset = vertexIndex * 8;
