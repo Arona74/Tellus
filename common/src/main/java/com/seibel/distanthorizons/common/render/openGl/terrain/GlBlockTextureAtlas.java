@@ -30,7 +30,7 @@ import java.nio.ByteBuffer;
  * The GPU side of the {@link BlockTextureRegistry},
  * a texture array with one layer per block face tile. <br><br>
  *
- * Layer {@link BlockTextureRegistry#FLAT_TILE_ID} is a uniform 1.0 color multiplier
+ * Layer {@link BlockTextureRegistry#UNTEXTURED_ID} is a uniform 1.0 color multiplier
  * so vertices without a texture render exactly like flat-colored LODs.
  *
  * @see BlockTextureRegistry
