@@ -4,10 +4,12 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.yucareux.tellus.Tellus;
+import com.yucareux.tellus.integration.distant_horizons.managed.ManagedTerrainNetworkPolicy;
 import com.yucareux.tellus.cache.TellusCacheDomain;
 import com.yucareux.tellus.cache.TellusCacheFiles;
 import com.yucareux.tellus.cache.TellusCacheHandle;
 import com.yucareux.tellus.cache.TellusCacheRegistry;
+import com.yucareux.tellus.world.data.source.ParallelDownloadRunner;
 import com.yucareux.tellus.worldgen.EarthProjection;
 import io.github.sebasbaumh.mapbox.vectortile.VectorTile.Tile;
 import io.github.sebasbaumh.mapbox.vectortile.VectorTile.Tile.Feature;
@@ -28,14 +30,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-import net.fabricmc.loader.api.FabricLoader;
+import com.yucareux.tellus.platform.TellusPlatform;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 
 public final class TellusOsmBuildingSource implements TellusCacheHandle {
-   private static final String DEFAULT_PM_TILES_URL = "https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/2026-02-18.0/buildings.pmtiles";
+   private static final String PM_TILES_THEME = "buildings";
    private static final double MIN_LAT = -85.05112878;
    private static final double MAX_LAT = 85.05112878;
    private static final double MIN_LON = -180.0;
@@ -43,8 +46,8 @@ public final class TellusOsmBuildingSource implements TellusCacheHandle {
    private static final double METERS_PER_DEGREE = 111319.49166666667;
    private static final double POINT_EPSILON = 1.0E-9;
    private static final int DEFAULT_TILE_EXTENT = 4096;
-   private static final int CONNECT_TIMEOUT_MS = intProperty("tellus.overture.buildings.connectTimeoutMs", 7000, 1, 120000);
-   private static final int READ_TIMEOUT_MS = intProperty("tellus.overture.buildings.readTimeoutMs", 20000, 1, 180000);
+   private static final int CONNECT_TIMEOUT_MS = intProperty("tellus.overture.buildings.connectTimeoutMs", 30000, 1, 120000);
+   private static final int READ_TIMEOUT_MS = intProperty("tellus.overture.buildings.readTimeoutMs", 60000, 1, 180000);
    private static final int DIRECTORY_CACHE_ENTRIES = intProperty("tellus.overture.buildings.dirCache", 256, 1, 8192);
    private static final int MAX_CACHE_TILES = intProperty("tellus.osm.buildings.cacheTiles", 256, 1, 8192);
    private static final int QUERY_ZOOM = intProperty("tellus.osm.buildings.queryZoom", 14, 0, 20);
@@ -54,7 +57,7 @@ public final class TellusOsmBuildingSource implements TellusCacheHandle {
    private static final String BUILDING_LAYER_NAME = "building";
    private static final String BUILDING_PART_LAYER_NAME = "building_part";
    private static final byte[] EMPTY_TILE_PAYLOAD = new byte[0];
-   private final Path cacheRoot = FabricLoader.getInstance().getGameDir().resolve("tellus/cache/map/buildings");
+   private final Path cacheRoot;
    private final PmTilesRangeReader pmTilesReader;
    private final Object initLock = new Object();
    private final LoadingCache<TileKey, OsmBuildingTile> cache;
@@ -65,8 +68,15 @@ public final class TellusOsmBuildingSource implements TellusCacheHandle {
    private volatile boolean initialized;
 
    public TellusOsmBuildingSource() {
-      String pmTilesUrl = System.getProperty("tellus.overture.buildings.pmtiles", DEFAULT_PM_TILES_URL);
-      this.pmTilesReader = new PmTilesRangeReader(pmTilesUrl, CONNECT_TIMEOUT_MS, READ_TIMEOUT_MS, DIRECTORY_CACHE_ENTRIES);
+      String pmTilesUrl = System.getProperty("tellus.overture.buildings.pmtiles");
+      if (pmTilesUrl == null || pmTilesUrl.isBlank()) {
+         pmTilesUrl = OvertureTileUrls.defaultThemeUrl(PM_TILES_THEME);
+      }
+
+      this.cacheRoot = TellusPlatform.gameDir()
+         .resolve("tellus/cache/map/buildings")
+         .resolve(OvertureTileUrls.cacheNamespace(pmTilesUrl));
+      this.pmTilesReader = PmTilesRangeReader.shared(pmTilesUrl, CONNECT_TIMEOUT_MS, READ_TIMEOUT_MS, DIRECTORY_CACHE_ENTRIES);
       this.cache = CacheBuilder.newBuilder().maximumSize(MAX_CACHE_TILES).build(new CacheLoader<TileKey, OsmBuildingTile>() {
          public OsmBuildingTile load(TileKey key) {
             return TellusOsmBuildingSource.this.loadTile(key);
@@ -119,6 +129,67 @@ public final class TellusOsmBuildingSource implements TellusCacheHandle {
       return this.buildingsForAreaWithStatus(minBlockX, minBlockZ, maxBlockX, maxBlockZ, worldScale, marginBlocks, OsmQueryMode.BLOCKING).features();
    }
 
+   public int downloadAreaTaskCount(int minBlockX, int minBlockZ, int maxBlockX, int maxBlockZ, double worldScale, int marginBlocks) {
+      return Math.max(1, this.downloadAreaTileKeys(minBlockX, minBlockZ, maxBlockX, maxBlockZ, worldScale, marginBlocks).size());
+   }
+
+   public int downloadAreaInputs(
+      int minBlockX, int minBlockZ, int maxBlockX, int maxBlockZ, double worldScale, int marginBlocks,
+      int completedUnits, BiConsumer<Integer, String> progressConsumer
+   ) {
+      BiConsumer<Integer, String> progress = progressConsumer == null ? (completed, detail) -> {
+      } : progressConsumer;
+      List<TileKey> keys = this.downloadAreaTileKeys(minBlockX, minBlockZ, maxBlockX, maxBlockZ, worldScale, marginBlocks);
+      if (keys.isEmpty()) {
+         progress.accept(completedUnits, "Skipping OSM building tiles because the source is unavailable");
+         return completedUnits + 1;
+      }
+      int startingUnits = completedUnits;
+      progress.accept(completedUnits, "Downloading " + keys.size() + " OSM building source tiles");
+      return ParallelDownloadRunner.run(ParallelDownloadRunner.scope("osm-buildings", TellusCacheRegistry.generation(TellusCacheDomain.OSM)), keys, completedUnits, this::downloadRawTile, (key, completed, phaseTotal) -> progress.accept(
+         completed, "Cached OSM building tile " + (completed - startingUnits) + "/" + phaseTotal + " (" + key.zoom() + "/" + key.x() + "/" + key.y() + ")"
+      ));
+   }
+
+   public int preloadAreaInputs(
+      int minBlockX, int minBlockZ, int maxBlockX, int maxBlockZ, double worldScale, int marginBlocks,
+      int completedUnits, BiConsumer<Integer, String> progressConsumer
+   ) {
+      BiConsumer<Integer, String> progress = progressConsumer == null ? (completed, detail) -> {
+      } : progressConsumer;
+      List<TileKey> keys = this.downloadAreaTileKeys(minBlockX, minBlockZ, maxBlockX, maxBlockZ, worldScale, marginBlocks);
+      if (keys.isEmpty()) {
+         progress.accept(completedUnits, "Skipping OSM building tiles because the source is unavailable");
+         return completedUnits + 1;
+      }
+      int startingUnits = completedUnits;
+      progress.accept(completedUnits, "Loading " + keys.size() + " OSM building source tiles");
+      return ParallelDownloadRunner.run(ParallelDownloadRunner.scope("osm-buildings-memory", TellusCacheRegistry.generation(TellusCacheDomain.OSM)), keys, completedUnits, this::loadTileIntoCache, (key, completed, phaseTotal) -> progress.accept(
+         completed, "Loaded OSM building tile " + (completed - startingUnits) + "/" + phaseTotal + " (" + key.zoom() + "/" + key.x() + "/" + key.y() + ")"
+      ));
+   }
+
+   private void loadTileIntoCache(TileKey key) {
+      try {
+         this.cache.get(key);
+      } catch (Exception error) {
+         this.tileLoadFailures.add(key);
+         throw new RuntimeException("Failed to preload Overture building tile " + key, error);
+      }
+   }
+
+   private List<TileKey> downloadAreaTileKeys(
+      int minBlockX, int minBlockZ, int maxBlockX, int maxBlockZ, double worldScale, int marginBlocks
+   ) {
+      this.ensureInitialized();
+      if (!this.available || worldScale <= 0.0) {
+         return List.of();
+      }
+
+      GeoBounds bounds = geoBoundsForBlockArea(minBlockX, minBlockZ, maxBlockX, maxBlockZ, marginBlocks, worldScale);
+      return bounds == null ? List.of() : tileKeysForBounds(bounds, this.queryZoom);
+   }
+
    public void prefetchTiles(double blockX, double blockZ, double worldScale, int radius) {
       this.ensureInitialized();
       if (this.available && !(worldScale <= 0.0) && radius > 0) {
@@ -154,7 +225,9 @@ public final class TellusOsmBuildingSource implements TellusCacheHandle {
          this.cache.invalidate(key);
       }
 
-      OsmQueryMode queryMode = mode == null ? OsmQueryMode.BLOCKING : mode;
+      OsmQueryMode queryMode = ManagedTerrainNetworkPolicy.isCacheOnly()
+         ? OsmQueryMode.BLOCKING
+         : mode == null ? OsmQueryMode.BLOCKING : mode;
       if (queryMode == OsmQueryMode.NON_BLOCKING) {
          this.queueAsyncLoad(key);
          return new TileLookup(OsmBuildingTile.empty(), true);
@@ -257,6 +330,19 @@ public final class TellusOsmBuildingSource implements TellusCacheHandle {
          this.tileLoadFailures.remove(key);
          OsmPerf.recordTileLoad(OsmPerf.TileSource.OSM_BUILDINGS, OsmPerf.TileLoadPath.NETWORK);
          return parsed;
+      }
+   }
+
+   private void downloadRawTile(TileKey key) {
+      Path cachePath = this.cachePathFor(key);
+      if (Files.isRegularFile(cachePath)) {
+         return;
+      }
+
+      long generation = TellusCacheRegistry.generation(TellusCacheDomain.OSM);
+      byte[] payload = this.fetchTilePayloadWithRetry(key);
+      if (!TellusCacheRegistry.isCurrent(TellusCacheDomain.OSM, generation) || !this.cacheTile(cachePath, payload, generation)) {
+         throw new RuntimeException("Discarded stale Overture building cache write for " + key);
       }
    }
 

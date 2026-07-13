@@ -1,7 +1,13 @@
 package com.yucareux.tellus;
 
 import com.yucareux.tellus.client.screen.EarthTeleportScreen;
+import com.yucareux.tellus.client.hud.ManagedTerrainDownloadOverlay;
+import com.yucareux.tellus.integration.distant_horizons.managed.ManagedTerrainClientState;
+import com.yucareux.tellus.integration.distant_horizons.managed.ManagedTerrainViewDistance;
 import com.yucareux.tellus.network.GeoTpOpenMapPayload;
+import com.yucareux.tellus.network.ManagedTerrainStatusPayload;
+import com.yucareux.tellus.network.ManagedTerrainViewPayload;
+import com.yucareux.tellus.network.TellusNeoForgeClientNetworking;
 import com.yucareux.tellus.network.TellusWeatherPayload;
 import com.yucareux.tellus.world.realtime.SnowGrid;
 import com.yucareux.tellus.world.realtime.TemperatureGrid;
@@ -10,22 +16,32 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public final class TellusClient {
+   private static int managedTerrainViewUpdateTicks;
    private TellusClient() {
    }
 
    public static void register(IEventBus modEventBus) {
       modEventBus.addListener(TellusClient::registerClientPayloadHandlers);
+      modEventBus.addListener(TellusClient::registerGuiLayers);
       NeoForge.EVENT_BUS.addListener(TellusClient::onClientDisconnect);
+      NeoForge.EVENT_BUS.addListener(TellusClient::onClientTick);
+   }
+
+   private static void registerGuiLayers(RegisterGuiLayersEvent event) {
+      event.registerAboveAll(Tellus.id("managed_terrain_status"), (graphics, deltaTracker) -> ManagedTerrainDownloadOverlay.render(graphics));
    }
 
    private static void registerClientPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
       event.register(GeoTpOpenMapPayload.TYPE, TellusClient::handleOpenMapPayload);
       event.register(TellusWeatherPayload.TYPE, TellusClient::handleWeatherPayload);
+      event.register(ManagedTerrainStatusPayload.TYPE, TellusClient::handleManagedTerrainStatusPayload);
    }
 
    private static void handleOpenMapPayload(GeoTpOpenMapPayload payload, IPayloadContext context) {
@@ -58,5 +74,19 @@ public final class TellusClient {
 
    private static void onClientDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {
       TellusRealtimeState.reset();
+      ManagedTerrainClientState.reset();
+      managedTerrainViewUpdateTicks = 0;
+   }
+
+   private static void handleManagedTerrainStatusPayload(ManagedTerrainStatusPayload payload, IPayloadContext context) {
+      Minecraft.getInstance().execute(() -> ManagedTerrainClientState.update(payload.status()));
+   }
+
+   private static void onClientTick(ClientTickEvent.Post event) {
+      Minecraft minecraft = Minecraft.getInstance();
+      if (minecraft.player != null && ++managedTerrainViewUpdateTicks >= 40) {
+         managedTerrainViewUpdateTicks = 0;
+         TellusNeoForgeClientNetworking.sendToServer(new ManagedTerrainViewPayload(ManagedTerrainViewDistance.detect()));
+      }
    }
 }

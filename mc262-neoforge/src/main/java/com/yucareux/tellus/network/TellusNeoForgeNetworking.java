@@ -14,8 +14,10 @@ public final class TellusNeoForgeNetworking {
    public static void registerPayloadHandlers(RegisterPayloadHandlersEvent event) {
       PayloadRegistrar registrar = event.registrar("1");
       registrar.playToServer(GeoTpTeleportPayload.TYPE, GeoTpTeleportPayload.CODEC, Tellus::handleGeoTeleport);
+      registrar.playToServer(ManagedTerrainViewPayload.TYPE, ManagedTerrainViewPayload.CODEC, Tellus::handleManagedTerrainView);
       registrar.playToClient(GeoTpOpenMapPayload.TYPE, GeoTpOpenMapPayload.CODEC);
       registrar.playToClient(TellusWeatherPayload.TYPE, TellusWeatherPayload.CODEC);
+      registrar.playToClient(ManagedTerrainStatusPayload.TYPE, ManagedTerrainStatusPayload.CODEC);
    }
 
    public static void sendToPlayer(ServerPlayer player, CustomPacketPayload payload) {

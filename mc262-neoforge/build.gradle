@@ -7,6 +7,7 @@ plugins {
 def minecraftVersion = '26.2'
 def neoForgeVersion = '26.2.0.7-beta'
 def distantHorizonsApiVersion = '7.0.0'
+def twelveMonkeysImageioVersion = '3.13.1'
 def javaVersion = 25
 def distantHorizonsRuntimePath = providers.gradleProperty('mc262_distant_horizons_runtime_path').orNull
 
@@ -95,6 +96,42 @@ dependencies {
 		version {
 			strictly '[4.28.2,5.0)'
 			prefer '4.28.2'
+		}
+	}
+	jarJar(implementation("com.twelvemonkeys.imageio:imageio-webp:${twelveMonkeysImageioVersion}")) {
+		version {
+			strictly '[3.13.1,3.14)'
+			prefer twelveMonkeysImageioVersion
+		}
+	}
+	jarJar(implementation("com.twelvemonkeys.imageio:imageio-core:${twelveMonkeysImageioVersion}")) {
+		version {
+			strictly '[3.13.1,3.14)'
+			prefer twelveMonkeysImageioVersion
+		}
+	}
+	jarJar(implementation("com.twelvemonkeys.imageio:imageio-metadata:${twelveMonkeysImageioVersion}")) {
+		version {
+			strictly '[3.13.1,3.14)'
+			prefer twelveMonkeysImageioVersion
+		}
+	}
+	jarJar(implementation("com.twelvemonkeys.common:common-lang:${twelveMonkeysImageioVersion}")) {
+		version {
+			strictly '[3.13.1,3.14)'
+			prefer twelveMonkeysImageioVersion
+		}
+	}
+	jarJar(implementation("com.twelvemonkeys.common:common-io:${twelveMonkeysImageioVersion}")) {
+		version {
+			strictly '[3.13.1,3.14)'
+			prefer twelveMonkeysImageioVersion
+		}
+	}
+	jarJar(implementation("com.twelvemonkeys.common:common-image:${twelveMonkeysImageioVersion}")) {
+		version {
+			strictly '[3.13.1,3.14)'
+			prefer twelveMonkeysImageioVersion
 		}
 	}
 

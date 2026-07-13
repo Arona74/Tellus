@@ -3,6 +3,7 @@ package com.yucareux.tellus.world.data.osm;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.yucareux.tellus.integration.distant_horizons.managed.ManagedTerrainNetworkPolicy;
 import com.yucareux.tellus.world.data.source.DownloadProgressReporter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -15,24 +16,28 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.zip.GZIPInputStream;
 
-final class PmTilesRangeReader {
+public final class PmTilesRangeReader {
    private static final int HEADER_SIZE = 127;
    private static final int MAX_DIRECTORY_DEPTH = 6;
    private static final int COMPRESSION_NONE = 1;
    private static final int COMPRESSION_GZIP = 2;
    private static final int PMTILES_VERSION = 3;
+   private static final ConcurrentHashMap<ReaderKey, PmTilesRangeReader> SHARED_READERS = new ConcurrentHashMap<>();
    private final URI uri;
    private final int connectTimeoutMs;
    private final int readTimeoutMs;
    private final LoadingCache<PmTilesRangeReader.DirectoryKey, PmTilesRangeReader.Directory> directoryCache;
+   private final LoadingCache<Long, TilePayload> tilePayloadCache;
    
    private PmTilesRangeReader.PmTilesHeader header;
    
    private PmTilesRangeReader.Directory rootDirectory;
 
-   PmTilesRangeReader(String url, int connectTimeoutMs, int readTimeoutMs, int directoryCacheEntries) {
+   public PmTilesRangeReader(String url, int connectTimeoutMs, int readTimeoutMs, int directoryCacheEntries) {
       this.uri = URI.create(Objects.requireNonNull(url, "url"));
       this.connectTimeoutMs = Math.max(1, connectTimeoutMs);
       this.readTimeoutMs = Math.max(1, readTimeoutMs);
@@ -43,9 +48,36 @@ final class PmTilesRangeReader {
                return PmTilesRangeReader.this.readDirectory(key.offset, key.length);
             }
          });
+      this.tilePayloadCache = CacheBuilder.newBuilder()
+         .maximumSize(Math.max(8, Math.min(512, directoryCacheEntries)))
+         .build(new CacheLoader<Long, TilePayload>() {
+            @Override
+            public TilePayload load(Long tileId) throws Exception {
+               return PmTilesRangeReader.this.loadTilePayload(tileId);
+            }
+         });
    }
 
-   PmTilesRangeReader.PmTilesHeader header() throws IOException {
+   /**
+    * Shares archive metadata and leaf-directory caches between source layers that
+    * read the same Overture PMTiles archive. Tile payloads remain owned and
+    * decoded by each source-specific cache.
+    */
+   public static PmTilesRangeReader shared(String url, int connectTimeoutMs, int readTimeoutMs, int directoryCacheEntries) {
+      URI uri = URI.create(Objects.requireNonNull(url, "url")).normalize();
+      ReaderKey key = new ReaderKey(
+         uri,
+         Math.max(1, connectTimeoutMs),
+         Math.max(1, readTimeoutMs),
+         Math.max(1, directoryCacheEntries)
+      );
+      return SHARED_READERS.computeIfAbsent(
+         key,
+         ignored -> new PmTilesRangeReader(uri.toString(), key.connectTimeoutMs(), key.readTimeoutMs(), key.directoryCacheEntries())
+      );
+   }
+
+   public synchronized PmTilesRangeReader.PmTilesHeader header() throws IOException {
       if (this.header == null) {
          this.header = this.readHeader();
       }
@@ -54,15 +86,27 @@ final class PmTilesRangeReader {
    }
 
    
-   byte[] getTileBytes(int z, int x, int y) throws IOException {
+   public byte[] getTileBytes(int z, int x, int y) throws IOException {
       long tileId = zxyToTileId(z, x, y);
+      try {
+         TilePayload payload = this.tilePayloadCache.get(tileId);
+         return payload.found() ? payload.bytes() : null;
+      } catch (ExecutionException error) {
+         if (error.getCause() instanceof IOException io) {
+            throw io;
+         }
+         throw new IOException("Failed to read PMTiles tile " + z + "/" + x + "/" + y, error.getCause());
+      }
+   }
+
+   private TilePayload loadTilePayload(long tileId) throws IOException {
       PmTilesRangeReader.PmTilesHeader header = this.header();
       PmTilesRangeReader.Directory directory = this.getRootDirectory();
 
       for (int depth = 0; depth < MAX_DIRECTORY_DEPTH; depth++) {
          PmTilesRangeReader.Entry entry = findTile(directory.entries, tileId);
          if (entry == null) {
-            return null;
+            return TilePayload.missing();
          }
 
          if (entry.runLength != 0L) {
@@ -72,7 +116,7 @@ final class PmTilesRangeReader {
             }
 
             byte[] tileBytes = this.readBytes(dataOffset, (int)entry.length);
-            return decompress(tileBytes, header.tileCompression);
+            return TilePayload.found(decompress(tileBytes, header.tileCompression));
          }
 
          long dirOffset = header.leafDirectoryOffset + entry.offset;
@@ -80,10 +124,10 @@ final class PmTilesRangeReader {
          directory = this.getDirectory(dirOffset, dirLength);
       }
 
-      return null;
+      return TilePayload.missing();
    }
 
-   private PmTilesRangeReader.Directory getRootDirectory() throws IOException {
+   private synchronized PmTilesRangeReader.Directory getRootDirectory() throws IOException {
       if (this.rootDirectory == null) {
          PmTilesRangeReader.PmTilesHeader header = this.header();
          this.rootDirectory = this.getDirectory(header.rootOffset, header.rootLength);
@@ -184,6 +228,9 @@ final class PmTilesRangeReader {
       if (length <= 0) {
          return new byte[0];
       } else {
+         if (ManagedTerrainNetworkPolicy.isCacheOnly()) {
+            throw new IOException("Network access is disabled during managed Distant Horizons generation");
+         }
          HttpURLConnection connection = (HttpURLConnection)this.uri.toURL().openConnection();
          connection.setRequestProperty("Range", "bytes=" + offset + "-" + (offset + length - 1L));
          connection.setInstanceFollowRedirects(true);
@@ -414,6 +461,19 @@ final class PmTilesRangeReader {
    private record DirectoryKey(long offset, long length) {
    }
 
+   private record ReaderKey(URI uri, int connectTimeoutMs, int readTimeoutMs, int directoryCacheEntries) {
+   }
+
+   private record TilePayload(byte[] bytes, boolean found) {
+      private static TilePayload found(byte[] bytes) {
+         return new TilePayload(Objects.requireNonNull(bytes, "bytes"), true);
+      }
+
+      private static TilePayload missing() {
+         return new TilePayload(new byte[0], false);
+      }
+   }
+
    private static final class Entry {
       private final long tileId;
       private long offset;
@@ -428,7 +488,7 @@ final class PmTilesRangeReader {
       }
    }
 
-   static final class PmTilesHeader {
+   public static final class PmTilesHeader {
       private final long rootOffset;
       private final long rootLength;
       private final long leafDirectoryOffset;

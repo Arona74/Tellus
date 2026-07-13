@@ -31,6 +31,12 @@ bin/
 # fabric
 
 run/
+mc*/logs/
+
+# local build and integration output
+
+/output/
+/third_party/
 
 # java
 
