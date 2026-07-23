@@ -13,12 +13,11 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.levelgen.Aquifer;
-import net.minecraft.world.level.levelgen.Beardifier;
+import net.minecraft.world.level.levelgen.DensityFunctions;
 import net.minecraft.world.level.levelgen.NoiseChunk;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.NoiseSettings;
@@ -49,7 +48,6 @@ public final class TellusVanillaNoiseCaveSampler {
    public void apply(
       RegistryAccess registryAccess,
       long worldSeed,
-      StructureManager structures,
       ChunkAccess chunk,
       int chunkMinY,
       int tellusSeaLevel,
@@ -73,7 +71,7 @@ public final class TellusVanillaNoiseCaveSampler {
          Objects.requireNonNull(surfaceHeightSampler, "surfaceHeightSampler");
       }
       RandomState randomState = this.randomStateFor(registryAccess, worldSeed);
-      VanillaField field = this.sampleVanillaField(randomState, structures, chunk.getPos());
+      VanillaField field = this.sampleVanillaField(randomState, chunk.getPos());
       BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
       ChunkPos chunkPos = chunk.getPos();
       int chunkMinX = chunkPos.getMinBlockX();
@@ -112,15 +110,14 @@ public final class TellusVanillaNoiseCaveSampler {
                ? minimumGeologySurfaceYByColumn[columnIndex]
                : Integer.MAX_VALUE;
             for (int actualY = firstCarveY; actualY >= actualBottomY; actualY--) {
-               if (UndergroundStructureExclusion.blocksCarving(structureExclusions, worldX, actualY, worldZ)) {
-                  continue;
-               }
-
+               boolean carvingBlocked =
+                  UndergroundStructureExclusion.blocksCarving(structureExclusions, worldX, actualY, worldZ);
                int virtualY = TellusCaveDepthMapper.virtualYForActualY(
                   actualY, actualSurfaceY, actualBottomY, virtualSurfaceY, field.minY()
                );
                BlockState vanillaState = field.state(localX, virtualY, localZ);
                boolean caveAllowed = applyCaves
+                  && !carvingBlocked
                   && (floodGuardYByColumn == null || actualY < floodGuardYByColumn[columnIndex]);
                BlockState replacement = caveAllowed ? caveReplacement(vanillaState, actualY, tellusSeaLevel) : null;
                boolean noiseFeature = false;
@@ -153,7 +150,7 @@ public final class TellusVanillaNoiseCaveSampler {
       }
    }
 
-   private VanillaField sampleVanillaField(RandomState randomState, StructureManager structures, ChunkPos chunkPos) {
+   private VanillaField sampleVanillaField(RandomState randomState, ChunkPos chunkPos) {
       NoiseSettings noiseSettings = this.vanillaSettings.noiseSettings();
       int minY = noiseSettings.minY();
       int height = noiseSettings.height();
@@ -163,13 +160,17 @@ public final class TellusVanillaNoiseCaveSampler {
       int verticalCellCount = height / cellHeight;
       int cellMinY = Math.floorDiv(minY, cellHeight);
       Aquifer.FluidPicker fluidPicker = createFluidPicker(this.vanillaSettings);
+      // Structure starts have already been retargeted into Tellus's actual Y
+      // range. Feeding those coordinates into this temporary vanilla-height
+      // field mixes two vertical coordinate systems and can stretch a local
+      // structure beard into a surface-reaching cave chamber.
       SamplingNoiseChunk noiseChunk = new SamplingNoiseChunk(
          horizontalCellCount,
          randomState,
          chunkPos.getMinBlockX(),
          chunkPos.getMinBlockZ(),
          noiseSettings,
-         Beardifier.forStructuresInChunk(structures, chunkPos),
+         TellusEmptyBeardifier.instance(),
          this.vanillaSettings,
          fluidPicker,
          Blender.empty()
@@ -354,7 +355,7 @@ public final class TellusVanillaNoiseCaveSampler {
          int firstBlockX,
          int firstBlockZ,
          NoiseSettings noiseSettings,
-         Beardifier beardifier,
+         DensityFunctions.BeardifierOrMarker beardifier,
          NoiseGeneratorSettings generatorSettings,
          Aquifer.FluidPicker fluidPicker,
          Blender blender

@@ -19,10 +19,13 @@ class UndergroundStructureExclusionTest {
    }
 
    @Test
-   void leavesBeardBoxCavernsAndOrePlacementToVanillaStyleGeneration() {
-      assertFalse(UndergroundStructureExclusion.protectsProjectedGeneration(TerrainAdjustment.BEARD_BOX));
-      assertTrue(UndergroundStructureExclusion.protectsProjectedGeneration(TerrainAdjustment.BURY));
-      assertFalse(UndergroundStructureExclusion.protectsProjectedGeneration(TerrainAdjustment.NONE));
+   void separatesBeardBoxRoofProtectionFromFeaturePlacement() {
+      assertTrue(UndergroundStructureExclusion.protectsProjectedCarving(TerrainAdjustment.BEARD_BOX));
+      assertTrue(UndergroundStructureExclusion.protectsProjectedCarving(TerrainAdjustment.BURY));
+      assertFalse(UndergroundStructureExclusion.protectsProjectedCarving(TerrainAdjustment.NONE));
+      assertFalse(UndergroundStructureExclusion.protectsFeaturePlacement(TerrainAdjustment.BEARD_BOX));
+      assertTrue(UndergroundStructureExclusion.protectsFeaturePlacement(TerrainAdjustment.BURY));
+      assertFalse(UndergroundStructureExclusion.protectsFeaturePlacement(TerrainAdjustment.NONE));
    }
 
    @Test
@@ -43,6 +46,27 @@ class UndergroundStructureExclusionTest {
    }
 
    @Test
+   void carvingOnlyCavernsStillAllowOresAndDeepDarkDecoration() {
+      UndergroundStructureExclusion.Box cavern =
+         new UndergroundStructureExclusion.Box(100, 20, 200, 110, 30, 210, false);
+      List<UndergroundStructureExclusion.Box> boxes = List.of(cavern);
+
+      assertTrue(UndergroundStructureExclusion.blocksCarving(boxes, 100, 20, 200));
+      assertFalse(UndergroundStructureExclusion.blocksFeaturePlacement(boxes, 100, 20, 200));
+   }
+
+   @Test
+   void supportsCompactPerPieceCarverBuffersForAncientCities() {
+      UndergroundStructureExclusion.Box piece =
+         new UndergroundStructureExclusion.Box(100, 20, 200, 110, 30, 210, 1, false);
+      List<UndergroundStructureExclusion.Box> boxes = List.of(piece);
+
+      assertTrue(UndergroundStructureExclusion.blocksCarving(boxes, 99, 19, 199));
+      assertFalse(UndergroundStructureExclusion.blocksCarving(boxes, 98, 19, 199));
+      assertFalse(UndergroundStructureExclusion.blocksFeaturePlacement(boxes, 100, 20, 200));
+   }
+
+   @Test
    void reportsHorizontalIntersectionWithMargin() {
       assertTrue(ROOM.intersectsHorizontal(80, 180, 90, 190, 10));
       assertFalse(ROOM.intersectsHorizontal(79, 179, 89, 189, 10));
@@ -53,6 +77,14 @@ class UndergroundStructureExclusionTest {
       assertThrows(
          IllegalArgumentException.class,
          () -> new UndergroundStructureExclusion.Box(5, 0, 0, 4, 1, 1)
+      );
+   }
+
+   @Test
+   void rejectsNegativeCarvingMargins() {
+      assertThrows(
+         IllegalArgumentException.class,
+         () -> new UndergroundStructureExclusion.Box(0, 0, 0, 1, 1, 1, -1, false)
       );
    }
 }

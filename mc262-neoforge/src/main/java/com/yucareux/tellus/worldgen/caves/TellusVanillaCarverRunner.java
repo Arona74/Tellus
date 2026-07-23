@@ -86,7 +86,6 @@ public final class TellusVanillaCarverRunner {
       this.noiseCaveSampler.apply(
          registryAccess,
          worldSeed,
-         safeStructures,
          chunk,
          this.chunkMinY,
          tellusSeaLevel,

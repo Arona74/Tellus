@@ -32,22 +32,49 @@ class UndergroundStructureProtectionTest {
    }
 
    @Test
-   void usesPieceEnvelopesWithoutBedrockWallsForBeardBoxStructures() {
-      assertTrue(UndergroundStructureProtection.usesPieceScopedTerrainEnvelope(TerrainAdjustment.BEARD_BOX));
-      assertFalse(UndergroundStructureProtection.usesPieceScopedTerrainEnvelope(TerrainAdjustment.BURY));
+   void usesBoundedDeepslateCavernsWithoutBedrockWallsForBeardBoxStructures() {
+      assertTrue(UndergroundStructureProtection.usesBoundedCavernEnvelope(TerrainAdjustment.BEARD_BOX));
+      assertFalse(UndergroundStructureProtection.usesBoundedCavernEnvelope(TerrainAdjustment.BURY));
+      assertEquals(1, UndergroundStructureProtection.horizontalProtectionThickness(true));
+      assertEquals(5, UndergroundStructureProtection.horizontalProtectionThickness(false));
+      assertEquals(12, UndergroundStructureProtection.horizontalClearanceRadius(TerrainAdjustment.BEARD_BOX));
+      assertEquals(0, UndergroundStructureProtection.clearanceBelow(TerrainAdjustment.BEARD_BOX));
+      assertEquals(1, UndergroundStructureProtection.clearanceFloorOffset(TerrainAdjustment.BEARD_BOX));
+      assertEquals(0, UndergroundStructureProtection.clearanceFloorOffset(TerrainAdjustment.BURY));
+      assertEquals(12, UndergroundStructureProtection.clearanceAbove(TerrainAdjustment.BEARD_BOX));
       assertEquals(
          19,
          UndergroundStructureProtection.protectionFillTopY(40, 20, true, true)
       );
       assertEquals(
-         40,
+         20,
          UndergroundStructureProtection.protectionFillTopY(40, 20, true, false)
+      );
+      assertEquals(
+         40,
+         UndergroundStructureProtection.protectionFillTopY(40, 20, false, true)
       );
       assertTrue(
          UndergroundStructureProtection.isOuterBedrockSkin(5, -20, 5, 0, -20, 0, 10, 10, false)
       );
       assertFalse(
          UndergroundStructureProtection.isOuterBedrockSkin(0, -10, 5, 0, -20, 0, 10, 10, false)
+      );
+   }
+
+   @Test
+   void capsAncientCityClearanceBelowTheSurface() {
+      assertEquals(
+         96,
+         UndergroundStructureProtection.clearanceCeilingY(TerrainAdjustment.BEARD_BOX, 90, 112)
+      );
+      assertEquals(
+         102,
+         UndergroundStructureProtection.clearanceCeilingY(TerrainAdjustment.BEARD_BOX, 90, 140)
+      );
+      assertEquals(
+         94,
+         UndergroundStructureProtection.clearanceCeilingY(TerrainAdjustment.BEARD_THIN, 90, 92)
       );
    }
 }

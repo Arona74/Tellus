@@ -15,12 +15,15 @@ public final class UndergroundStructureExclusion {
    private UndergroundStructureExclusion() {
    }
 
+   public static boolean protectsProjectedCarving(TerrainAdjustment adjustment) {
+      return adjustment != TerrainAdjustment.NONE;
+   }
+
    /**
-    * Beard-box structures already rely on piece-aware terrain shaping. Treating
-    * every piece as a hard cave and feature exclusion removes the cavern and
-    * nearly all ore from an ancient city's footprint.
+    * Beard-box structures need a protected roof, but their cavern must remain
+    * eligible for ores, geological stone, and deep-dark decoration.
     */
-   public static boolean protectsProjectedGeneration(TerrainAdjustment adjustment) {
+   public static boolean protectsFeaturePlacement(TerrainAdjustment adjustment) {
       return adjustment != TerrainAdjustment.NONE && adjustment != TerrainAdjustment.BEARD_BOX;
    }
 
@@ -29,30 +32,63 @@ public final class UndergroundStructureExclusion {
    }
 
    public static boolean blocksCarving(List<Box> boxes, int x, int y, int z) {
-      return containsExpanded(boxes, x, y, z, CARVER_MARGIN);
-   }
-
-   public static boolean blocksFeaturePlacement(List<Box> boxes, int x, int y, int z) {
-      return containsExpanded(boxes, x, y, z, FEATURE_PLACEMENT_MARGIN);
-   }
-
-   private static boolean containsExpanded(List<Box> boxes, int x, int y, int z, int margin) {
       if (boxes == null || boxes.isEmpty()) {
          return false;
       }
 
       for (Box box : boxes) {
-         if (box.containsExpanded(x, y, z, margin)) {
+         if (box.containsExpanded(x, y, z, box.carvingMargin())) {
             return true;
          }
       }
       return false;
    }
 
-   public record Box(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+   public static boolean blocksFeaturePlacement(List<Box> boxes, int x, int y, int z) {
+      if (boxes == null || boxes.isEmpty()) {
+         return false;
+      }
+
+      for (Box box : boxes) {
+         if (box.blocksFeaturePlacement() && box.containsExpanded(x, y, z, FEATURE_PLACEMENT_MARGIN)) {
+            return true;
+         }
+      }
+      return false;
+   }
+
+   public record Box(
+      int minX,
+      int minY,
+      int minZ,
+      int maxX,
+      int maxY,
+      int maxZ,
+      int carvingMargin,
+      boolean blocksFeaturePlacement
+   ) {
+      public Box(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+         this(minX, minY, minZ, maxX, maxY, maxZ, CARVER_MARGIN, true);
+      }
+
+      public Box(
+         int minX,
+         int minY,
+         int minZ,
+         int maxX,
+         int maxY,
+         int maxZ,
+         boolean blocksFeaturePlacement
+      ) {
+         this(minX, minY, minZ, maxX, maxY, maxZ, CARVER_MARGIN, blocksFeaturePlacement);
+      }
+
       public Box {
          if (minX > maxX || minY > maxY || minZ > maxZ) {
             throw new IllegalArgumentException("Underground structure exclusion bounds are inverted");
+         }
+         if (carvingMargin < 0) {
+            throw new IllegalArgumentException("Underground structure carving margin cannot be negative");
          }
       }
 

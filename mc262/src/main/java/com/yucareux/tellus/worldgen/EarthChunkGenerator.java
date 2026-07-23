@@ -3405,7 +3405,7 @@ public final class EarthChunkGenerator extends ChunkGenerator {
          return;
       }
 
-      record ProtectionVolume(BoundingBox box, boolean pieceScoped) {
+      record ProtectionVolume(BoundingBox box, boolean cavernEnvelope) {
       }
 
       ChunkPos chunkPos = chunk.getPos();
@@ -3418,19 +3418,23 @@ public final class EarthChunkGenerator extends ChunkGenerator {
       }
 
       List<ProtectionVolume> protectionVolumes = new ArrayList<>();
+      List<BoundingBox> structureCores = new ArrayList<>();
       for (StructureStart start : starts) {
-         boolean pieceScoped = UndergroundStructureProtection.usesPieceScopedTerrainEnvelope(
+         boolean cavernEnvelope = UndergroundStructureProtection.usesBoundedCavernEnvelope(
             start.getStructure().terrainAdaptation()
          );
-         if (pieceScoped) {
+         BoundingBox startBounds = start.getBoundingBox();
+         if (cavernEnvelope) {
             for (StructurePiece piece : start.getPieces()) {
-               protectionVolumes.add(new ProtectionVolume(piece.getBoundingBox(), true));
+               BoundingBox pieceBounds = piece.getBoundingBox();
+               protectionVolumes.add(new ProtectionVolume(pieceBounds, true));
+               structureCores.add(pieceBounds);
             }
          } else {
-            protectionVolumes.add(new ProtectionVolume(start.getBoundingBox(), false));
+            protectionVolumes.add(new ProtectionVolume(startBounds, false));
+            structureCores.add(startBounds);
          }
       }
-      List<BoundingBox> structureCores = protectionVolumes.stream().map(ProtectionVolume::box).toList();
       int chunkMinX = chunkPos.getMinBlockX();
       int chunkMinZ = chunkPos.getMinBlockZ();
       int chunkMaxX = chunkMinX + CHUNK_MASK;
@@ -3441,10 +3445,12 @@ public final class EarthChunkGenerator extends ChunkGenerator {
 
       for (ProtectionVolume volume : protectionVolumes) {
          BoundingBox box = volume.box();
-         int expandedMinX = box.minX() - UndergroundStructureProtection.TOTAL_THICKNESS;
-         int expandedMaxX = box.maxX() + UndergroundStructureProtection.TOTAL_THICKNESS;
-         int expandedMinZ = box.minZ() - UndergroundStructureProtection.TOTAL_THICKNESS;
-         int expandedMaxZ = box.maxZ() + UndergroundStructureProtection.TOTAL_THICKNESS;
+         int horizontalThickness =
+            UndergroundStructureProtection.horizontalProtectionThickness(volume.cavernEnvelope());
+         int expandedMinX = box.minX() - horizontalThickness;
+         int expandedMaxX = box.maxX() + horizontalThickness;
+         int expandedMinZ = box.minZ() - horizontalThickness;
+         int expandedMaxZ = box.maxZ() + horizontalThickness;
          int minX = Math.max(chunkMinX, expandedMinX);
          int maxX = Math.min(chunkMaxX, expandedMaxX);
          int minZ = Math.max(chunkMinZ, expandedMinZ);
@@ -3476,7 +3482,7 @@ public final class EarthChunkGenerator extends ChunkGenerator {
                );
                int fillTopY = Math.min(
                   UndergroundStructureProtection.protectionFillTopY(
-                     terrainShellBottomY, box.minY(), volume.pieceScoped(), preserveStructureCores
+                     terrainShellBottomY, box.minY(), volume.cavernEnvelope(), preserveStructureCores
                   ),
                   chunkMaxY
                );
@@ -3498,11 +3504,11 @@ public final class EarthChunkGenerator extends ChunkGenerator {
                      expandedMinZ,
                      expandedMaxX,
                      expandedMaxZ,
-                     !volume.pieceScoped()
+                     !volume.cavernEnvelope()
                   );
                   BlockState state = bedrockSkin
                      ? BEDROCK_STATE
-                     : volume.pieceScoped() ? DEEPSLATE_STATE : STONE_STATE;
+                     : volume.cavernEnvelope() ? DEEPSLATE_STATE : STONE_STATE;
                   cursor.set(worldX, y, worldZ);
                   if (!chunk.getBlockState(cursor).equals(state)) {
                      setChunkBlockStateDiscardingBlockEntity(chunk, cursor, state);
@@ -3537,7 +3543,7 @@ public final class EarthChunkGenerator extends ChunkGenerator {
    ) {
       List<StructureStart> starts = structures.startsForStructure(
          chunkPos,
-         structure -> UndergroundStructureExclusion.protectsProjectedGeneration(structure.terrainAdaptation())
+         structure -> UndergroundStructureExclusion.protectsProjectedCarving(structure.terrainAdaptation())
       );
       if (starts.isEmpty()) {
          return List.of();
@@ -3553,6 +3559,7 @@ public final class EarthChunkGenerator extends ChunkGenerator {
             continue;
          }
 
+         TerrainAdjustment adjustment = start.getStructure().terrainAdaptation();
          BoundingBox startBounds = start.getBoundingBox();
          int centerX = startBounds.minX() + (startBounds.maxX() - startBounds.minX()) / 2;
          int centerZ = startBounds.minZ() + (startBounds.maxZ() - startBounds.minZ()) / 2;
@@ -3561,17 +3568,33 @@ public final class EarthChunkGenerator extends ChunkGenerator {
             continue;
          }
 
+         boolean cavernEnvelope = UndergroundStructureProtection.usesBoundedCavernEnvelope(adjustment);
+         boolean blocksFeaturePlacement = UndergroundStructureExclusion.protectsFeaturePlacement(adjustment);
+         int carvingMargin = cavernEnvelope
+            ? UndergroundStructureProtection.CAVERN_PIECE_CARVER_MARGIN
+            : UndergroundStructureExclusion.CARVER_MARGIN;
+         int intersectionMargin = blocksFeaturePlacement
+            ? Math.max(carvingMargin, UndergroundStructureExclusion.FEATURE_PLACEMENT_MARGIN)
+            : carvingMargin;
+
          for (StructurePiece piece : start.getPieces()) {
             BoundingBox bounds = piece.getBoundingBox();
             UndergroundStructureExclusion.Box exclusion = new UndergroundStructureExclusion.Box(
-               bounds.minX(), bounds.minY(), bounds.minZ(), bounds.maxX(), bounds.maxY(), bounds.maxZ()
+               bounds.minX(),
+               bounds.minY(),
+               bounds.minZ(),
+               bounds.maxX(),
+               bounds.maxY(),
+               bounds.maxZ(),
+               carvingMargin,
+               blocksFeaturePlacement
             );
             if (!exclusion.intersectsHorizontal(
                chunkMinX,
                chunkMinZ,
                chunkMaxX,
                chunkMaxZ,
-               UndergroundStructureExclusion.FEATURE_PLACEMENT_MARGIN
+               intersectionMargin
             )) {
                continue;
             }
@@ -3601,9 +3624,16 @@ public final class EarthChunkGenerator extends ChunkGenerator {
 
          for (StructureStart start : starts) {
             if (start != null && start.isValid()) {
+               TerrainAdjustment adjustment = start.getStructure().terrainAdaptation();
+               int horizontalClearance = UndergroundStructureProtection.horizontalClearanceRadius(adjustment);
+               int clearanceBelow = UndergroundStructureProtection.clearanceBelow(adjustment);
+               int clearanceAbove = UndergroundStructureProtection.clearanceAbove(adjustment);
                for (StructurePiece piece : start.getPieces()) {
                  BoundingBox box = piece.getBoundingBox();
-                 if (box.intersects(chunkMinX, chunkMinZ, chunkMaxX, chunkMaxZ)) {
+                 if (box.maxX() + horizontalClearance + 1 >= chunkMinX
+                    && box.minX() - horizontalClearance - 1 <= chunkMaxX
+                    && box.maxZ() + horizontalClearance + 1 >= chunkMinZ
+                    && box.minZ() - horizontalClearance - 1 <= chunkMaxZ) {
                      int centerX = box.minX() + box.maxX() >> 1;
                      int centerZ = box.minZ() + box.maxZ() >> 1;
                      int terrainSurface = this.resolveAuxWaterColumn(centerX, centerZ).terrainSurface();
@@ -3612,14 +3642,18 @@ public final class EarthChunkGenerator extends ChunkGenerator {
                         int coreMaxX = box.maxX() + 1;
                         int coreMinZ = box.minZ() - 1;
                         int coreMaxZ = box.maxZ() + 1;
-                        int coreMinY = box.minY() - 0;
+                        int coreMinY =
+                           box.minY() + UndergroundStructureProtection.clearanceFloorOffset(adjustment);
                         int coreMaxY = box.maxY() + 0;
-                        int minX = Math.max(chunkMinX, coreMinX - 6);
-                        int maxX = Math.min(chunkMaxX, coreMaxX + 6);
-                        int minZ = Math.max(chunkMinZ, coreMinZ - 6);
-                        int maxZ = Math.min(chunkMaxZ, coreMaxZ + 6);
-                        int minY = Math.max(chunkMinY + 1, coreMinY - 0);
-                        int maxY = Math.min(chunkMaxY - 1, coreMaxY + 4);
+                        int minX = Math.max(chunkMinX, coreMinX - horizontalClearance);
+                        int maxX = Math.min(chunkMaxX, coreMaxX + horizontalClearance);
+                        int minZ = Math.max(chunkMinZ, coreMinZ - horizontalClearance);
+                        int maxZ = Math.min(chunkMaxZ, coreMaxZ + horizontalClearance);
+                        int minY = Math.max(chunkMinY + 1, coreMinY - clearanceBelow);
+                        int maxY = Math.min(
+                           chunkMaxY - 1,
+                           UndergroundStructureProtection.clearanceCeilingY(adjustment, coreMaxY, terrainSurface)
+                        );
                         if (maxY >= minY && maxX >= minX && maxZ >= minZ) {
                            for (int z = minZ; z <= maxZ; z++) {
                               for (int x = minX; x <= maxX; x++) {
@@ -3628,9 +3662,9 @@ public final class EarthChunkGenerator extends ChunkGenerator {
                                        continue;
                                     }
 
-                                    double nx = axisDistanceNormalized(x, coreMinX, coreMaxX, 6);
-                                    double nz = axisDistanceNormalized(z, coreMinZ, coreMaxZ, 6);
-                                    double ny = axisDistanceNormalized(y, coreMinY, coreMaxY, 0, 4);
+                                    double nx = axisDistanceNormalized(x, coreMinX, coreMaxX, horizontalClearance);
+                                    double nz = axisDistanceNormalized(z, coreMinZ, coreMaxZ, horizontalClearance);
+                                    double ny = axisDistanceNormalized(y, coreMinY, coreMaxY, clearanceBelow, clearanceAbove);
                                     double distance = Math.sqrt(nx * nx + ny * ny + nz * nz);
                                     double threshold = 1.0 + this.structureClearanceNoiseJitter(x, y, z) * 0.22;
                                     if (!(distance > threshold)) {
