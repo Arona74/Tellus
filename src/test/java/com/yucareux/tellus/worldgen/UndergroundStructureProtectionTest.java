@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import net.minecraft.world.level.levelgen.structure.TerrainAdjustment;
 import org.junit.jupiter.api.Test;
 
 class UndergroundStructureProtectionTest {
@@ -28,5 +29,25 @@ class UndergroundStructureProtectionTest {
       assertTrue(UndergroundStructureProtection.isOuterBedrockSkin(5, -20, 5, 0, -20, 0, 10, 10));
       assertTrue(UndergroundStructureProtection.isOuterBedrockSkin(0, -10, 5, 0, -20, 0, 10, 10));
       assertFalse(UndergroundStructureProtection.isOuterBedrockSkin(1, -10, 1, 0, -20, 0, 10, 10));
+   }
+
+   @Test
+   void usesPieceEnvelopesWithoutBedrockWallsForBeardBoxStructures() {
+      assertTrue(UndergroundStructureProtection.usesPieceScopedTerrainEnvelope(TerrainAdjustment.BEARD_BOX));
+      assertFalse(UndergroundStructureProtection.usesPieceScopedTerrainEnvelope(TerrainAdjustment.BURY));
+      assertEquals(
+         19,
+         UndergroundStructureProtection.protectionFillTopY(40, 20, true, true)
+      );
+      assertEquals(
+         40,
+         UndergroundStructureProtection.protectionFillTopY(40, 20, true, false)
+      );
+      assertTrue(
+         UndergroundStructureProtection.isOuterBedrockSkin(5, -20, 5, 0, -20, 0, 10, 10, false)
+      );
+      assertFalse(
+         UndergroundStructureProtection.isOuterBedrockSkin(0, -10, 5, 0, -20, 0, 10, 10, false)
+      );
    }
 }

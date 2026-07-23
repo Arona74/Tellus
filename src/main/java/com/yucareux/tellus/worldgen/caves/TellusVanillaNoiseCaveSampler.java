@@ -1,7 +1,12 @@
 package com.yucareux.tellus.worldgen.caves;
 
 import com.google.common.base.Preconditions;
-import com.yucareux.tellus.worldgen.UndergroundGenerationDepthPolicy;
+import com.yucareux.tellus.worldgen.GeologicalStonePlacementPolicy;
+import com.yucareux.tellus.worldgen.UndergroundFeatureClassifier;
+import com.yucareux.tellus.worldgen.UndergroundStructureExclusion;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.IntBinaryOperator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
@@ -51,19 +56,36 @@ public final class TellusVanillaNoiseCaveSampler {
       boolean applyCaves,
       boolean cavesReachSurface,
       boolean applyOreVeins,
+      boolean applyGeologicalStonePatches,
       int[] surfaceYByColumn,
+      IntBinaryOperator surfaceHeightSampler,
       int[] floodGuardYByColumn,
       int[] generationFloorYByColumn,
+      List<UndergroundStructureExclusion.Box> structureExclusions,
       CaveBlockWriter blockWriter
    ) {
-      Preconditions.checkArgument(applyCaves || applyOreVeins, "At least one underground noise feature must be enabled");
+      Preconditions.checkArgument(
+         applyCaves || applyOreVeins || applyGeologicalStonePatches,
+         "At least one underground noise feature must be enabled"
+      );
       Preconditions.checkArgument(surfaceYByColumn.length == CHUNK_AREA, "Tellus cave surface array must contain 256 columns");
+      if (applyGeologicalStonePatches) {
+         Objects.requireNonNull(surfaceHeightSampler, "surfaceHeightSampler");
+      }
       RandomState randomState = this.randomStateFor(registryAccess, worldSeed);
       VanillaField field = this.sampleVanillaField(randomState, structures, chunk.getPos());
       BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
       ChunkPos chunkPos = chunk.getPos();
       int chunkMinX = chunkPos.getMinBlockX();
       int chunkMinZ = chunkPos.getMinBlockZ();
+      int[] minimumGeologySurfaceYByColumn = applyGeologicalStonePatches
+         ? minimumNearbySurfaceYByColumn(
+            surfaceHeightSampler,
+            chunkMinX,
+            chunkMinZ,
+            GeologicalStonePlacementPolicy.NOISE_SURFACE_SAMPLE_RADIUS
+         )
+         : null;
       boolean exposeSurfaceEntrances = applyCaves && cavesReachSurface;
 
       for (int localZ = 0; localZ < CHUNK_SIDE; localZ++) {
@@ -75,12 +97,7 @@ public final class TellusVanillaNoiseCaveSampler {
                continue;
             }
 
-            int actualBottomY = Math.max(
-               chunkMinY + 1,
-               UndergroundGenerationDepthPolicy.deepestGenerationY(
-                  actualSurfaceY, UndergroundGenerationDepthPolicy.MAX_DEPTH_BELOW_SURFACE
-               )
-            );
+            int actualBottomY = chunkMinY + 1;
             if (generationFloorYByColumn != null) {
                actualBottomY = Math.max(actualBottomY, generationFloorYByColumn[columnIndex] + 1);
             }
@@ -91,7 +108,14 @@ public final class TellusVanillaNoiseCaveSampler {
 
             int worldX = chunkMinX + localX;
             int worldZ = chunkMinZ + localZ;
+            int minimumNearbySurfaceY = minimumGeologySurfaceYByColumn != null
+               ? minimumGeologySurfaceYByColumn[columnIndex]
+               : Integer.MAX_VALUE;
             for (int actualY = firstCarveY; actualY >= actualBottomY; actualY--) {
+               if (UndergroundStructureExclusion.blocksCarving(structureExclusions, worldX, actualY, worldZ)) {
+                  continue;
+               }
+
                int virtualY = TellusCaveDepthMapper.virtualYForActualY(
                   actualY, actualSurfaceY, actualBottomY, virtualSurfaceY, field.minY()
                );
@@ -99,10 +123,16 @@ public final class TellusVanillaNoiseCaveSampler {
                boolean caveAllowed = applyCaves
                   && (floodGuardYByColumn == null || actualY < floodGuardYByColumn[columnIndex]);
                BlockState replacement = caveAllowed ? caveReplacement(vanillaState, actualY, tellusSeaLevel) : null;
-               boolean oreVein = false;
-               if (replacement == null && applyOreVeins) {
-                  replacement = oreVeinReplacement(vanillaState);
-                  oreVein = replacement != null;
+               boolean noiseFeature = false;
+               if (replacement == null && (applyOreVeins || applyGeologicalStonePatches)) {
+                  replacement = oreVeinReplacement(vanillaState, applyOreVeins, applyGeologicalStonePatches);
+                  boolean geologicalStone = replacement != null
+                     && UndergroundFeatureClassifier.isGeologicalStone(replacement.getBlock());
+                  if (geologicalStone
+                     && !GeologicalStonePlacementPolicy.isNoiseStoneBuried(actualY, minimumNearbySurfaceY)) {
+                     replacement = null;
+                  }
+                  noiseFeature = replacement != null;
                }
                if (replacement == null) {
                   continue;
@@ -110,7 +140,7 @@ public final class TellusVanillaNoiseCaveSampler {
 
                cursor.set(worldX, actualY, worldZ);
                BlockState current = chunk.getBlockState(cursor);
-               boolean replaceable = oreVein
+               boolean replaceable = noiseFeature
                   ? current.is(BlockTags.BASE_STONE_OVERWORLD)
                   : current.is(BlockTags.OVERWORLD_CARVER_REPLACEABLES);
                if (!replaceable) {
@@ -232,16 +262,49 @@ public final class TellusVanillaNoiseCaveSampler {
       return null;
    }
 
-   static BlockState oreVeinReplacement(BlockState vanillaState) {
-      if (vanillaState.is(Blocks.COPPER_ORE)
+   static BlockState oreVeinReplacement(
+      BlockState vanillaState, boolean applyOreVeins, boolean applyGeologicalStonePatches
+   ) {
+      if (applyOreVeins && (vanillaState.is(Blocks.COPPER_ORE)
          || vanillaState.is(Blocks.RAW_COPPER_BLOCK)
-         || vanillaState.is(Blocks.GRANITE)
          || vanillaState.is(Blocks.DEEPSLATE_IRON_ORE)
-         || vanillaState.is(Blocks.RAW_IRON_BLOCK)
-         || vanillaState.is(Blocks.TUFF)) {
+         || vanillaState.is(Blocks.RAW_IRON_BLOCK))) {
+         return vanillaState;
+      }
+      if (applyGeologicalStonePatches && (vanillaState.is(Blocks.GRANITE) || vanillaState.is(Blocks.TUFF))) {
          return vanillaState;
       }
       return null;
+   }
+
+   private static int[] minimumNearbySurfaceYByColumn(
+      IntBinaryOperator surfaceHeightSampler, int chunkMinX, int chunkMinZ, int radius
+   ) {
+      int sampleSide = CHUNK_SIDE + radius * 2;
+      int[] sampledSurfaceY = new int[sampleSide * sampleSide];
+      for (int sampleZ = 0; sampleZ < sampleSide; sampleZ++) {
+         for (int sampleX = 0; sampleX < sampleSide; sampleX++) {
+            sampledSurfaceY[sampleZ * sampleSide + sampleX] = surfaceHeightSampler.applyAsInt(
+               chunkMinX + sampleX - radius, chunkMinZ + sampleZ - radius
+            );
+         }
+      }
+
+      int[] minimumSurfaceYByColumn = new int[CHUNK_AREA];
+      for (int localZ = 0; localZ < CHUNK_SIDE; localZ++) {
+         for (int localX = 0; localX < CHUNK_SIDE; localX++) {
+            int minimumSurfaceY = Integer.MAX_VALUE;
+            for (int dz = 0; dz <= radius * 2; dz++) {
+               for (int dx = 0; dx <= radius * 2; dx++) {
+                  minimumSurfaceY = Math.min(
+                     minimumSurfaceY, sampledSurfaceY[(localZ + dz) * sampleSide + localX + dx]
+                  );
+               }
+            }
+            minimumSurfaceYByColumn[localZ * CHUNK_SIDE + localX] = minimumSurfaceY;
+         }
+      }
+      return minimumSurfaceYByColumn;
    }
 
    static int surfaceReferenceY(int highestSolidY, int preliminarySurfaceY, boolean cavesReachSurface) {

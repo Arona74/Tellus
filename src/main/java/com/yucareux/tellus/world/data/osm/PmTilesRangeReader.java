@@ -40,7 +40,7 @@ public final class PmTilesRangeReader {
       this.uri = requireHttpUri(URI.create(Objects.requireNonNull(url, "url")));
       this.connectTimeoutMs = Math.max(1, connectTimeoutMs);
       this.readTimeoutMs = Math.max(1, readTimeoutMs);
-      this.directoryCache = CacheBuilder.<PmTilesRangeReader.DirectoryKey, PmTilesRangeReader.Directory>newBuilder()
+      this.directoryCache = CacheBuilder.newBuilder()
          .maximumWeight(directoryCacheBudget(directoryCacheEntries))
          .weigher((PmTilesRangeReader.DirectoryKey key, PmTilesRangeReader.Directory directory) -> directoryWeight(directory.entries.size()))
          .build(new CacheLoader<PmTilesRangeReader.DirectoryKey, PmTilesRangeReader.Directory>() {
@@ -48,7 +48,7 @@ public final class PmTilesRangeReader {
                return PmTilesRangeReader.this.readDirectory(key.offset, key.length);
             }
          });
-      this.tilePayloadCache = CacheBuilder.<Long, TilePayload>newBuilder()
+      this.tilePayloadCache = CacheBuilder.newBuilder()
          .maximumWeight(MAX_TILE_PAYLOAD_CACHE_BYTES)
          .weigher((Long tileId, TilePayload payload) -> Math.max(64, payload.bytes().length))
          .build(new CacheLoader<Long, TilePayload>() {
