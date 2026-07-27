@@ -85,6 +85,23 @@ public final class TellusElevationSource implements TellusCacheHandle {
    private final TellusLandMaskSource landMask = TellusWorldgenSources.landMask();
    private volatile EarthGeneratorSettings.DemSelection lastLoggedSelection;
 
+   /**
+    * When true, decoded elevation keeps its Terrarium sub-metre precision instead of being
+    * rounded to whole metres. Static because {@code readTerrainRaster} is static and the source
+    * is effectively a singleton; set per-world from the generator's settings. Changing it
+    * invalidates the tile caches so tiles are re-decoded at the new precision.
+    */
+    private static volatile boolean subMetreElevation = Boolean.getBoolean("tellus.subMetreElevation");
+
+   /** Set the sub-metre precision mode (from world settings) and refresh caches if it changed. */
+   public void setSubMetreElevation(boolean enabled) {
+      if (subMetreElevation != enabled) {
+         subMetreElevation = enabled;
+         this.cache.invalidateAll();
+         this.oceanCache.invalidateAll();
+      }
+   }
+
    public TellusElevationSource() {
       this.cacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/elevation-mapterhorn");
       this.oceanCacheRoot = TellusPlatform.gameDir().resolve("tellus/cache/elevation-openwaters");
@@ -1111,13 +1128,13 @@ public final class TellusElevationSource implements TellusCacheHandle {
 
             int sampleIndex = localX + localZ * NormalizedElevationTileKey.TILE_SIZE;
             double elevationMeters = Double.isFinite(resolved.elevationMeters()) ? resolved.elevationMeters() : 0.0;
-            int roundedElevation = Mth.clamp((int)Math.round(elevationMeters), (int)Short.MIN_VALUE, (int)Short.MAX_VALUE);
-            heights.set(localX, localZ, (short)roundedElevation);
+            double clampedElevation = Mth.clamp(elevationMeters, (double)Short.MIN_VALUE, (double)Short.MAX_VALUE);
+            heights.set(localX, localZ, subMetreElevation ? clampedElevation : (double)Math.round(clampedElevation));
             double mapterhornElevation = Double.isFinite(resolved.mapterhornElevationMeters())
                ? resolved.mapterhornElevationMeters()
                : 0.0;
-            int roundedMapterhorn = Mth.clamp((int)Math.round(mapterhornElevation), (int)Short.MIN_VALUE, (int)Short.MAX_VALUE);
-            mapterhornHeights.set(localX, localZ, (short)roundedMapterhorn);
+            double clampedMapterhorn = Mth.clamp(mapterhornElevation, (double)Short.MIN_VALUE, (double)Short.MAX_VALUE);
+            mapterhornHeights.set(localX, localZ, subMetreElevation ? clampedMapterhorn : (double)Math.round(clampedMapterhorn));
             primaryProviders[sampleIndex] = (byte)resolved.primaryProvider().ordinal();
             providerMask |= resolved.providerMask();
             if (Integer.bitCount(resolved.providerMask()) > 1) {
@@ -2398,7 +2415,9 @@ public final class TellusElevationSource implements TellusCacheHandle {
                   + green
                   + blue / (double)TERRARIUM_ENCODING_SCALE
                   - 32768.0;
-               raster.set(x, y, (short)Math.round(elevation));
+               // Keep the decoded sub-metre precision when enabled; otherwise round to whole
+               // metres to preserve the original (backward-compatible) terrain.
+               raster.set(x, y, subMetreElevation ? elevation : (double)Math.round(elevation));
             }
          }
 

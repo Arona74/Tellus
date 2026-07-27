@@ -48,10 +48,15 @@ final class TellusRasterWriter {
    }
 
    private static void writeLeftFiltered(ShortRaster raster, DataOutputStream output) throws IOException {
+      // The on-disk cache format stores whole-metre shorts. The in-memory raster is now float
+      // (to preserve sub-metre precision during a generation session); it is rounded here when
+      // written to disk. Sub-metre precision therefore does not survive a disk-cache round-trip
+      // (a follow-up could add a float cache format), but it is available for freshly decoded /
+      // memory-cached tiles, which is what terrain generation uses.
       for (int y = 0; y < raster.height(); y++) {
          int previous = 0;
          for (int x = 0; x < raster.width(); x++) {
-            int current = raster.get(x, y);
+            int current = (int)Math.round(raster.get(x, y));
             output.writeShort((short)(current - previous));
             previous = current;
          }
