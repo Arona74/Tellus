@@ -5,6 +5,7 @@ def sharedSourceLayers = config.sharedSourceLayers as List
 def distantHorizonsApiVersion = '7.0.0'
 def twelveMonkeysImageioVersion = '3.13.1'
 def distantHorizonsRuntimePath = providers.gradleProperty(config.distantHorizonsRuntimeProperty).orNull
+def usesLocalRuntimeMods = minecraftVersion == '26.2'
 def overriddenSharedMainSources = (config.overriddenSharedMainSources ?: []) as Set
 def sharedMainJavaPath = rootProject.file('src/main/java').toPath().toAbsolutePath().normalize()
 
@@ -123,7 +124,11 @@ dependencies {
 
 	compileOnly "maven.modrinth:DistantHorizonsApi:${distantHorizonsApiVersion}"
 	if (distantHorizonsRuntimePath) {
-		runtimeOnly files(distantHorizonsRuntimePath)
+		if (usesLocalRuntimeMods) {
+			localRuntime files(distantHorizonsRuntimePath)
+		} else {
+			modRuntimeOnly files(distantHorizonsRuntimePath)
+		}
 	}
 }
 

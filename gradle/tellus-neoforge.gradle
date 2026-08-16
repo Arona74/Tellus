@@ -6,6 +6,7 @@ def sharedSourceLayers = config.sharedSourceLayers as List
 def distantHorizonsApiVersion = '7.0.0'
 def twelveMonkeysImageioVersion = '3.13.1'
 def distantHorizonsRuntimePath = providers.gradleProperty(config.distantHorizonsRuntimeProperty).orNull
+def usesLegacyAdditionalRuntimeClasspath = minecraftVersion == '1.21.1'
 
 base {
 	archivesName = "${rootProject.archives_base_name}-neoforge-${minecraftVersion}"
@@ -82,6 +83,9 @@ neoForge {
 configurations {
 	relocatedXz
 	lercWebjar
+	if (usesLegacyAdditionalRuntimeClasspath) {
+		additionalRuntimeClasspath.extendsFrom implementation
+	}
 	runtimeClasspath.extendsFrom localRuntime
 }
 
@@ -160,8 +164,10 @@ dependencies {
 	compileOnly "maven.modrinth:DistantHorizonsApi:${distantHorizonsApiVersion}"
 	if (distantHorizonsRuntimePath) {
 		localRuntime files(distantHorizonsRuntimePath)
+	} else if (usesLegacyAdditionalRuntimeClasspath) {
+		additionalRuntimeClasspath 'org.tukaani:xz:1.10'
 	} else {
-		localRuntime 'org.tukaani:xz:1.10'
+		runtimeOnly 'org.tukaani:xz:1.10'
 	}
 }
 

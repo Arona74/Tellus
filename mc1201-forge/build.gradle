@@ -11,6 +11,7 @@ def distantHorizonsApiVersion = '7.0.0'
 def twelveMonkeysImageioVersion = '3.13.1'
 def javaVersion = 17
 def distantHorizonsRuntimePath = providers.gradleProperty('mc1201_forge_distant_horizons_runtime_path').orNull
+def distantHorizonsRuntimeFile = distantHorizonsRuntimePath ? file(distantHorizonsRuntimePath) : null
 def sharedSourceLayers = ['pre-26', 'mc1201', 'forge-family', 'pre-26-forge']
 def overriddenSharedMainSources = [
 	'com/yucareux/tellus/network/GeoTpOpenMapPayload.java',
@@ -30,6 +31,11 @@ tasks.withType(AbstractArchiveTask).configureEach {
 
 repositories {
 	mavenCentral()
+	if (distantHorizonsRuntimeFile) {
+		flatDir {
+			dirs distantHorizonsRuntimeFile.parentFile
+		}
+	}
 	maven {
 		url = 'https://api.modrinth.com/maven/'
 		content {
@@ -119,8 +125,8 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
 
 	compileOnly "maven.modrinth:DistantHorizonsApi:${distantHorizonsApiVersion}"
-	if (distantHorizonsRuntimePath) {
-		runtimeOnly files(distantHorizonsRuntimePath)
+	if (distantHorizonsRuntimeFile) {
+		modImplementation name: distantHorizonsRuntimeFile.name.replaceFirst(/\.jar$/, '')
 	}
 }
 
