@@ -1,6 +1,6 @@
 # Tellus
 
-Tellus is a Fabric mod that recreates real-world terrain in Minecraft by generating Earth-scale landscapes from geographic data. It focuses on realistic elevation, biome placement, and climate-driven time and weather, aiming to make the world feel like a playable map of our planet.
+Tellus is a multiloader mod for Fabric, Forge, and NeoForge that recreates real-world terrain in Minecraft by generating Earth-scale landscapes from geographic data. It focuses on realistic elevation, biome placement, and climate-driven time and weather, aiming to make the world feel like a playable map of our planet.
 
 ![Tellus header image](images/Header%20image.png)
 
@@ -44,16 +44,6 @@ Tellus integrates with the Distant Horizons (DH) mod to render planet-scale terr
 
 Because Tellus worlds are Earth-scale, DH is strongly recommended and is almost essential for comfortable exploration and long-distance views.
 
-### Offline Fast LOD profiling
-
-The Minecraft 26.2 target includes a headless source-loading simulation for Fast LOD development. It uses experimental 1:1 true-height settings, prefetches the real elevation, land-cover, land-mask, Overture water/road/building inputs, and reports cold/warm sampling timings without starting Minecraft or creating a world:
-
-```bash
-./gradlew :mc262:simulateFastLodDataLoading
-```
-
-The default 64×64 detail-11 pass spans 8192 chunks, matching a 4096-chunk render radius. Use `-PsimDetails=0,6,11`, `-PsimGrid=64`, `-PsimLatitude=...`, and `-PsimLongitude=...` to select a smaller profile. The task stores its isolated cache under `mc262/build/lod-simulation-game`; `-PsimGameDir=...` selects another cache for cold-run comparisons.
-
 ## Commands
 
 - `/tellus map`: Opens the GeoTP map UI (requires gamemaster permissions).
@@ -71,10 +61,11 @@ These options are available in the "Customize World Generation" screen when crea
 ![Tellus config screen](images/Config%20screen.png)
 
 ### World Settings
-- **World Scale**: Controls how many real-world meters are represented by one block. Lower values create more detailed, larger worlds; higher values compress distances and features. Current limits are 1:1m to 1:1km per block.
-- **Increase Height**: Enables the experimental expanded-height terrain profile. Elevation remains proportional to the selected World Scale. Hover over the option in-game for the current compatibility warning.
-- **Terrestrial Height Scale**: Multiplier that converts elevation above sea level from meters to blocks. Higher values produce taller mountains and landforms.
-- **Oceanic Height Scale**: Multiplier that converts elevation below sea level from meters to blocks. Higher values deepen oceans and trenches.
+- **World Scale**: Controls the real-world meters represented by one block at the equator. Mercator's latitude distortion is accounted for automatically. Lower values create more detailed, larger worlds; higher values compress distances and features. Current limits are 1:1m to 1:1km per block.
+- **Automatic Height Scaling**: Enabled by default. Applies the local Mercator latitude correction so terrain keeps the same true scale vertically and horizontally; disable it to use the configured height multiplier uniformly.
+- **Increase Height**: Enables the experimental range Y=-640..10447. With Automatic Height Scaling enabled, sea level stays at Y=0, Mercator height correction is exact through about 51.3° latitude at 1:1 scale, and deep oceans compress toward 384 blocks. With it disabled, Everest reaches Y=10240, sea level moves to Y=1392, and oceans can compress toward 1520 blocks while retaining up to 512 blocks of underground terrain. Earlier Increase Height worlds use an incompatible coordinate profile.
+- **Terrestrial Height Scale**: Additional multiplier for elevation above sea level, applied after the automatic Mercator latitude correction. Higher values produce taller mountains and landforms.
+- **Oceanic Height Scale**: Additional multiplier for elevation below sea level, applied after the automatic Mercator latitude correction. Higher values deepen oceans and trenches.
 - **Height Offset**: Shifts all terrain up or down by a fixed number of blocks. Use this to raise or lower the entire world.
 - **Max Altitude**: Upper world limit in blocks. Set to Automatic to let Tellus compute a safe cap based on your scale settings.
 - **Min Altitude**: Lower world limit in blocks. Set to Automatic to let Tellus compute a safe floor based on your scale settings.
@@ -107,12 +98,13 @@ This section lets you toggle vanilla structures and world features on or off, su
 
 ### Compatibility Settings
 - **Distant Horizons Render Mode**: Fast uses Tellus's LOD generator to build simplified distant terrain quickly with lower cost. Detailed asks Distant Horizons to use full chunk generation for far terrain, which is more accurate but significantly slower and heavier. For most setups, keeping Fast LOD generation is recommended.
-- **LOD Water Resolver**: Adds water depth and smoother water surfaces to Distant Horizons fast LODs using cached Overture vector water without a coarse land-cover fallback.
+- **LOD Water Resolver**: Adds coherent lake beds and smoother water surfaces to Distant Horizons fast LODs directly on the sampled LOD grid, avoiding block-resolution water-region generation.
 - **Coming Soon**: Additional compatibility options are work in progress and currently unavailable.
 
 ### Cache
 - **OSM data**: Cached map, road, and water tiles used by Tellus map and OSM features. Deleting will force re-downloads as needed.
 - **ESA WorldCover land cover**: Official 10 m categorical COG pixels and internal overview levels, fetched and cached by compressed byte range for biome and vegetation lookups.
+- **ETH canopy height**: On-demand 10 m canopy-height tiles used to keep procedural tree dimensions at a real-world 1:1 vertical scale.
 - **Koppen climate**: Cached climate raster used for biome climate classification.
 - **Mapterhorn terrain**: Cached elevation tiles used for terrain height sampling.
 - **OpenWaters bathymetry**: Cached bathymetry tiles used for ocean and underwater terrain.
@@ -133,6 +125,18 @@ This section lets you toggle vanilla structures and world features on or off, su
 - https://esa-worldcover.org/en/data-access
 - https://docs.overturemaps.org/attribution/
 - In-game processing: the primary COG is fetched with HTTP byte ranges and sampled directly; Overture fallback vectors use PMTiles byte ranges and a compact raster cache.
+
+### ETH Global Canopy Height 2020
+- All supported Minecraft and loader targets use the 10 m global canopy-top-height product by Lang et al. for procedural tree dimensions when Custom Trees is enabled.
+- Only official ArcGIS Living Atlas LERC tiles intersecting explored terrain are requested. Native level 13 remains in use through common full-detail scales such as 1:30; coarser overview levels are selected for larger preview/LOD requests.
+- Tree height remains one block per metre regardless of the horizontal world scale. ESA tree cover gates placement, while the ESA + Köppen + RESOLVE biome result selects the growth form and Minecraft log/leaf palette.
+- RESOLVE biome, realm, ecoregion ID, and ecoregion name select regional growth forms without changing the global dataset. In addition to the calibrated coast-redwood mix, tropical pine-oak forests use open high pine crowns with broadleaf companions; Mediterranean regions use sclerophyll woodland forms; Australasian woodland uses sparse eucalypt crowns and multi-stemmed mallee where named by RESOLVE; and the Icelandic/Scandinavian birch ecoregions use low, wind-shaped birch instead of spruce.
+- Distant Horizons reuses the full-detail nine-block tree anchors, regional profile, ETH-derived height, crown dimensions, and material palette. This keeps distant canopies stable when their full chunks load while retaining a cheaper column representation for LOD generation.
+- Raw tile storage is bounded to 256 MiB by default and decoded memory storage to 64 tiles. Override them with `tellus.canopyHeight.diskCacheMiB` and `tellus.canopyHeight.memoryTiles`.
+- The official service is the default; a compatible mirror can later be selected with `tellus.canopyHeight.serviceUrl` without changing tree-generation code.
+- Dataset: Lang, N., Schindler, K., and Wegner, J. D. (2022), ETH_GlobalCanopyHeight_10m_2020_version1, ETH Zurich. License: CC BY 4.0.
+- https://doi.org/10.3929/ethz-b-000609802
+- https://www.arcgis.com/home/item.html?id=2a3dfb00c2c6425f85bd70da420d58eb
 
 ### Overture Maps water
 - Overture Maps base-theme water features provide inland-water geometry and definitive `ocean`/`sea` coastline polygons.
