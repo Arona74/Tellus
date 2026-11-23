@@ -51,7 +51,6 @@ public record EarthGeneratorSettings(
    boolean addTrailRuins,
    boolean deepDark,
    boolean geodes,
-   boolean distantHorizonsWaterResolver,
    boolean distantHorizonsOsmFeatures,
    int distantHorizonsOsmRoadMaxDetail,
    int distantHorizonsOsmBuildingMaxDetail,
@@ -80,14 +79,19 @@ public record EarthGeneratorSettings(
    int undergroundDepth,
    boolean customTrees,
    boolean automaticHeightScaling,
-   boolean hugeRedMushrooms
+   boolean hugeRedMushrooms,
+   int distantHorizonsCityLightsDistance,
+   boolean addAbandonedCamps,
+   boolean lakeFreezing,
+   boolean teleportProgress
 ) {
    public static final double DEFAULT_SPAWN_LATITUDE = 27.9881;
    public static final double DEFAULT_SPAWN_LONGITUDE = 86.925;
    public static final int AUTO_ALTITUDE = Integer.MIN_VALUE;
-   public static final int MIN_WORLD_Y = -2032;
-   public static final int MAX_WORLD_HEIGHT = 4064;
+   // The dense BlockPos profile clamps Y below its floor, which collapses lower blocks and crashes lighting.
+   public static final int MIN_WORLD_Y = HighYPackedCoordinateProfile.isEnabled() ? HighYPackedCoordinateProfile.TELLUS_DIMENSION_MIN_Y : -2032;
    public static final int MAX_WORLD_Y = 2031;
+   public static final int MAX_WORLD_HEIGHT = MAX_WORLD_Y - MIN_WORLD_Y + 1;
    public static final int EXPERIMENTAL_HEIGHT_OFFSET = 0;
    public static final int EXPERIMENTAL_DEEP_OCEAN_HEIGHT_OFFSET = 1_392;
    public static final int MIN_UNDERGROUND_DEPTH = 64;
@@ -110,6 +114,10 @@ public record EarthGeneratorSettings(
    private static final double MIN_RANDOM_BIOME_DENSITY = 0.0;
    private static final double MAX_RANDOM_BIOME_DENSITY = 0.4;
    public static final boolean DEFAULT_AUTOMATIC_HEIGHT_SCALING = true;
+   /** LOD city lights distance (in chunks from the nearest player) that keeps them out to the edge of DH's render distance. */
+   public static final int DH_CITY_LIGHTS_UNLIMITED = 0;
+   public static final int DEFAULT_DH_CITY_LIGHTS_DISTANCE = 1024;
+   private static final int MAX_DH_CITY_LIGHTS_DISTANCE = 1 << 16;
    public static final EarthGeneratorSettings DEFAULT = new EarthGeneratorSettings(
       30.0,
       1.0,
@@ -145,7 +153,6 @@ public record EarthGeneratorSettings(
       false,
       false,
       false,
-      true,
       FIXED_DH_OSM_FEATURES,
       FIXED_DH_OSM_ROAD_MAX_DETAIL,
       FIXED_DH_OSM_BUILDING_MAX_DETAIL,
@@ -174,7 +181,11 @@ public record EarthGeneratorSettings(
       DEFAULT_UNDERGROUND_DEPTH,
       true,
       DEFAULT_AUTOMATIC_HEIGHT_SCALING,
-      false
+      false,
+      DEFAULT_DH_CITY_LIGHTS_DISTANCE,
+      false,
+      true,
+      true
    );
    private static final MapCodec<EarthGeneratorSettings.BaseToggles> BASE_TOGGLES_CODEC = RecordCodecBuilder.mapCodec(
       instance -> instance.group(
@@ -300,9 +311,6 @@ public record EarthGeneratorSettings(
          }
       }
    );
-   private static final MapCodec<Boolean> DISTANT_HORIZONS_WATER_RESOLVER_CODEC = Codec.BOOL
-      .fieldOf("distant_horizons_water_resolver")
-      .orElse(DEFAULT.distantHorizonsWaterResolver());
    private static final MapCodec<Boolean> DISTANT_HORIZONS_OSM_FEATURES_CODEC = Codec.BOOL
       .fieldOf("distant_horizons_osm_features")
       .orElse(DEFAULT.distantHorizonsOsmFeatures());
@@ -333,6 +341,9 @@ public record EarthGeneratorSettings(
    private static final MapCodec<Boolean> HUGE_RED_MUSHROOMS_CODEC = Codec.BOOL
       .fieldOf("huge_red_mushrooms")
       .orElse(DEFAULT.hugeRedMushrooms());
+   private static final MapCodec<Integer> DISTANT_HORIZONS_CITY_LIGHTS_DISTANCE_CODEC = Codec.intRange(0, MAX_DH_CITY_LIGHTS_DISTANCE)
+      .fieldOf("distant_horizons_city_lights_distance")
+      .orElse(DEFAULT.distantHorizonsCityLightsDistance());
    private static final MapCodec<Boolean> REALTIME_TIME_CODEC = Codec.BOOL.fieldOf("realtime_time").orElse(DEFAULT.realtimeTime());
    private static final MapCodec<Boolean> REALTIME_WEATHER_CODEC = Codec.BOOL.fieldOf("realtime_weather").orElse(DEFAULT.realtimeWeather());
    private static final MapCodec<Boolean> HISTORICAL_SNOW_CODEC = Codec.BOOL.fieldOf("historical_snow").orElse(DEFAULT.historicalSnow());
@@ -405,17 +416,20 @@ public record EarthGeneratorSettings(
          .apply(instance, EarthGeneratorSettings::createStructureSettings)
    );
    private static final MapCodec<Boolean> TRAIL_RUINS_CODEC = Codec.BOOL.fieldOf("add_trail_ruins").orElse(DEFAULT.addTrailRuins());
+   private static final MapCodec<Boolean> ABANDONED_CAMPS_CODEC = Codec.BOOL.fieldOf("add_abandoned_camps").orElse(DEFAULT.addAbandonedCamps());
+   private static final MapCodec<Boolean> LAKE_FREEZING_CODEC = Codec.BOOL.fieldOf("lake_freezing").orElse(DEFAULT.lakeFreezing());
+   private static final MapCodec<Boolean> TELEPORT_PROGRESS_CODEC = Codec.BOOL.fieldOf("teleport_progress").orElse(DEFAULT.teleportProgress());
    private static final MapCodec<EarthGeneratorSettings> MAP_CODEC = MapCodec.of(
       new Implementation<EarthGeneratorSettings>() {
          public <T> RecordBuilder<T> encode(EarthGeneratorSettings input, DynamicOps<T> ops, RecordBuilder<T> prefix) {
             RecordBuilder<T> builder = EarthGeneratorSettings.BASE_CODEC.encode(EarthGeneratorSettings.SettingsBase.fromSettings(input), ops, prefix);
             builder = EarthGeneratorSettings.DISTANT_HORIZONS_RENDER_MODE_CODEC.encode(input.distantHorizonsRenderMode(), ops, builder);
             builder = EarthGeneratorSettings.DEM_SELECTION_CODEC.encode(input.demSelection(), ops, builder);
-            builder = EarthGeneratorSettings.DISTANT_HORIZONS_WATER_RESOLVER_CODEC.encode(input.distantHorizonsWaterResolver(), ops, builder);
             builder = EarthGeneratorSettings.DISTANT_HORIZONS_OSM_FEATURES_CODEC.encode(input.distantHorizonsOsmFeatures(), ops, builder);
             builder = EarthGeneratorSettings.DISTANT_HORIZONS_OSM_ROAD_MAX_DETAIL_CODEC.encode(input.distantHorizonsOsmRoadMaxDetail(), ops, builder);
             builder = EarthGeneratorSettings.DISTANT_HORIZONS_OSM_BUILDING_MAX_DETAIL_CODEC.encode(input.distantHorizonsOsmBuildingMaxDetail(), ops, builder);
             builder = EarthGeneratorSettings.DISTANT_HORIZONS_OSM_NON_BLOCKING_FETCH_CODEC.encode(input.distantHorizonsOsmNonBlockingFetch(), ops, builder);
+            builder = EarthGeneratorSettings.DISTANT_HORIZONS_CITY_LIGHTS_DISTANCE_CODEC.encode(input.distantHorizonsCityLightsDistance(), ops, builder);
             builder = EarthGeneratorSettings.REALTIME_TIME_CODEC.encode(input.realtimeTime(), ops, builder);
             builder = EarthGeneratorSettings.REALTIME_WEATHER_CODEC.encode(input.realtimeWeather(), ops, builder);
             builder = EarthGeneratorSettings.HISTORICAL_SNOW_CODEC.encode(input.historicalSnow(), ops, builder);
@@ -440,6 +454,9 @@ public record EarthGeneratorSettings(
             builder = EarthGeneratorSettings.GEODES_CODEC.encode(input.geodes(), ops, builder);
             builder = EarthGeneratorSettings.STRUCTURE_CODEC.encode(EarthGeneratorSettings.StructureSettings.fromSettings(input), ops, builder);
             builder = EarthGeneratorSettings.TRAIL_RUINS_CODEC.encode(input.addTrailRuins(), ops, builder);
+            builder = EarthGeneratorSettings.ABANDONED_CAMPS_CODEC.encode(input.addAbandonedCamps(), ops, builder);
+            builder = EarthGeneratorSettings.LAKE_FREEZING_CODEC.encode(input.lakeFreezing(), ops, builder);
+            builder = EarthGeneratorSettings.TELEPORT_PROGRESS_CODEC.encode(input.teleportProgress(), ops, builder);
             builder = EarthGeneratorSettings.TELLUS_MANAGED_TERRAIN_DOWNLOADS_CODEC.encode(input.tellusManagedTerrainDownloads(), ops, builder);
             builder = EarthGeneratorSettings.SHOW_TERRAIN_DOWNLOAD_OVERLAY_CODEC.encode(input.showTerrainDownloadOverlay(), ops, builder);
             builder = EarthGeneratorSettings.CAVES_REACH_SURFACE_CODEC.encode(input.cavesReachSurface(), ops, builder);
@@ -452,11 +469,11 @@ public record EarthGeneratorSettings(
             Stream<T> baseKeys = EarthGeneratorSettings.BASE_CODEC.keys(ops);
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_RENDER_MODE_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DEM_SELECTION_CODEC.keys(ops));
-            baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_WATER_RESOLVER_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_OSM_FEATURES_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_OSM_ROAD_MAX_DETAIL_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_OSM_BUILDING_MAX_DETAIL_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_OSM_NON_BLOCKING_FETCH_CODEC.keys(ops));
+            baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_CITY_LIGHTS_DISTANCE_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.REALTIME_TIME_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.REALTIME_WEATHER_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.HISTORICAL_SNOW_CODEC.keys(ops));
@@ -484,7 +501,10 @@ public record EarthGeneratorSettings(
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.CUSTOM_TREES_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.HUGE_RED_MUSHROOMS_CODEC.keys(ops));
             Stream<T> structureKeys = Stream.concat(baseKeys, EarthGeneratorSettings.STRUCTURE_CODEC.keys(ops));
-            return Stream.concat(structureKeys, EarthGeneratorSettings.TRAIL_RUINS_CODEC.keys(ops));
+            structureKeys = Stream.concat(structureKeys, EarthGeneratorSettings.TRAIL_RUINS_CODEC.keys(ops));
+            structureKeys = Stream.concat(structureKeys, EarthGeneratorSettings.ABANDONED_CAMPS_CODEC.keys(ops));
+            structureKeys = Stream.concat(structureKeys, EarthGeneratorSettings.LAKE_FREEZING_CODEC.keys(ops));
+            return Stream.concat(structureKeys, EarthGeneratorSettings.TELEPORT_PROGRESS_CODEC.keys(ops));
          }
       },
       new com.mojang.serialization.MapDecoder.Implementation<EarthGeneratorSettings>() {
@@ -493,11 +513,11 @@ public record EarthGeneratorSettings(
             DataResult<EarthGeneratorSettings.DistantHorizonsRenderMode> distantHorizonsRenderMode = EarthGeneratorSettings.DISTANT_HORIZONS_RENDER_MODE_CODEC
                .decode(ops, input);
             DataResult<EarthGeneratorSettings.DemSelection> demSelection = EarthGeneratorSettings.DEM_SELECTION_CODEC.decode(ops, input);
-            DataResult<Boolean> distantHorizonsWaterResolver = EarthGeneratorSettings.DISTANT_HORIZONS_WATER_RESOLVER_CODEC.decode(ops, input);
             DataResult<Boolean> distantHorizonsOsmFeatures = EarthGeneratorSettings.DISTANT_HORIZONS_OSM_FEATURES_CODEC.decode(ops, input);
             DataResult<Integer> distantHorizonsOsmRoadMaxDetail = EarthGeneratorSettings.DISTANT_HORIZONS_OSM_ROAD_MAX_DETAIL_CODEC.decode(ops, input);
             DataResult<Integer> distantHorizonsOsmBuildingMaxDetail = EarthGeneratorSettings.DISTANT_HORIZONS_OSM_BUILDING_MAX_DETAIL_CODEC.decode(ops, input);
             DataResult<Boolean> distantHorizonsOsmNonBlockingFetch = EarthGeneratorSettings.DISTANT_HORIZONS_OSM_NON_BLOCKING_FETCH_CODEC.decode(ops, input);
+            DataResult<Integer> distantHorizonsCityLightsDistance = EarthGeneratorSettings.DISTANT_HORIZONS_CITY_LIGHTS_DISTANCE_CODEC.decode(ops, input);
             DataResult<Boolean> realtimeTime = EarthGeneratorSettings.REALTIME_TIME_CODEC.decode(ops, input);
             DataResult<Boolean> realtimeWeather = EarthGeneratorSettings.REALTIME_WEATHER_CODEC.decode(ops, input);
             DataResult<Boolean> historicalSnow = EarthGeneratorSettings.HISTORICAL_SNOW_CODEC.decode(ops, input);
@@ -527,14 +547,14 @@ public record EarthGeneratorSettings(
             DataResult<Boolean> geodes = EarthGeneratorSettings.GEODES_CODEC.decode(ops, input);
             DataResult<EarthGeneratorSettings.StructureSettings> structures = EarthGeneratorSettings.STRUCTURE_CODEC.decode(ops, input);
             DataResult<Boolean> trailRuins = EarthGeneratorSettings.TRAIL_RUINS_CODEC.decode(ops, input);
+            DataResult<Boolean> abandonedCamps = EarthGeneratorSettings.ABANDONED_CAMPS_CODEC.decode(ops, input);
+            DataResult<Boolean> lakeFreezing = EarthGeneratorSettings.LAKE_FREEZING_CODEC.decode(ops, input);
+            DataResult<Boolean> teleportProgress = EarthGeneratorSettings.TELEPORT_PROGRESS_CODEC.decode(ops, input);
             DataResult<EarthGeneratorSettings.SettingsBase> withRenderMode = base.apply2(
                EarthGeneratorSettings::applyDistantHorizonsRenderMode, distantHorizonsRenderMode
             );
             DataResult<EarthGeneratorSettings.SettingsBase> withDemSelection = withRenderMode.apply2(EarthGeneratorSettings::applyDemSelection, demSelection);
-            DataResult<EarthGeneratorSettings.SettingsBase> withWaterResolver = withDemSelection.apply2(
-               EarthGeneratorSettings::applyDistantHorizonsWaterResolver, distantHorizonsWaterResolver
-            );
-            DataResult<EarthGeneratorSettings.SettingsBase> withOsmFeatures = withWaterResolver.apply2(
+            DataResult<EarthGeneratorSettings.SettingsBase> withOsmFeatures = withDemSelection.apply2(
                EarthGeneratorSettings::applyDistantHorizonsOsmFeatures, distantHorizonsOsmFeatures
             );
             DataResult<EarthGeneratorSettings.SettingsBase> withRealtimeTime = withOsmFeatures.apply2(EarthGeneratorSettings::applyRealtimeTime, realtimeTime);
@@ -557,6 +577,7 @@ public record EarthGeneratorSettings(
             settings = settings.apply2(EarthGeneratorSettings::applyDistantHorizonsOsmRoadMaxDetail, distantHorizonsOsmRoadMaxDetail);
             settings = settings.apply2(EarthGeneratorSettings::applyDistantHorizonsOsmBuildingMaxDetail, distantHorizonsOsmBuildingMaxDetail);
             settings = settings.apply2(EarthGeneratorSettings::applyDistantHorizonsOsmNonBlockingFetch, distantHorizonsOsmNonBlockingFetch);
+            settings = settings.apply2(EarthGeneratorSettings::applyDistantHorizonsCityLightsDistance, distantHorizonsCityLightsDistance);
             settings = settings.apply2(EarthGeneratorSettings::applyEnableRoads, enableRoads);
             settings = settings.apply2(EarthGeneratorSettings::applyEnableBuildings, enableBuildings);
             settings = settings.apply2(EarthGeneratorSettings::applyEnableWater, enableWater);
@@ -565,6 +586,9 @@ public record EarthGeneratorSettings(
             settings = settings.apply2(EarthGeneratorSettings::applyGeodes, geodes);
             settings = settings.apply2(EarthGeneratorSettings::withStructureSettings, structures);
             settings = settings.apply2(EarthGeneratorSettings::applyTrailRuins, trailRuins);
+            settings = settings.apply2(EarthGeneratorSettings::applyAbandonedCamps, abandonedCamps);
+            settings = settings.apply2(EarthGeneratorSettings::applyLakeFreezing, lakeFreezing);
+            settings = settings.apply2(EarthGeneratorSettings::applyTeleportProgress, teleportProgress);
             settings = settings.apply2(EarthGeneratorSettings::applyThinShellTerrain, thinShellTerrain);
             settings = settings.apply2(EarthGeneratorSettings::applyRandomBiomes, randomBiomes);
             settings = settings.apply2(EarthGeneratorSettings::applyRandomBiomeDensity, randomBiomeDensity);
@@ -603,11 +627,11 @@ public record EarthGeneratorSettings(
             Stream<T> baseKeys = EarthGeneratorSettings.BASE_CODEC.keys(ops);
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_RENDER_MODE_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DEM_SELECTION_CODEC.keys(ops));
-            baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_WATER_RESOLVER_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_OSM_FEATURES_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_OSM_ROAD_MAX_DETAIL_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_OSM_BUILDING_MAX_DETAIL_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_OSM_NON_BLOCKING_FETCH_CODEC.keys(ops));
+            baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.DISTANT_HORIZONS_CITY_LIGHTS_DISTANCE_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.REALTIME_TIME_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.REALTIME_WEATHER_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.HISTORICAL_SNOW_CODEC.keys(ops));
@@ -635,7 +659,10 @@ public record EarthGeneratorSettings(
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.CUSTOM_TREES_CODEC.keys(ops));
             baseKeys = Stream.concat(baseKeys, EarthGeneratorSettings.HUGE_RED_MUSHROOMS_CODEC.keys(ops));
             Stream<T> structureKeys = Stream.concat(baseKeys, EarthGeneratorSettings.STRUCTURE_CODEC.keys(ops));
-            return Stream.concat(structureKeys, EarthGeneratorSettings.TRAIL_RUINS_CODEC.keys(ops));
+            structureKeys = Stream.concat(structureKeys, EarthGeneratorSettings.TRAIL_RUINS_CODEC.keys(ops));
+            structureKeys = Stream.concat(structureKeys, EarthGeneratorSettings.ABANDONED_CAMPS_CODEC.keys(ops));
+            structureKeys = Stream.concat(structureKeys, EarthGeneratorSettings.LAKE_FREEZING_CODEC.keys(ops));
+            return Stream.concat(structureKeys, EarthGeneratorSettings.TELEPORT_PROGRESS_CODEC.keys(ops));
          }
       }
    );
@@ -676,7 +703,6 @@ public record EarthGeneratorSettings(
       boolean addTrailRuins,
       boolean deepDark,
       boolean geodes,
-      boolean distantHorizonsWaterResolver,
       boolean distantHorizonsOsmFeatures,
       int distantHorizonsOsmRoadMaxDetail,
       int distantHorizonsOsmBuildingMaxDetail,
@@ -705,7 +731,11 @@ public record EarthGeneratorSettings(
       int undergroundDepth,
       boolean customTrees,
       boolean automaticHeightScaling,
-      boolean hugeRedMushrooms
+      boolean hugeRedMushrooms,
+      int distantHorizonsCityLightsDistance,
+      boolean addAbandonedCamps,
+      boolean lakeFreezing,
+      boolean teleportProgress
    ) {
       worldScale = clampWorldScale(worldScale);
       randomBiomeDensity = Mth.clamp(randomBiomeDensity, MIN_RANDOM_BIOME_DENSITY, MAX_RANDOM_BIOME_DENSITY);
@@ -713,6 +743,7 @@ public record EarthGeneratorSettings(
       voxyChunkPregenMaxRadius = Mth.clamp(voxyChunkPregenMaxRadius, 0, MAX_VOXY_PREGEN_RADIUS);
       voxyChunkPregenChunksPerTick = Mth.clamp(voxyChunkPregenChunksPerTick, 1, MAX_VOXY_PREGEN_CHUNKS_PER_TICK);
       undergroundDepth = Mth.clamp(undergroundDepth, MIN_UNDERGROUND_DEPTH, MAX_UNDERGROUND_DEPTH);
+      distantHorizonsCityLightsDistance = Mth.clamp(distantHorizonsCityLightsDistance, DH_CITY_LIGHTS_UNLIMITED, MAX_DH_CITY_LIGHTS_DISTANCE);
       if (experimentalIncreaseHeight) {
          terrestrialHeightScale = 1.0;
          oceanicHeightScale = 1.0;
@@ -759,7 +790,6 @@ public record EarthGeneratorSettings(
       this.addTrailRuins = addTrailRuins;
       this.deepDark = deepDark;
       this.geodes = geodes;
-      this.distantHorizonsWaterResolver = distantHorizonsWaterResolver;
       this.distantHorizonsOsmFeatures = distantHorizonsOsmFeatures;
       this.distantHorizonsOsmRoadMaxDetail = distantHorizonsOsmRoadMaxDetail;
       this.distantHorizonsOsmBuildingMaxDetail = distantHorizonsOsmBuildingMaxDetail;
@@ -790,6 +820,10 @@ public record EarthGeneratorSettings(
       this.customTrees = customTrees;
       this.automaticHeightScaling = automaticHeightScaling;
       this.hugeRedMushrooms = hugeRedMushrooms;
+      this.distantHorizonsCityLightsDistance = distantHorizonsCityLightsDistance;
+      this.addAbandonedCamps = addAbandonedCamps;
+      this.lakeFreezing = lakeFreezing;
+      this.teleportProgress = teleportProgress;
    }
 
    public double effectiveTerrestrialHeightScale() {
@@ -901,7 +935,6 @@ public record EarthGeneratorSettings(
          Objects.requireNonNull(oreDistribution, "oreDistribution"),
          Objects.requireNonNull(geologicalStonePatches, "geologicalStonePatches"),
          Objects.requireNonNull(lavaPools, "lavaPools"),
-         DEFAULT.distantHorizonsWaterResolver(),
          DEFAULT.distantHorizonsOsmFeatures(),
          DEFAULT.realtimeTime(),
          DEFAULT.realtimeWeather(),
@@ -949,10 +982,6 @@ public record EarthGeneratorSettings(
    ) {
       Objects.requireNonNull(demSelection, "demSelection");
       return settings.withDemSelection(EarthGeneratorSettings.DemSelection.mapterhornSelection());
-   }
-
-   private static EarthGeneratorSettings.SettingsBase applyDistantHorizonsWaterResolver(EarthGeneratorSettings.SettingsBase settings, Boolean enabled) {
-      return settings.withDistantHorizonsWaterResolver(Objects.requireNonNull(enabled, "distantHorizonsWaterResolver"));
    }
 
    private static EarthGeneratorSettings.SettingsBase applyDistantHorizonsOsmFeatures(EarthGeneratorSettings.SettingsBase settings, Boolean enabled) {
@@ -1048,7 +1077,7 @@ public record EarthGeneratorSettings(
          this.addStrongholds, this.addVillages, this.addMineshafts, this.addOceanMonuments, this.addWoodlandMansions,
          this.addDesertTemples, this.addJungleTemples, this.addPillagerOutposts, this.addRuinedPortals, this.addShipwrecks,
          this.addOceanRuins, this.addBuriedTreasure, this.addIgloos, this.addWitchHuts, this.addAncientCities,
-         this.addTrialChambers, this.addTrailRuins, this.deepDark, this.geodes, this.distantHorizonsWaterResolver,
+         this.addTrialChambers, this.addTrailRuins, this.deepDark, this.geodes,
          this.distantHorizonsOsmFeatures, this.distantHorizonsOsmRoadMaxDetail, this.distantHorizonsOsmBuildingMaxDetail,
          this.distantHorizonsOsmNonBlockingFetch, this.realtimeTime, this.realtimeWeather, this.historicalSnow,
          this.voxyChunkPregenEnabled, this.voxyChunkPregenMaxRadius, this.voxyChunkPregenChunksPerTick,
@@ -1057,7 +1086,8 @@ public record EarthGeneratorSettings(
          this.randomBiomeSeed, this.randomBiomeIds, this.experimentalIncreaseHeight, managedTerrainDownloads, showOverlay, cavesReachSurface,
          this.undergroundDepth, this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1069,7 +1099,7 @@ public record EarthGeneratorSettings(
          this.addStrongholds, this.addVillages, this.addMineshafts, this.addOceanMonuments, this.addWoodlandMansions,
          this.addDesertTemples, this.addJungleTemples, this.addPillagerOutposts, this.addRuinedPortals, this.addShipwrecks,
          this.addOceanRuins, this.addBuriedTreasure, this.addIgloos, this.addWitchHuts, this.addAncientCities,
-         this.addTrialChambers, this.addTrailRuins, this.deepDark, this.geodes, this.distantHorizonsWaterResolver,
+         this.addTrialChambers, this.addTrailRuins, this.deepDark, this.geodes,
          this.distantHorizonsOsmFeatures, this.distantHorizonsOsmRoadMaxDetail, this.distantHorizonsOsmBuildingMaxDetail,
          this.distantHorizonsOsmNonBlockingFetch, this.realtimeTime, this.realtimeWeather, this.historicalSnow,
          this.voxyChunkPregenEnabled, this.voxyChunkPregenMaxRadius, this.voxyChunkPregenChunksPerTick,
@@ -1078,7 +1108,8 @@ public record EarthGeneratorSettings(
          this.randomBiomeSeed, this.randomBiomeIds, this.experimentalIncreaseHeight, this.tellusManagedTerrainDownloads,
          this.showTerrainDownloadOverlay, this.cavesReachSurface, undergroundDepth, this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1090,14 +1121,14 @@ public record EarthGeneratorSettings(
          this.addStrongholds, this.addVillages, this.addMineshafts, this.addOceanMonuments, this.addWoodlandMansions,
          this.addDesertTemples, this.addJungleTemples, this.addPillagerOutposts, this.addRuinedPortals, this.addShipwrecks,
          this.addOceanRuins, this.addBuriedTreasure, this.addIgloos, this.addWitchHuts, this.addAncientCities,
-         this.addTrialChambers, this.addTrailRuins, this.deepDark, this.geodes, this.distantHorizonsWaterResolver,
+         this.addTrialChambers, this.addTrailRuins, this.deepDark, this.geodes,
          this.distantHorizonsOsmFeatures, this.distantHorizonsOsmRoadMaxDetail, this.distantHorizonsOsmBuildingMaxDetail,
          this.distantHorizonsOsmNonBlockingFetch, this.realtimeTime, this.realtimeWeather, this.historicalSnow,
          this.voxyChunkPregenEnabled, this.voxyChunkPregenMaxRadius, this.voxyChunkPregenChunksPerTick,
          this.distantHorizonsRenderMode, this.demSelection, this.enableRoads, this.enableBuildings, this.enableWater,
          this.thinShellTerrain, this.climateBasedBuiltUpTerrain, this.randomBiomes, this.randomBiomeDensity,
          this.randomBiomeSeed, this.randomBiomeIds, this.experimentalIncreaseHeight, this.tellusManagedTerrainDownloads,
-         this.showTerrainDownloadOverlay, this.cavesReachSurface, this.undergroundDepth, customTrees, this.automaticHeightScaling, this.hugeRedMushrooms
+         this.showTerrainDownloadOverlay, this.cavesReachSurface, this.undergroundDepth, customTrees, this.automaticHeightScaling, this.hugeRedMushrooms, this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1109,7 +1140,7 @@ public record EarthGeneratorSettings(
          this.addStrongholds, this.addVillages, this.addMineshafts, this.addOceanMonuments, this.addWoodlandMansions,
          this.addDesertTemples, this.addJungleTemples, this.addPillagerOutposts, this.addRuinedPortals, this.addShipwrecks,
          this.addOceanRuins, this.addBuriedTreasure, this.addIgloos, this.addWitchHuts, this.addAncientCities,
-         this.addTrialChambers, this.addTrailRuins, this.deepDark, this.geodes, this.distantHorizonsWaterResolver,
+         this.addTrialChambers, this.addTrailRuins, this.deepDark, this.geodes,
          this.distantHorizonsOsmFeatures, this.distantHorizonsOsmRoadMaxDetail, this.distantHorizonsOsmBuildingMaxDetail,
          this.distantHorizonsOsmNonBlockingFetch, this.realtimeTime, this.realtimeWeather, this.historicalSnow,
          this.voxyChunkPregenEnabled, this.voxyChunkPregenMaxRadius, this.voxyChunkPregenChunksPerTick,
@@ -1117,8 +1148,37 @@ public record EarthGeneratorSettings(
          this.thinShellTerrain, this.climateBasedBuiltUpTerrain, this.randomBiomes, this.randomBiomeDensity,
          this.randomBiomeSeed, this.randomBiomeIds, this.experimentalIncreaseHeight, this.tellusManagedTerrainDownloads,
          this.showTerrainDownloadOverlay, this.cavesReachSurface, this.undergroundDepth, this.customTrees,
-         this.automaticHeightScaling, hugeRedMushrooms
+         this.automaticHeightScaling, hugeRedMushrooms, this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
+   }
+
+   private static EarthGeneratorSettings applyDistantHorizonsCityLightsDistance(EarthGeneratorSettings settings, Integer distanceChunks) {
+      return settings.withDistantHorizonsCityLightsDistance(Objects.requireNonNull(distanceChunks, "distantHorizonsCityLightsDistance"));
+   }
+
+   public EarthGeneratorSettings withDistantHorizonsCityLightsDistance(int distanceChunks) {
+      return new EarthGeneratorSettings(
+         this.worldScale, this.terrestrialHeightScale, this.oceanicHeightScale, this.heightOffset,
+         this.spawnLatitude, this.spawnLongitude, this.minAltitude, this.maxAltitude,
+         this.riverLakeShorelineBlend, this.oceanShorelineBlend, this.shorelineBlendCliffLimit, this.caveGeneration, this.oreDistribution, this.geologicalStonePatches, this.lavaPools,
+         this.addStrongholds, this.addVillages, this.addMineshafts, this.addOceanMonuments, this.addWoodlandMansions,
+         this.addDesertTemples, this.addJungleTemples, this.addPillagerOutposts, this.addRuinedPortals, this.addShipwrecks,
+         this.addOceanRuins, this.addBuriedTreasure, this.addIgloos, this.addWitchHuts, this.addAncientCities,
+         this.addTrialChambers, this.addTrailRuins, this.deepDark, this.geodes,
+         this.distantHorizonsOsmFeatures, this.distantHorizonsOsmRoadMaxDetail, this.distantHorizonsOsmBuildingMaxDetail,
+         this.distantHorizonsOsmNonBlockingFetch, this.realtimeTime, this.realtimeWeather, this.historicalSnow,
+         this.voxyChunkPregenEnabled, this.voxyChunkPregenMaxRadius, this.voxyChunkPregenChunksPerTick,
+         this.distantHorizonsRenderMode, this.demSelection, this.enableRoads, this.enableBuildings, this.enableWater,
+         this.thinShellTerrain, this.climateBasedBuiltUpTerrain, this.randomBiomes, this.randomBiomeDensity,
+         this.randomBiomeSeed, this.randomBiomeIds, this.experimentalIncreaseHeight, this.tellusManagedTerrainDownloads,
+         this.showTerrainDownloadOverlay, this.cavesReachSurface, this.undergroundDepth, this.customTrees,
+         this.automaticHeightScaling, this.hugeRedMushrooms, distanceChunks, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
+      );
+   }
+
+   /** True when LOD city lights reach as far as Distant Horizons renders. */
+   public boolean distantHorizonsCityLightsUnlimited() {
+      return this.distantHorizonsCityLightsDistance == DH_CITY_LIGHTS_UNLIMITED;
    }
 
    private static EarthGeneratorSettings.SettingsBase applyVoxyChunkPregenEnabled(EarthGeneratorSettings.SettingsBase settings, Boolean enabled) {
@@ -1169,7 +1229,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -1198,12 +1257,85 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
    private static EarthGeneratorSettings applyTrailRuins(EarthGeneratorSettings settings, Boolean addTrailRuins) {
       return settings.withTrailRuins(Objects.requireNonNull(addTrailRuins, "addTrailRuins"));
+   }
+
+   private static EarthGeneratorSettings applyAbandonedCamps(EarthGeneratorSettings settings, Boolean addAbandonedCamps) {
+      return settings.withAbandonedCamps(Objects.requireNonNull(addAbandonedCamps, "addAbandonedCamps"));
+   }
+
+   private EarthGeneratorSettings withAbandonedCamps(boolean addAbandonedCamps) {
+      return new EarthGeneratorSettings(
+         this.worldScale, this.terrestrialHeightScale, this.oceanicHeightScale, this.heightOffset,
+         this.spawnLatitude, this.spawnLongitude, this.minAltitude, this.maxAltitude,
+         this.riverLakeShorelineBlend, this.oceanShorelineBlend, this.shorelineBlendCliffLimit, this.caveGeneration, this.oreDistribution, this.geologicalStonePatches, this.lavaPools,
+         this.addStrongholds, this.addVillages, this.addMineshafts, this.addOceanMonuments, this.addWoodlandMansions,
+         this.addDesertTemples, this.addJungleTemples, this.addPillagerOutposts, this.addRuinedPortals, this.addShipwrecks,
+         this.addOceanRuins, this.addBuriedTreasure, this.addIgloos, this.addWitchHuts, this.addAncientCities,
+         this.addTrialChambers, this.addTrailRuins, this.deepDark, this.geodes,
+         this.distantHorizonsOsmFeatures, this.distantHorizonsOsmRoadMaxDetail, this.distantHorizonsOsmBuildingMaxDetail,
+         this.distantHorizonsOsmNonBlockingFetch, this.realtimeTime, this.realtimeWeather, this.historicalSnow,
+         this.voxyChunkPregenEnabled, this.voxyChunkPregenMaxRadius, this.voxyChunkPregenChunksPerTick,
+         this.distantHorizonsRenderMode, this.demSelection, this.enableRoads, this.enableBuildings, this.enableWater,
+         this.thinShellTerrain, this.climateBasedBuiltUpTerrain, this.randomBiomes, this.randomBiomeDensity,
+         this.randomBiomeSeed, this.randomBiomeIds, this.experimentalIncreaseHeight, this.tellusManagedTerrainDownloads,
+         this.showTerrainDownloadOverlay, this.cavesReachSurface, this.undergroundDepth, this.customTrees,
+         this.automaticHeightScaling, this.hugeRedMushrooms, this.distantHorizonsCityLightsDistance, addAbandonedCamps, this.lakeFreezing, this.teleportProgress
+      );
+   }
+
+   private static EarthGeneratorSettings applyLakeFreezing(EarthGeneratorSettings settings, Boolean lakeFreezing) {
+      return settings.withLakeFreezing(Objects.requireNonNull(lakeFreezing, "lakeFreezing"));
+   }
+
+   private EarthGeneratorSettings withLakeFreezing(boolean lakeFreezing) {
+      return new EarthGeneratorSettings(
+         this.worldScale, this.terrestrialHeightScale, this.oceanicHeightScale, this.heightOffset,
+         this.spawnLatitude, this.spawnLongitude, this.minAltitude, this.maxAltitude,
+         this.riverLakeShorelineBlend, this.oceanShorelineBlend, this.shorelineBlendCliffLimit, this.caveGeneration, this.oreDistribution, this.geologicalStonePatches, this.lavaPools,
+         this.addStrongholds, this.addVillages, this.addMineshafts, this.addOceanMonuments, this.addWoodlandMansions,
+         this.addDesertTemples, this.addJungleTemples, this.addPillagerOutposts, this.addRuinedPortals, this.addShipwrecks,
+         this.addOceanRuins, this.addBuriedTreasure, this.addIgloos, this.addWitchHuts, this.addAncientCities,
+         this.addTrialChambers, this.addTrailRuins, this.deepDark, this.geodes,
+         this.distantHorizonsOsmFeatures, this.distantHorizonsOsmRoadMaxDetail, this.distantHorizonsOsmBuildingMaxDetail,
+         this.distantHorizonsOsmNonBlockingFetch, this.realtimeTime, this.realtimeWeather, this.historicalSnow,
+         this.voxyChunkPregenEnabled, this.voxyChunkPregenMaxRadius, this.voxyChunkPregenChunksPerTick,
+         this.distantHorizonsRenderMode, this.demSelection, this.enableRoads, this.enableBuildings, this.enableWater,
+         this.thinShellTerrain, this.climateBasedBuiltUpTerrain, this.randomBiomes, this.randomBiomeDensity,
+         this.randomBiomeSeed, this.randomBiomeIds, this.experimentalIncreaseHeight, this.tellusManagedTerrainDownloads,
+         this.showTerrainDownloadOverlay, this.cavesReachSurface, this.undergroundDepth, this.customTrees,
+         this.automaticHeightScaling, this.hugeRedMushrooms, this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, lakeFreezing, this.teleportProgress
+      );
+   }
+
+   private static EarthGeneratorSettings applyTeleportProgress(EarthGeneratorSettings settings, Boolean teleportProgress) {
+      return settings.withTeleportProgress(Objects.requireNonNull(teleportProgress, "teleportProgress"));
+   }
+
+   private EarthGeneratorSettings withTeleportProgress(boolean teleportProgress) {
+      return new EarthGeneratorSettings(
+         this.worldScale, this.terrestrialHeightScale, this.oceanicHeightScale, this.heightOffset,
+         this.spawnLatitude, this.spawnLongitude, this.minAltitude, this.maxAltitude,
+         this.riverLakeShorelineBlend, this.oceanShorelineBlend, this.shorelineBlendCliffLimit, this.caveGeneration, this.oreDistribution, this.geologicalStonePatches, this.lavaPools,
+         this.addStrongholds, this.addVillages, this.addMineshafts, this.addOceanMonuments, this.addWoodlandMansions,
+         this.addDesertTemples, this.addJungleTemples, this.addPillagerOutposts, this.addRuinedPortals, this.addShipwrecks,
+         this.addOceanRuins, this.addBuriedTreasure, this.addIgloos, this.addWitchHuts, this.addAncientCities,
+         this.addTrialChambers, this.addTrailRuins, this.deepDark, this.geodes,
+         this.distantHorizonsOsmFeatures, this.distantHorizonsOsmRoadMaxDetail, this.distantHorizonsOsmBuildingMaxDetail,
+         this.distantHorizonsOsmNonBlockingFetch, this.realtimeTime, this.realtimeWeather, this.historicalSnow,
+         this.voxyChunkPregenEnabled, this.voxyChunkPregenMaxRadius, this.voxyChunkPregenChunksPerTick,
+         this.distantHorizonsRenderMode, this.demSelection, this.enableRoads, this.enableBuildings, this.enableWater,
+         this.thinShellTerrain, this.climateBasedBuiltUpTerrain, this.randomBiomes, this.randomBiomeDensity,
+         this.randomBiomeSeed, this.randomBiomeIds, this.experimentalIncreaseHeight, this.tellusManagedTerrainDownloads,
+         this.showTerrainDownloadOverlay, this.cavesReachSurface, this.undergroundDepth, this.customTrees,
+         this.automaticHeightScaling, this.hugeRedMushrooms, this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, teleportProgress
+      );
    }
 
    private static EarthGeneratorSettings applyDeepDark(EarthGeneratorSettings settings, Boolean deepDark) {
@@ -1250,7 +1382,6 @@ public record EarthGeneratorSettings(
          addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -1279,7 +1410,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1319,7 +1451,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -1348,7 +1479,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1388,7 +1520,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -1417,7 +1548,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1457,7 +1589,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          maxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -1486,7 +1617,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1526,7 +1658,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          maxDetail,
@@ -1555,7 +1686,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1595,7 +1727,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -1624,7 +1755,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1664,7 +1796,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -1693,7 +1824,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1733,7 +1865,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -1762,7 +1893,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1802,7 +1934,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -1831,7 +1962,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1871,7 +2003,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -1900,7 +2031,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -1940,7 +2072,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -1969,7 +2100,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -2027,7 +2159,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -2056,7 +2187,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -2131,7 +2263,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -2160,7 +2291,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          this.automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -2200,7 +2332,6 @@ public record EarthGeneratorSettings(
          this.addTrailRuins,
          this.deepDark,
          this.geodes,
-         this.distantHorizonsWaterResolver,
          this.distantHorizonsOsmFeatures,
          this.distantHorizonsOsmRoadMaxDetail,
          this.distantHorizonsOsmBuildingMaxDetail,
@@ -2229,7 +2360,8 @@ public record EarthGeneratorSettings(
          this.undergroundDepth,
          this.customTrees,
          automaticHeightScaling,
-         this.hugeRedMushrooms
+         this.hugeRedMushrooms,
+         this.distantHorizonsCityLightsDistance, this.addAbandonedCamps, this.lakeFreezing, this.teleportProgress
       );
    }
 
@@ -2475,7 +2607,6 @@ public record EarthGeneratorSettings(
 
    public static enum DistantHorizonsRenderMode {
       FAST("fast"),
-      ULTRA_FAST("ultra_fast"),
       DETAILED("detailed");
 
       public static final Codec<EarthGeneratorSettings.DistantHorizonsRenderMode> CODEC = Codec.STRING
@@ -2527,7 +2658,6 @@ public record EarthGeneratorSettings(
       boolean oreDistribution,
       boolean geologicalStonePatches,
       boolean lavaPools,
-      boolean distantHorizonsWaterResolver,
       boolean distantHorizonsOsmFeatures,
       boolean realtimeTime,
       boolean realtimeWeather,
@@ -2555,7 +2685,6 @@ public record EarthGeneratorSettings(
             settings.oreDistribution(),
             settings.geologicalStonePatches(),
             settings.lavaPools(),
-            settings.distantHorizonsWaterResolver(),
             settings.distantHorizonsOsmFeatures(),
             settings.realtimeTime(),
             settings.realtimeWeather(),
@@ -2565,36 +2694,6 @@ public record EarthGeneratorSettings(
             settings.voxyChunkPregenChunksPerTick(),
             settings.distantHorizonsRenderMode(),
             settings.demSelection()
-         );
-      }
-
-      private EarthGeneratorSettings.SettingsBase withDistantHorizonsWaterResolver(boolean enabled) {
-         return new EarthGeneratorSettings.SettingsBase(
-            this.worldScale,
-            this.terrestrialHeightScale,
-            this.oceanicHeightScale,
-            this.heightOffset,
-            this.spawnLatitude,
-            this.spawnLongitude,
-            this.minAltitude,
-            this.maxAltitude,
-            this.riverLakeShorelineBlend,
-            this.oceanShorelineBlend,
-            this.shorelineBlendCliffLimit,
-            this.caveGeneration,
-            this.oreDistribution,
-            this.geologicalStonePatches,
-            this.lavaPools,
-            enabled,
-            this.distantHorizonsOsmFeatures,
-            this.realtimeTime,
-            this.realtimeWeather,
-            this.historicalSnow,
-            this.voxyChunkPregenEnabled,
-            this.voxyChunkPregenMaxRadius,
-            this.voxyChunkPregenChunksPerTick,
-            this.distantHorizonsRenderMode,
-            this.demSelection
          );
       }
 
@@ -2615,7 +2714,6 @@ public record EarthGeneratorSettings(
             this.oreDistribution,
             this.geologicalStonePatches,
             this.lavaPools,
-            this.distantHorizonsWaterResolver,
             enabled,
             this.realtimeTime,
             this.realtimeWeather,
@@ -2645,7 +2743,6 @@ public record EarthGeneratorSettings(
             this.oreDistribution,
             this.geologicalStonePatches,
             this.lavaPools,
-            this.distantHorizonsWaterResolver,
             this.distantHorizonsOsmFeatures,
             enabled,
             this.realtimeWeather,
@@ -2675,7 +2772,6 @@ public record EarthGeneratorSettings(
             this.oreDistribution,
             this.geologicalStonePatches,
             this.lavaPools,
-            this.distantHorizonsWaterResolver,
             this.distantHorizonsOsmFeatures,
             this.realtimeTime,
             enabled,
@@ -2705,7 +2801,6 @@ public record EarthGeneratorSettings(
             this.oreDistribution,
             this.geologicalStonePatches,
             this.lavaPools,
-            this.distantHorizonsWaterResolver,
             this.distantHorizonsOsmFeatures,
             this.realtimeTime,
             this.realtimeWeather,
@@ -2735,7 +2830,6 @@ public record EarthGeneratorSettings(
             this.oreDistribution,
             this.geologicalStonePatches,
             this.lavaPools,
-            this.distantHorizonsWaterResolver,
             this.distantHorizonsOsmFeatures,
             this.realtimeTime,
             this.realtimeWeather,
@@ -2765,7 +2859,6 @@ public record EarthGeneratorSettings(
             this.oreDistribution,
             this.geologicalStonePatches,
             this.lavaPools,
-            this.distantHorizonsWaterResolver,
             this.distantHorizonsOsmFeatures,
             this.realtimeTime,
             this.realtimeWeather,
@@ -2795,7 +2888,6 @@ public record EarthGeneratorSettings(
             this.oreDistribution,
             this.geologicalStonePatches,
             this.lavaPools,
-            this.distantHorizonsWaterResolver,
             this.distantHorizonsOsmFeatures,
             this.realtimeTime,
             this.realtimeWeather,
@@ -2825,7 +2917,6 @@ public record EarthGeneratorSettings(
             this.oreDistribution,
             this.geologicalStonePatches,
             this.lavaPools,
-            this.distantHorizonsWaterResolver,
             this.distantHorizonsOsmFeatures,
             this.realtimeTime,
             this.realtimeWeather,
@@ -2855,7 +2946,6 @@ public record EarthGeneratorSettings(
             this.oreDistribution,
             this.geologicalStonePatches,
             this.lavaPools,
-            this.distantHorizonsWaterResolver,
             this.distantHorizonsOsmFeatures,
             this.realtimeTime,
             this.realtimeWeather,
@@ -2904,7 +2994,6 @@ public record EarthGeneratorSettings(
             EarthGeneratorSettings.DEFAULT.addTrailRuins(),
             EarthGeneratorSettings.DEFAULT.deepDark(),
             EarthGeneratorSettings.DEFAULT.geodes(),
-            this.distantHorizonsWaterResolver,
             this.distantHorizonsOsmFeatures,
             EarthGeneratorSettings.DEFAULT.distantHorizonsOsmRoadMaxDetail(),
             EarthGeneratorSettings.DEFAULT.distantHorizonsOsmBuildingMaxDetail(),
@@ -2933,7 +3022,11 @@ public record EarthGeneratorSettings(
             EarthGeneratorSettings.DEFAULT.undergroundDepth(),
             EarthGeneratorSettings.DEFAULT.customTrees(),
             EarthGeneratorSettings.DEFAULT.automaticHeightScaling(),
-            EarthGeneratorSettings.DEFAULT.hugeRedMushrooms()
+            EarthGeneratorSettings.DEFAULT.hugeRedMushrooms(),
+            EarthGeneratorSettings.DEFAULT.distantHorizonsCityLightsDistance(),
+            EarthGeneratorSettings.DEFAULT.addAbandonedCamps(),
+            EarthGeneratorSettings.DEFAULT.lakeFreezing(),
+            EarthGeneratorSettings.DEFAULT.teleportProgress()
          );
       }
    }

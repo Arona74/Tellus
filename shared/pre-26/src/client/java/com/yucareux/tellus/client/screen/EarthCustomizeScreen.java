@@ -1,13 +1,14 @@
 package com.yucareux.tellus.client.screen;
 
-import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.serialization.Lifecycle;
 import com.yucareux.tellus.Tellus;
 import com.yucareux.tellus.cache.TellusCacheManager;
 import com.yucareux.tellus.client.preview.TerrainPreview;
 import com.yucareux.tellus.client.preview.TerrainPreviewWidget;
+import com.yucareux.tellus.client.compat.AbstractTellusWidget;
 import com.yucareux.tellus.client.widget.CustomizationList;
 import com.yucareux.tellus.compat.ClientMinecraftCompat;
+import com.yucareux.tellus.integration.distant_horizons.DistantHorizonsCompatibility;
 import com.yucareux.tellus.platform.TellusPlatform;
 import com.yucareux.tellus.worldgen.EarthChunkGenerator;
 import com.yucareux.tellus.worldgen.EarthGeneratorSettings;
@@ -38,6 +39,7 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.Button.OnPress;
 import net.minecraft.client.gui.components.CycleButton.Builder;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationContext;
 import net.minecraft.core.Holder;
@@ -50,11 +52,9 @@ import net.minecraft.core.RegistryAccess.ImmutableRegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.RegistryLayer;
 import net.minecraft.util.Mth;
-import net.minecraft.Util;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
@@ -72,15 +72,19 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       Component.translatable("tellus.customize.work_in_progress").withStyle(ChatFormatting.GRAY), "workInProgressLabel"
    );
    
-   private static final ResourceLocation DYNAMIC_DIMENSION_TYPE_ID = Objects.requireNonNull(
-      ClientMinecraftCompat.resourceLocation("tellus", "earth_dynamic"), "dynamicDimensionTypeId"
-   );
-   
    private static final ResourceKey<DimensionType> DYNAMIC_DIMENSION_TYPE_KEY = Objects.requireNonNull(
-      ResourceKey.create(Registries.DIMENSION_TYPE, DYNAMIC_DIMENSION_TYPE_ID), "dynamicDimensionTypeKey"
+      ResourceKey.create(
+         Registries.DIMENSION_TYPE,
+         Objects.requireNonNull(ClientMinecraftCompat.resourceLocation("tellus", "earth_dynamic"), "dynamicDimensionTypeId")
+      ),
+      "dynamicDimensionTypeKey"
    );
    private static final double OSM_ROADS_AND_BUILDINGS_MAX_WORLD_SCALE = 15.0;
+   // LOD city lights distance slider stops, in chunks; the step after the last one is Unlimited.
+   private static final int[] CITY_LIGHTS_DISTANCE_STEPS = {256, 512, 1024, 2048, 4096};
    private static final String BIOME_TOGGLE_PREFIX = "random_biome.";
+   // Once per game launch: the disabled options keep the reason in their tooltips.
+   private static boolean incompatibleDistantHorizonsWarned;
    private final CreateWorldScreen parent;
    private final List<EarthCustomizeScreen.CategoryDefinition> categories;
    private CustomizationList list;
@@ -94,6 +98,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
    private double spawnLatitude = 27.9881;
    private double spawnLongitude = 86.925;
    private long randomBiomeSeed = EarthGeneratorSettings.DEFAULT.randomBiomeSeed();
+   private Component validationError;
 
    public EarthCustomizeScreen(CreateWorldScreen parent, WorldCreationContext worldCreationContext) {
       super(TITLE);
@@ -142,10 +147,12 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
    }
 
    private void onSettingsChanged() {
+      this.validationError = null;
       this.previewDirtyAt = System.currentTimeMillis();
    }
 
    public void applySpawnpoint(double latitude, double longitude) {
+      this.validationError = null;
       this.spawnLatitude = latitude;
       this.spawnLongitude = longitude;
       this.previewDirtyAt = System.currentTimeMillis();
@@ -207,10 +214,18 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
          EarthGeneratorSettings settings = Objects.requireNonNull(this.buildSettings(), "generatorSettings");
          WorldCreationContext current = Objects.requireNonNull(this.parent.getUiState().getSettings(), "worldCreationContext");
          EarthGeneratorSettings.HeightLimits limits = Objects.requireNonNull(EarthGeneratorSettings.resolveHeightLimits(settings), "heightLimits");
-         WorldCreationContext updated = Objects.requireNonNull(updateWorldCreationContext(current, settings, limits), "updatedWorldContext");
-         this.parent.getUiState().setSettings(updated);
-         this.preview.close();
-         this.minecraft.setScreen(this.parent);
+         try {
+            ExperimentalHeightSupport.validateOrThrow(settings, limits);
+            WorldCreationContext updated = Objects.requireNonNull(updateWorldCreationContext(current, settings, limits), "updatedWorldContext");
+            this.parent.getUiState().setSettings(updated);
+            this.preview.close();
+            this.minecraft.setScreen(this.parent);
+         } catch (IllegalStateException error) {
+            Tellus.LOGGER.warn("Tellus world settings validation failed", error);
+            this.validationError = settings.experimentalIncreaseHeight() && !ExperimentalHeightSupport.isRuntimeProfileActive()
+               ? experimentalHeightValidationFailedTooltip()
+               : Component.translatable("tellus.validation.world_settings_failed").withStyle(ChatFormatting.RED);
+         }
       }
    }
 
@@ -244,7 +259,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
                   limits.minY(),
                   limits.height(),
                   limits.logicalHeight(),
-                  overworldKey.location(),
+                  ClientMinecraftCompat.resourceKeyName(overworldKey),
                   describeDimensionType(updatedType),
                   describeDimensionType(registryType)
                }
@@ -261,13 +276,11 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       LayeredRegistryAccess<RegistryLayer> updatedRegistries = Objects.requireNonNull(
          updateWorldgenLevelStems(registriesWithTypes, updatedDatapackDimensions), "updatedRegistries"
       );
-      return new WorldCreationContext(
-         current.options(),
+      return ClientMinecraftCompat.createWorldCreationContext(
+         current,
          updatedDatapackDimensions,
          updatedDimensions,
-         updatedRegistries,
-         current.dataPackResources(),
-         current.dataConfiguration()
+         updatedRegistries
       );
    }
 
@@ -358,6 +371,27 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
             this.previewWidget.requestRebuild(this.buildSettings());
          }
       }
+
+      if (!incompatibleDistantHorizonsWarned && this.minecraft != null && DistantHorizonsCompatibility.isIncompatibleBuildInstalled()) {
+         incompatibleDistantHorizonsWarned = true;
+         this.minecraft.setScreen(this.incompatibleDistantHorizonsWarning());
+      }
+   }
+
+   private ConfirmScreen incompatibleDistantHorizonsWarning() {
+      Component title = Component.translatable("tellus.distant_horizons.incompatible.title").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
+      Component message = Component.translatable("tellus.distant_horizons.incompatible.message")
+         .append("\n\n")
+         .append(Component.literal(DistantHorizonsCompatibility.TELLUS_BUILD_URL).withStyle(ChatFormatting.AQUA));
+      return new ConfirmScreen(openDownloadPage -> {
+         if (openDownloadPage) {
+            ClientMinecraftCompat.openUri(DistantHorizonsCompatibility.TELLUS_BUILD_URL);
+         }
+
+         if (this.minecraft != null) {
+            this.minecraft.setScreen(this);
+         }
+      }, title, message, Component.translatable("tellus.distant_horizons.incompatible.download"), Component.translatable("gui.continue"));
    }
 
    public void removed() {
@@ -404,7 +438,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       this.setToggleValue("add_trial_chambers", settings.addTrialChambers());
       this.setToggleValue("add_trail_ruins", settings.addTrailRuins());
       this.setToggleValue("automatic_height_scaling", settings.automaticHeightScaling());
-      this.setToggleValue("experimental_increase_height", settings.experimentalIncreaseHeight() && ExperimentalHeightSupport.isRuntimeProfileActive());
+      this.setToggleValue("experimental_increase_height", settings.experimentalIncreaseHeight() && increaseHeightAvailable());
       this.applyPreloadHeightGuard(settings);
       this.onSettingsChanged();
    }
@@ -484,9 +518,6 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       boolean addAncientCities = this.findToggleValue("add_ancient_cities", EarthGeneratorSettings.DEFAULT.addAncientCities());
       boolean addTrialChambers = this.findToggleValue("add_trial_chambers", EarthGeneratorSettings.DEFAULT.addTrialChambers());
       boolean addTrailRuins = this.findToggleValue("add_trail_ruins", EarthGeneratorSettings.DEFAULT.addTrailRuins());
-      boolean distantHorizonsWaterResolver = this.findToggleValue(
-         "distant_horizons_water_resolver", EarthGeneratorSettings.DEFAULT.distantHorizonsWaterResolver()
-      );
       boolean distantHorizonsOsmFeatures = EarthGeneratorSettings.DEFAULT.distantHorizonsOsmFeatures();
       int distantHorizonsOsmRoadMaxDetail = EarthGeneratorSettings.DEFAULT.distantHorizonsOsmRoadMaxDetail();
       int distantHorizonsOsmBuildingMaxDetail = EarthGeneratorSettings.DEFAULT.distantHorizonsOsmBuildingMaxDetail();
@@ -500,6 +531,8 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       boolean realtimeTime = this.findToggleValue("realtime_time", EarthGeneratorSettings.DEFAULT.realtimeTime());
       boolean realtimeWeather = this.findToggleValue("realtime_weather", EarthGeneratorSettings.DEFAULT.realtimeWeather());
       boolean historicalSnow = false;
+      boolean lakeFreezing = this.findToggleValue("lake_freezing", EarthGeneratorSettings.DEFAULT.lakeFreezing());
+      boolean teleportProgress = this.findToggleValue("teleport_progress", EarthGeneratorSettings.DEFAULT.teleportProgress());
       boolean voxyChunkPregenEnabled = this.findToggleValue("voxy_chunk_pregen_enabled", EarthGeneratorSettings.DEFAULT.voxyChunkPregenEnabled());
       int voxyChunkPregenMaxRadius = (int)Math.round(
          this.findSliderValue("voxy_chunk_pregen_max_radius", EarthGeneratorSettings.DEFAULT.voxyChunkPregenMaxRadius())
@@ -510,13 +543,12 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       EarthGeneratorSettings.DistantHorizonsRenderMode renderMode = this.findRenderMode(
          "distant_horizons_render_mode", EarthGeneratorSettings.DEFAULT.distantHorizonsRenderMode()
       );
+      int distantHorizonsCityLightsDistance = cityLightsDistanceForStep(
+         this.findSliderValue("distant_horizons_city_lights_distance", cityLightsDistanceStep(EarthGeneratorSettings.DEFAULT_DH_CITY_LIGHTS_DISTANCE))
+      );
       if (!roadsAndBuildingsSupportedForWorldScale(worldScale)) {
          enableRoads = false;
          enableBuildings = false;
-      }
-
-      if (renderMode == EarthGeneratorSettings.DistantHorizonsRenderMode.ULTRA_FAST) {
-         distantHorizonsWaterResolver = false;
       }
 
       return new EarthGeneratorSettings(
@@ -554,7 +586,6 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
          addTrailRuins,
          deepDark,
          geodes,
-         distantHorizonsWaterResolver,
          distantHorizonsOsmFeatures,
          distantHorizonsOsmRoadMaxDetail,
          distantHorizonsOsmBuildingMaxDetail,
@@ -583,7 +614,11 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
          undergroundDepth,
          customTrees,
          automaticHeightScaling,
-         hugeRedMushrooms
+         hugeRedMushrooms,
+         distantHorizonsCityLightsDistance,
+         EarthGeneratorSettings.DEFAULT.addAbandonedCamps(),
+         lakeFreezing,
+         teleportProgress
       );
    }
 
@@ -638,7 +673,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       this.randomBiomeSeed = initialSettings.randomBiomeSeed();
       this.setRandomBiomeSelection(initialSettings.randomBiomeIds());
       this.setToggleValue("automatic_height_scaling", initialSettings.automaticHeightScaling());
-      this.setToggleValue("experimental_increase_height", initialSettings.experimentalIncreaseHeight() && ExperimentalHeightSupport.isRuntimeProfileActive());
+      this.setToggleValue("experimental_increase_height", initialSettings.experimentalIncreaseHeight() && increaseHeightAvailable());
       this.setToggleValue("deep_dark", initialSettings.deepDark());
       this.setToggleValue("geodes", initialSettings.geodes());
       this.setToggleValue("add_strongholds", initialSettings.addStrongholds());
@@ -658,16 +693,18 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       this.setToggleValue("add_ancient_cities", initialSettings.addAncientCities());
       this.setToggleValue("add_trial_chambers", initialSettings.addTrialChambers());
       this.setToggleValue("add_trail_ruins", initialSettings.addTrailRuins());
-      this.setToggleValue("distant_horizons_water_resolver", initialSettings.distantHorizonsWaterResolver());
       this.setToggleValue("tellus_managed_terrain_downloads", initialSettings.tellusManagedTerrainDownloads());
       this.setToggleValue("show_terrain_download_overlay", initialSettings.showTerrainDownloadOverlay());
       this.setToggleValue("realtime_time", initialSettings.realtimeTime());
       this.setToggleValue("realtime_weather", initialSettings.realtimeWeather());
       this.setToggleValue("historical_snow", false);
+      this.setToggleValue("lake_freezing", initialSettings.lakeFreezing());
+      this.setToggleValue("teleport_progress", initialSettings.teleportProgress());
       this.setToggleValue("voxy_chunk_pregen_enabled", initialSettings.voxyChunkPregenEnabled());
       this.setSliderValue("voxy_chunk_pregen_max_radius", initialSettings.voxyChunkPregenMaxRadius());
       this.setSliderValue("voxy_chunk_pregen_chunks_per_tick", initialSettings.voxyChunkPregenChunksPerTick());
       this.setRenderModeValue("distant_horizons_render_mode", initialSettings.distantHorizonsRenderMode());
+      this.setSliderValue("distant_horizons_city_lights_distance", cityLightsDistanceStep(initialSettings.distantHorizonsCityLightsDistance()));
    }
 
    private void setSliderValue(String key, double value) {
@@ -749,7 +786,12 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
       this.renderVersionBackground(graphics, mouseX, mouseY, delta);
       super.render(graphics, mouseX, mouseY, delta);
-      graphics.drawCenteredString(this.font, this.title, this.width / 2, 20, 16777215);
+      // Text colors need an alpha byte: since 1.21.6, text drawn with alpha 0 is skipped.
+      graphics.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFFFF);
+      if (this.validationError != null) {
+         int messageWidth = Math.max(120, this.width - 24);
+         graphics.drawWordWrap(this.font, this.validationError, 12, Math.max(42, this.height - 58), messageWidth, 0xFFFF5555);
+      }
    }
 
    private List<EarthCustomizeScreen.CategoryDefinition> createCategories() {
@@ -765,7 +807,12 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
             toggle("automatic_height_scaling", EarthGeneratorSettings.DEFAULT.automaticHeightScaling()),
             toggle("experimental_increase_height", EarthGeneratorSettings.DEFAULT.experimentalIncreaseHeight())
                .withTooltip(experimentalIncreaseHeightTooltip())
-               .forceDisabled(!ExperimentalHeightSupport.isRuntimeProfileActive(), experimentalHeightRuntimeDisabledTooltip()),
+               .forceDisabled(
+                  !increaseHeightAvailable(),
+                  DistantHorizonsCompatibility.isIncompatibleBuildInstalled()
+                     ? requiresTellusDistantHorizonsTooltip()
+                     : experimentalHeightRuntimeDisabledTooltip()
+               ),
             slider(
                "underground_depth",
                EarthGeneratorSettings.DEFAULT.undergroundDepth(),
@@ -786,7 +833,8 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
             slider("height_offset", EarthGeneratorSettings.DEFAULT.heightOffset(), -2000.0, 128.0, 1.0)
                .withDisplay(EarthCustomizeScreen::formatHeightOffset),
             slider("max_altitude", -1.0, -1.0, 2031.0, 16.0).withDisplay(EarthCustomizeScreen::formatMaxAltitude),
-            slider("min_altitude", EarthGeneratorSettings.DEFAULT.minAltitude(), -2048.0, 2031.0, 16.0).withDisplay(EarthCustomizeScreen::formatMinAltitude)
+            slider("min_altitude", EarthGeneratorSettings.DEFAULT.minAltitude(), -2048.0, 2031.0, 16.0).withDisplay(EarthCustomizeScreen::formatMinAltitude),
+            toggle("teleport_progress", EarthGeneratorSettings.DEFAULT.teleportProgress())
          )
       );
       categories.add(
@@ -864,7 +912,8 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
             List.of(
                toggle("realtime_time", EarthGeneratorSettings.DEFAULT.realtimeTime()),
                toggle("realtime_weather", EarthGeneratorSettings.DEFAULT.realtimeWeather()),
-               toggle("historical_snow", false).forceDisabled(true, historicalSnowReworkTooltip())
+               toggle("historical_snow", false).forceDisabled(true, historicalSnowReworkTooltip()),
+               toggle("lake_freezing", EarthGeneratorSettings.DEFAULT.lakeFreezing())
             )
          )
       );
@@ -882,7 +931,13 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
                "distant_horizons",
                List.of(
                   mode("distant_horizons_render_mode", EarthGeneratorSettings.DEFAULT.distantHorizonsRenderMode()),
-                  toggle("distant_horizons_water_resolver", EarthGeneratorSettings.DEFAULT.distantHorizonsWaterResolver())
+                  slider(
+                     "distant_horizons_city_lights_distance",
+                     cityLightsDistanceStep(EarthGeneratorSettings.DEFAULT_DH_CITY_LIGHTS_DISTANCE),
+                     0.0,
+                     CITY_LIGHTS_DISTANCE_STEPS.length,
+                     1.0
+                  ).withDisplay(EarthCustomizeScreen::formatCityLightsDistance)
                )
             )
             .hideFromRoot()
@@ -904,19 +959,23 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
             .parent("compatibility"),
          "voxyCategory"
       );
-      if (!distantHorizonsInstalled) {
-         disableCategoryForMissingMod(distantHorizonsCategory, "distanthorizons");
+      // A DH older than API 7.1 never runs the Tellus LOD generators, so these settings would do nothing.
+      Component distantHorizonsUnavailable = !distantHorizonsInstalled
+         ? requiresModTooltip("distanthorizons")
+         : (DistantHorizonsCompatibility.isIntegrationEnabled() ? null : requiresTellusDistantHorizonsTooltip());
+      if (distantHorizonsUnavailable != null) {
+         disableCategory(distantHorizonsCategory, distantHorizonsUnavailable);
       }
 
       if (!voxyInstalled) {
-         disableCategoryForMissingMod(voxyCategory, "voxy");
+         disableCategory(voxyCategory, requiresModTooltip("voxy"));
       }
 
       List<EarthCustomizeScreen.SettingDefinition> compatibilitySettings = new ArrayList<>();
       compatibilitySettings.add(
          this.categoryLink(distantHorizonsCategory)
-            .active(distantHorizonsInstalled)
-            .withTooltip(distantHorizonsInstalled ? null : requiresModTooltip("distanthorizons"))
+            .active(distantHorizonsUnavailable == null)
+            .withTooltip(distantHorizonsUnavailable)
       );
       compatibilitySettings.add(this.categoryLink(voxyCategory).active(voxyInstalled).withTooltip(voxyInstalled ? null : requiresModTooltip("voxy")));
       if (distantHorizonsInstalled && voxyInstalled) {
@@ -1005,9 +1064,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       return new EarthCustomizeScreen.CategoryLinkDefinition(targetCategory);
    }
 
-   private static void disableCategoryForMissingMod( EarthCustomizeScreen.CategoryDefinition category,  String modId) {
-      Component tooltip = requiresModTooltip(modId);
-
+   private static void disableCategory( EarthCustomizeScreen.CategoryDefinition category,  Component tooltip) {
       for (EarthCustomizeScreen.SettingDefinition setting : category.getSettings()) {
          if (setting instanceof EarthCustomizeScreen.ModeDefinition mode) {
             mode.unavailable(tooltip);
@@ -1152,6 +1209,36 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       return Component.translatable("tellus.value.chunks", String.format(Locale.ROOT, "%.0f", value)).getString();
    }
 
+   private static String formatCityLightsDistance(double step) {
+      int distance = cityLightsDistanceForStep(step);
+      return distance == EarthGeneratorSettings.DH_CITY_LIGHTS_UNLIMITED
+         ? Component.translatable("tellus.value.unlimited").getString()
+         : formatChunkRadius(distance);
+   }
+
+   /** The chunk distance of a city lights slider step; the step after the last distance is Unlimited. */
+   private static int cityLightsDistanceForStep(double step) {
+      int index = (int)Math.round(step);
+      return index >= 0 && index < CITY_LIGHTS_DISTANCE_STEPS.length
+         ? CITY_LIGHTS_DISTANCE_STEPS[index]
+         : EarthGeneratorSettings.DH_CITY_LIGHTS_UNLIMITED;
+   }
+
+   /** The slider step showing a stored city lights distance: the nearest stop, or Unlimited. */
+   private static double cityLightsDistanceStep(int distanceChunks) {
+      if (distanceChunks == EarthGeneratorSettings.DH_CITY_LIGHTS_UNLIMITED) {
+         return CITY_LIGHTS_DISTANCE_STEPS.length;
+      }
+      int best = 0;
+      for (int i = 1; i < CITY_LIGHTS_DISTANCE_STEPS.length; i++) {
+         double ratio = Math.abs(Math.log((double)distanceChunks / CITY_LIGHTS_DISTANCE_STEPS[i]));
+         if (ratio < Math.abs(Math.log((double)distanceChunks / CITY_LIGHTS_DISTANCE_STEPS[best]))) {
+            best = i;
+         }
+      }
+      return best;
+   }
+
    private static String formatChunksPerTick(double value) {
       return Component.translatable("tellus.value.chunks_per_tick", String.format(Locale.ROOT, "%.0f", value)).getString();
    }
@@ -1280,6 +1367,18 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
    }
 
    
+   private static Component requiresTellusDistantHorizonsTooltip() {
+      return Objects.requireNonNull(
+         Component.translatable("tellus.compatibility.requires_tellus_distant_horizons").withStyle(ChatFormatting.GRAY),
+         "requiresTellusDistantHorizonsTooltip"
+      );
+   }
+
+   /** Increase Height needs its launch profile and, with DH installed, the Tellus build that holds its LODs. */
+   private static boolean increaseHeightAvailable() {
+      return ExperimentalHeightSupport.isRuntimeProfileActive() && !DistantHorizonsCompatibility.isIncompatibleBuildInstalled();
+   }
+
    private static Component compatibilityModName( String modId) {
       return switch (modId) {
          case "distanthorizons" -> (MutableComponent)Objects.requireNonNull(Component.translatable("tellus.compatibility.mod.distant_horizons"), "modName");
@@ -1312,10 +1411,22 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
 
    private static Component experimentalHeightRuntimeDisabledTooltip() {
       return Objects.requireNonNull(
-         Component.translatable("tellus.experimental_increase_height.runtime_disabled.tooltip", ExperimentalHeightSupport.launchPropertyInstruction())
-            .withStyle(ChatFormatting.GRAY),
+         experimentalHeightUnavailable("tellus.experimental_increase_height.runtime_disabled.tooltip").withStyle(ChatFormatting.GRAY),
          "experimentalHeightRuntimeDisabledTooltip"
       );
+   }
+
+   private static Component experimentalHeightValidationFailedTooltip() {
+      return Objects.requireNonNull(
+         experimentalHeightUnavailable("tellus.experimental_increase_height.validation_failed").withStyle(ChatFormatting.RED),
+         "experimentalHeightValidationFailedTooltip"
+      );
+   }
+
+   private static MutableComponent experimentalHeightUnavailable(String launchPropertyKey) {
+      return ExperimentalHeightSupport.isBlockedBySable()
+         ? Component.translatable("tellus.experimental_increase_height.sable_disabled")
+         : Component.translatable(launchPropertyKey, ExperimentalHeightSupport.launchPropertyInstruction());
    }
 
    private static String describeDimensionType(DimensionType type) {
@@ -1337,7 +1448,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       for (RegistryLayer layer : RegistryLayer.values()) {
          Frozen layerAccess = updatedRegistries.getLayer(layer);
          if (!layerAccess.lookup(Registries.DIMENSION_TYPE).isEmpty()) {
-            Registry<DimensionType> source = layerAccess.registryOrThrow(Registries.DIMENSION_TYPE);
+            Registry<DimensionType> source = ClientMinecraftCompat.registryOrThrow(layerAccess, Registries.DIMENSION_TYPE);
             Lifecycle lifecycle = Objects.requireNonNull(
                source instanceof MappedRegistry<DimensionType> mapped ? mapped.registryLifecycle() : Lifecycle.experimental(), "dimensionTypeLifecycle"
             );
@@ -1421,6 +1532,8 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
    }
 
    private void showCategory(EarthCustomizeScreen.CategoryDefinition category) {
+      // Changing a setting re-shows its category; keep the scroll position so the edited row stays in view.
+      boolean refreshingCategory = category.getId().equals(this.currentCategoryId);
       this.currentCategoryId = category.getId();
       this.list.clear();
       String parentCategoryId = category.parentCategoryId();
@@ -1471,7 +1584,9 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
          this.list.addWidget(setting.createWidget(onChange));
       }
 
-      this.list.setScrollAmount(0.0);
+      if (!refreshingCategory) {
+         this.list.setScrollAmount(0.0);
+      }
    }
 
    
@@ -1617,28 +1732,45 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
          }
       } else if ("distant_horizons".equals(category.getId())) {
          EarthCustomizeScreen.ModeDefinition renderMode = null;
-         EarthCustomizeScreen.ToggleDefinition waterResolver = null;
+         EarthCustomizeScreen.SliderDefinition cityLightsDistance = null;
 
          for (EarthCustomizeScreen.SettingDefinition setting : category.getSettings()) {
             if (setting instanceof EarthCustomizeScreen.ModeDefinition mode && mode.key.equals("distant_horizons_render_mode")) {
                renderMode = mode;
             }
 
-            if (setting instanceof EarthCustomizeScreen.ToggleDefinition toggle && toggle.key.equals("distant_horizons_water_resolver")) {
-               waterResolver = toggle;
+            if (setting instanceof EarthCustomizeScreen.SliderDefinition slider && slider.key.equals("distant_horizons_city_lights_distance")) {
+               cityLightsDistance = slider;
             }
          }
 
-         if (renderMode != null && waterResolver != null) {
-            boolean blockedByVoxy = bothCompatibilityModsInstalled && voxyEnabled;
-            boolean ultraFast = renderMode.value == EarthGeneratorSettings.DistantHorizonsRenderMode.ULTRA_FAST;
+         boolean blockedByVoxy = bothCompatibilityModsInstalled && voxyEnabled;
+         if (renderMode != null) {
             renderMode.forceDisabled(blockedByVoxy);
-            waterResolver.forceDisabled(ultraFast || blockedByVoxy);
-            if (ultraFast) {
-               waterResolver.value = false;
+         }
+
+         if (cityLightsDistance != null) {
+            Component unusedReason = this.cityLightsDistanceUnusedReason(renderMode);
+            if (unusedReason != null) {
+               cityLightsDistance.forceDisabled(true, unusedReason);
+            } else {
+               cityLightsDistance.forceDisabled(blockedByVoxy);
             }
          }
       }
+   }
+
+   /** Why the LOD city lights distance would have no effect with the current settings, or null when it applies. */
+   private Component cityLightsDistanceUnusedReason(EarthCustomizeScreen.ModeDefinition renderMode) {
+      if (renderMode != null && renderMode.value == EarthGeneratorSettings.DistantHorizonsRenderMode.DETAILED) {
+         return Component.translatable("property.tellus.distant_horizons_city_lights_distance.full_chunks.tooltip").withStyle(ChatFormatting.GRAY);
+      }
+      boolean roads = this.findToggleValue("enable_roads", EarthGeneratorSettings.DEFAULT.enableRoads());
+      boolean buildings = this.findToggleValue("enable_buildings", EarthGeneratorSettings.DEFAULT.enableBuildings());
+      if (!this.roadsAndBuildingsSupportedForSelectedScale() || !roads && !buildings) {
+         return Component.translatable("property.tellus.distant_horizons_city_lights_distance.no_towns.tooltip").withStyle(ChatFormatting.GRAY);
+      }
+      return null;
    }
 
    private boolean roadsAndBuildingsSupportedForSelectedScale() {
@@ -1704,8 +1836,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
    }
 
    private static boolean isShiftDown() {
-      long window = Minecraft.getInstance().getWindow().getWindow();
-      return InputConstants.isKeyDown(window, 340) || InputConstants.isKeyDown(window, 344);
+      return ClientMinecraftCompat.isShiftDown();
    }
 
    private final class AutoAdjustDefinition implements EarthCustomizeScreen.SettingDefinition {
@@ -1775,7 +1906,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       }
    }
 
-   private static final class CacheActionWidget extends AbstractWidget {
+   private static final class CacheActionWidget extends AbstractTellusWidget {
       private final Button button;
 
       private CacheActionWidget( Component label,  Runnable action) {
@@ -1795,23 +1926,23 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
          this.button.render(graphics, mouseX, mouseY, delta);
       }
 
-      public void onClick(double mouseX, double mouseY) {
-         this.button.mouseClicked(mouseX, mouseY, 0);
+      protected void tellusOnClick(double mouseX, double mouseY) {
+         ClientMinecraftCompat.mouseClicked(this.button, mouseX, mouseY, 0);
       }
 
-      protected void onDrag(double mouseX, double mouseY, double deltaX, double deltaY) {
-         this.button.mouseDragged(mouseX, mouseY, 0, deltaX, deltaY);
+      protected void tellusOnDrag(double mouseX, double mouseY, double deltaX, double deltaY) {
+         ClientMinecraftCompat.mouseDragged(this.button, mouseX, mouseY, 0, deltaX, deltaY);
       }
 
-      public void onRelease(double mouseX, double mouseY) {
-         this.button.mouseReleased(mouseX, mouseY, 0);
+      protected void tellusOnRelease(double mouseX, double mouseY) {
+         ClientMinecraftCompat.mouseReleased(this.button, mouseX, mouseY, 0);
       }
 
       protected void updateWidgetNarration( NarrationElementOutput narration) {
       }
    }
 
-   private static final class CacheProgressWidget extends AbstractWidget {
+   private static final class CacheProgressWidget extends AbstractTellusWidget {
       private static final Component CANCEL_LABEL = Objects.requireNonNull(Component.translatable("gui.cancel"), "cancelLabel");
       private static final int TEXT_COLOR = 0xFFFFFFFF;
       private static final int READY_TEXT_COLOR = 0xFF80C080;
@@ -1883,23 +2014,23 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       }
 
       @Override
-      public void onClick(double mouseX, double mouseY) {
+      protected void tellusOnClick(double mouseX, double mouseY) {
          if (TellusCacheManager.snapshot().status() == TellusCacheManager.Status.DELETING) {
-            this.cancelButton.mouseClicked(mouseX, mouseY, 0);
+            ClientMinecraftCompat.mouseClicked(this.cancelButton, mouseX, mouseY, 0);
          }
       }
 
       @Override
-      protected void onDrag(double mouseX, double mouseY, double deltaX, double deltaY) {
+      protected void tellusOnDrag(double mouseX, double mouseY, double deltaX, double deltaY) {
          if (TellusCacheManager.snapshot().status() == TellusCacheManager.Status.DELETING) {
-            this.cancelButton.mouseDragged(mouseX, mouseY, 0, deltaX, deltaY);
+            ClientMinecraftCompat.mouseDragged(this.cancelButton, mouseX, mouseY, 0, deltaX, deltaY);
          }
       }
 
       @Override
-      public void onRelease(double mouseX, double mouseY) {
+      protected void tellusOnRelease(double mouseX, double mouseY) {
          if (TellusCacheManager.snapshot().status() == TellusCacheManager.Status.DELETING) {
-            this.cancelButton.mouseReleased(mouseX, mouseY, 0);
+            ClientMinecraftCompat.mouseReleased(this.cancelButton, mouseX, mouseY, 0);
          }
       }
 
@@ -1939,7 +2070,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       }
    }
 
-   private static final class CacheEntryWidget extends AbstractWidget {
+   private static final class CacheEntryWidget extends AbstractTellusWidget {
       
       private static final Component DELETE_LABEL = Objects.requireNonNull(Component.translatable("tellus.cache.delete"), "deleteLabel");
       private final TellusCacheManager.Metric metric;
@@ -1979,21 +2110,21 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
          }
       }
 
-      public void onClick(double mouseX, double mouseY) {
+      protected void tellusOnClick(double mouseX, double mouseY) {
          if (this.allowDelete) {
-            this.deleteButton.mouseClicked(mouseX, mouseY, 0);
+            ClientMinecraftCompat.mouseClicked(this.deleteButton, mouseX, mouseY, 0);
          }
       }
 
-      protected void onDrag(double mouseX, double mouseY, double deltaX, double deltaY) {
+      protected void tellusOnDrag(double mouseX, double mouseY, double deltaX, double deltaY) {
          if (this.allowDelete) {
-            this.deleteButton.mouseDragged(mouseX, mouseY, 0, deltaX, deltaY);
+            ClientMinecraftCompat.mouseDragged(this.deleteButton, mouseX, mouseY, 0, deltaX, deltaY);
          }
       }
 
-      public void onRelease(double mouseX, double mouseY) {
+      protected void tellusOnRelease(double mouseX, double mouseY) {
          if (this.allowDelete) {
-            this.deleteButton.mouseReleased(mouseX, mouseY, 0);
+            ClientMinecraftCompat.mouseReleased(this.deleteButton, mouseX, mouseY, 0);
          }
       }
 
@@ -2086,7 +2217,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       }
    }
 
-   private static final class DualButtonWidget extends AbstractWidget {
+   private static final class DualButtonWidget extends AbstractTellusWidget {
       private final Button leftButton;
       private final Button rightButton;
 
@@ -2128,20 +2259,20 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
          this.rightButton.render(graphics, mouseX, mouseY, delta);
       }
 
-      public boolean mouseClicked(double mouseX, double mouseY, int button) {
-         boolean leftClicked = this.leftButton.mouseClicked(mouseX, mouseY, button);
-         boolean rightClicked = this.rightButton.mouseClicked(mouseX, mouseY, button);
+      protected boolean tellusMouseClicked(double mouseX, double mouseY, int button) {
+         boolean leftClicked = ClientMinecraftCompat.mouseClicked(this.leftButton, mouseX, mouseY, button);
+         boolean rightClicked = ClientMinecraftCompat.mouseClicked(this.rightButton, mouseX, mouseY, button);
          return leftClicked || rightClicked;
       }
 
-      protected void onDrag(double mouseX, double mouseY, double deltaX, double deltaY) {
-         this.leftButton.mouseDragged(mouseX, mouseY, 0, deltaX, deltaY);
-         this.rightButton.mouseDragged(mouseX, mouseY, 0, deltaX, deltaY);
+      protected void tellusOnDrag(double mouseX, double mouseY, double deltaX, double deltaY) {
+         ClientMinecraftCompat.mouseDragged(this.leftButton, mouseX, mouseY, 0, deltaX, deltaY);
+         ClientMinecraftCompat.mouseDragged(this.rightButton, mouseX, mouseY, 0, deltaX, deltaY);
       }
 
-      public void onRelease(double mouseX, double mouseY) {
-         this.leftButton.mouseReleased(mouseX, mouseY, 0);
-         this.rightButton.mouseReleased(mouseX, mouseY, 0);
+      protected void tellusOnRelease(double mouseX, double mouseY) {
+         ClientMinecraftCompat.mouseReleased(this.leftButton, mouseX, mouseY, 0);
+         ClientMinecraftCompat.mouseReleased(this.rightButton, mouseX, mouseY, 0);
       }
 
       protected void updateWidgetNarration( NarrationElementOutput narration) {
@@ -2262,7 +2393,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
             ? this.unavailableTooltip
             : (this.locked ? EarthCustomizeScreen.workInProgressTooltip(this.key) : EarthCustomizeScreen.settingTooltip(this.key));
          Builder<EarthGeneratorSettings.DistantHorizonsRenderMode> builder = configureCycleButton(
-            CycleButton.builder(EarthCustomizeScreen::formatRenderMode), this.value, MODES
+            EarthCustomizeScreen::formatRenderMode, this.value, MODES
          ).withTooltip(value -> Tooltip.create(tooltip));
          CycleButton<EarthGeneratorSettings.DistantHorizonsRenderMode> button = builder.create(0, 0, 0, 20, name, (btn, value) -> {
             this.value = value;
@@ -2293,6 +2424,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       private boolean unavailable;
       
       private Component unavailableTooltip;
+      private Component forceDisabledTooltip;
 
       private SliderDefinition(String key, double defaultValue, double min, double max, double step) {
          this.key = key;
@@ -2319,6 +2451,16 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
 
       private EarthCustomizeScreen.SliderDefinition forceDisabled(boolean forceDisabled) {
          this.forceDisabled = forceDisabled;
+         if (!forceDisabled) {
+            this.forceDisabledTooltip = null;
+         }
+
+         return this;
+      }
+
+      private EarthCustomizeScreen.SliderDefinition forceDisabled(boolean forceDisabled, Component tooltip) {
+         this.forceDisabled = forceDisabled;
+         this.forceDisabledTooltip = forceDisabled ? Objects.requireNonNull(tooltip, "forceDisabledTooltip") : null;
          return this;
       }
 
@@ -2333,7 +2475,9 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
          EarthCustomizeScreen.EarthSlider slider = new EarthCustomizeScreen.EarthSlider(0, 0, 0, 20, this, onChange);
          Component tooltip = this.unavailableTooltip != null
             ? this.unavailableTooltip
-            : (this.locked ? EarthCustomizeScreen.workInProgressTooltip(this.key) : EarthCustomizeScreen.settingTooltip(this.key));
+            : (this.forceDisabled && this.forceDisabledTooltip != null
+               ? this.forceDisabledTooltip
+               : (this.locked ? EarthCustomizeScreen.workInProgressTooltip(this.key) : EarthCustomizeScreen.settingTooltip(this.key)));
          slider.setTooltip(Tooltip.create(tooltip));
          slider.active = !this.locked && !this.forceDisabled && !this.unavailable;
          return slider;
@@ -2381,7 +2525,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       }
    }
 
-   private static final class SpacerWidget extends AbstractWidget {
+   private static final class SpacerWidget extends AbstractTellusWidget {
       private SpacerWidget() {
          super(0, 0, 0, 20, Component.empty());
       }
@@ -2412,7 +2556,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
       }
    }
 
-   private static final class TextLineWidget extends AbstractWidget {
+   private static final class TextLineWidget extends AbstractTellusWidget {
       
       private final Component text;
       private final int color;
@@ -2438,23 +2582,23 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
             float scaledHeight = 9.0F * scale;
             float textX = this.getX() + (this.width - scaledWidth) * 0.5F;
             float textY = this.getY() + (this.height - scaledHeight) * 0.5F;
-            graphics.pose().pushPose();
-            graphics.pose().translate(textX, textY, 0.0F);
-            graphics.pose().scale(scale, scale, 1.0F);
+            ClientMinecraftCompat.pushPose(graphics);
+            ClientMinecraftCompat.translatePose(graphics, textX, textY);
+            ClientMinecraftCompat.scalePose(graphics, scale, scale);
             graphics.drawString(font, this.text, 0, 0, drawColor, true);
             if (this.url != null) {
                int underlineY = 9;
                graphics.fill(0, underlineY, textWidth, underlineY + 1, drawColor);
             }
 
-            graphics.pose().popPose();
+            ClientMinecraftCompat.popPose(graphics);
          }
       }
 
-      public boolean mouseClicked(double mouseX, double mouseY, int button) {
+      protected boolean tellusMouseClicked(double mouseX, double mouseY, int button) {
          String url = this.url;
          if (url != null && button == 0 && this.isMouseOver(mouseX, mouseY)) {
-            Util.getPlatform().openUri(url);
+            ClientMinecraftCompat.openUri(url);
             return true;
          } else {
             return false;
@@ -2525,8 +2669,7 @@ public class EarthCustomizeScreen extends EarthCustomizeScreenVersionCompat {
                      ? this.tooltipOverride
                      : (this.locked ? EarthCustomizeScreen.workInProgressTooltip(this.key) : EarthCustomizeScreen.settingTooltip(this.key))
                ));
-         Builder<Boolean> builder = CycleButton.booleanBuilder(EarthCustomizeScreen.YES, EarthCustomizeScreen.NO)
-            .withInitialValue(this.value)
+         Builder<Boolean> builder = configureBooleanCycleButton(EarthCustomizeScreen.YES, EarthCustomizeScreen.NO, this.value)
             .withTooltip(value -> Tooltip.create(tooltip));
          CycleButton<Boolean> button = builder.create(0, 0, 0, 20, name, (btn, value) -> {
             this.value = value;

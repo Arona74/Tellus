@@ -10,6 +10,7 @@ import com.yucareux.tellus.network.ManagedTerrainStatusPayload;
 import com.yucareux.tellus.network.ManagedTerrainViewPayload;
 import com.yucareux.tellus.network.TellusNeoForgeClientNetworking;
 import com.yucareux.tellus.network.TellusWeatherPayload;
+import com.yucareux.tellus.platform.NeoForgeClientVersionCompat;
 import com.yucareux.tellus.platform.TellusClientPlatform;
 import com.yucareux.tellus.world.realtime.SnowGrid;
 import com.yucareux.tellus.world.realtime.TemperatureGrid;
@@ -29,7 +30,10 @@ import org.lwjgl.glfw.GLFW;
 
 public final class TellusClient {
    private static final KeyMapping OPEN_MAP_KEY = new KeyMapping(
-      "key.tellus.open_map", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_M, "key.category.tellus.controls"
+      "key.tellus.open_map",
+      InputConstants.Type.KEYSYM,
+      GLFW.GLFW_KEY_M,
+      NeoForgeClientVersionCompat.keyCategory()
    );
    private static int managedTerrainViewUpdateTicks;
 
@@ -41,6 +45,7 @@ public final class TellusClient {
          () -> true,
          (latitude, longitude) -> TellusNeoForgeClientNetworking.sendToServer(new GeoTpTeleportPayload(latitude, longitude))
       );
+      TellusNeoForgeClientNetworking.registerClientPayloadHandlers(modEventBus);
       modEventBus.addListener(TellusClient::registerGuiLayers);
       modEventBus.addListener(TellusClient::registerKeyMappings);
       NeoForge.EVENT_BUS.addListener(TellusClient::onClientDisconnect);
@@ -48,6 +53,7 @@ public final class TellusClient {
    }
 
    private static void registerKeyMappings(RegisterKeyMappingsEvent event) {
+      NeoForgeClientVersionCompat.registerKeyCategory(event);
       event.register(OPEN_MAP_KEY);
    }
 

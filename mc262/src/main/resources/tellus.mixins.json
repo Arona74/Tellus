@@ -4,6 +4,7 @@
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
 		"BiomeFreezeMixin",
+		"IceBlockMeltMixin",
 		"BiomePrecipitationMixin",
 		"BlockEntityLoadStaticMixin",
 		"BlockPosHighYMixin",
@@ -16,6 +17,7 @@
 		"OceanMonumentBuildingMixin",
 		"SerializableChunkDataHighYMixin",
 		"OceanMonumentStructureMixin",
+		"ServerMainNewWorldHeightMixin",
 		"WaterSourceConversionMixin"
 	],
 	"injectors": {

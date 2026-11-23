@@ -1,12 +1,5 @@
 package com.yucareux.tellus.client.preview;
 
-import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.CompareOp;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.yucareux.tellus.Tellus;
 import com.yucareux.tellus.mixin.client.GuiGraphicsAccessor;
@@ -38,8 +31,11 @@ import com.yucareux.tellus.worldgen.building.BuildingBlueprint;
 import com.yucareux.tellus.worldgen.building.BuildingProfile;
 import com.yucareux.tellus.worldgen.building.TellusBuildingBlueprints;
 import com.yucareux.tellus.worldgen.building.TellusBuildingProfiles;
+import com.yucareux.tellus.worldgen.landmark.LandmarkPlacement;
+import com.yucareux.tellus.worldgen.landmark.TellusLandmarks;
 import com.yucareux.tellus.worldgen.building.TellusBuildingStyles;
 import com.yucareux.tellus.worldgen.BadlandsTerrainPolicy;
+import com.yucareux.tellus.worldgen.AntarcticSnowPolicy;
 import com.yucareux.tellus.worldgen.EarthGeneratorSettings;
 import com.yucareux.tellus.worldgen.MountainSurfaceRules;
 import com.yucareux.tellus.worldgen.EarthProjection;
@@ -74,8 +70,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.TextureSetup;
-import net.minecraft.client.renderer.BindGroupLayouts;
-import net.minecraft.client.renderer.state.gui.GuiElementRenderState;
 import net.minecraft.client.renderer.state.gui.GuiRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -143,6 +137,7 @@ public final class TerrainPreview implements AutoCloseable {
    private static final int PREVIEW_ROAD_WOOD_COLOR = 0x8B6A43;
    private static final int PREVIEW_ROAD_CONCRETE_COLOR = 0xA4A7A2;
    private static final int BUILDING_PREVIEW_COLOR = 10000536;
+   private static final int LANDMARK_PREVIEW_COLOR = 0x8E6B50;
    private static final int PREVIEW_SKY_TOP_COLOR = 0xFF83B4CC;
    private static final int PREVIEW_SKY_HORIZON_COLOR = 0xFFC5D3C2;
    private static final int PREVIEW_SKY_GROUND_COLOR = 0xFF66745F;
@@ -170,29 +165,6 @@ public final class TerrainPreview implements AutoCloseable {
    private static final float PREVIEW_VERTICAL_CELL_RATIO = 0.7F;
    private static final int PREVIEW_SHADOW_STEPS = 28;
    private static final Vector3f LIGHT_DIR = new Vector3f(-0.48F, 0.78F, -0.4F).normalize();
-   private static final RenderPipeline PREVIEW_SUN_PIPELINE = RenderPipeline.builder()
-      .withLocation("pipeline/tellus_preview_sun")
-      .withBindGroupLayout(BindGroupLayouts.GLOBALS)
-      .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
-      .withVertexShader("core/position_tex_color")
-      .withFragmentShader("core/position_tex_color")
-      .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
-      .withColorTargetState(new ColorTargetState(BlendFunction.OVERLAY))
-      .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
-      .withPrimitiveTopology(PrimitiveTopology.QUADS)
-      .build();
-   private static final RenderPipeline PREVIEW_PIPELINE = RenderPipeline.builder()
-      .withLocation("pipeline/tellus_terrain_preview")
-      .withBindGroupLayout(BindGroupLayouts.GLOBALS)
-      .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
-      .withVertexShader("core/gui")
-      .withFragmentShader("core/gui")
-      .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
-      .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
-      .withPrimitiveTopology(PrimitiveTopology.QUADS)
-      .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, true))
-      .withCull(false)
-      .build();
    private final TellusElevationSource elevationSource = new TellusElevationSource();
    private final TellusLandCoverSource landCoverSource = new TellusLandCoverSource();
    private final TellusCanopyHeightSource canopyHeightSource = TellusWorldgenSources.canopyHeight();
@@ -201,6 +173,8 @@ public final class TerrainPreview implements AutoCloseable {
    private final TellusResolveSource resolveSource = TellusResolveSource.shared();
    private final TellusOsmRoadSource osmRoadSource = TellusWorldgenSources.osmRoads();
    private final TellusOsmBuildingSource osmBuildingSource = TellusWorldgenSources.osmBuildings();
+   private volatile TellusLandmarks previewLandmarks;
+   private volatile double previewLandmarksScale;
    private final TellusOsmWaterSource osmWaterSource = TellusWorldgenSources.osmWater();
    private final ExecutorService executor;
    private final AtomicInteger requestId = new AtomicInteger();
@@ -334,7 +308,7 @@ public final class TerrainPreview implements AutoCloseable {
       }
 
       graphics.enableScissor(x, y, x + width, y + height);
-      graphics.blit(PREVIEW_SUN_PIPELINE, PREVIEW_SUN_TEXTURE, sunX, sunY, 0.0F, 0.0F, sunSize, sunSize, 32, 32);
+      PreviewRenderCompat.blitSun(graphics, PREVIEW_SUN_TEXTURE, sunX, sunY, sunSize);
       graphics.disableScissor();
    }
 
@@ -373,6 +347,7 @@ public final class TerrainPreview implements AutoCloseable {
       boolean roadsPreviewEnabled = settings.enableRoads() && settings.worldScale() > 0.0 && settings.worldScale() <= 15.0;
       boolean buildingsPreviewEnabled = settings.enableBuildings() && settings.worldScale() > 0.0 && settings.worldScale() <= 15.0 && this.osmBuildingSource.available();
       double worldScale = settings.worldScale();
+      AntarcticSnowPolicy antarcticSnowPolicy = AntarcticSnowPolicy.forWorldScale(worldScale);
       boolean useVisualCover = worldScale > 0.0 && worldScale < 10.0;
       long terrainDownloadUnits = gridArea;
       long coverDownloadUnits = (long)coverSize * coverSize * (useVisualCover ? 2L : 1L);
@@ -622,7 +597,7 @@ public final class TerrainPreview implements AutoCloseable {
                int coverZ = Math.min(coverSize - 1, sampleZ / coverStride);
                int visualCoverClass = visualCoverClasses[coverX + coverZ * coverSize];
                if (BadlandsTerrainPolicy.isDryCanyonCover(visualCoverClass)) {
-                  String coherentKoppen = this.koppenSource.sampleSmoothedCode(blockX, blockZ, worldScale);
+                  String coherentKoppen = this.koppenSource.sampleCoherentCode(blockX, blockZ, worldScale);
                   if (BadlandsTerrainPolicy.shouldUseCoherentAridClimate(visualCoverClass, coherentKoppen)) {
                      koppen = coherentKoppen;
                   }
@@ -795,7 +770,7 @@ public final class TerrainPreview implements AutoCloseable {
                oceanFallbackMask[idx],
                !waterPreviewEnabled,
                settings.enableWater(),
-               false,
+               antarcticSnowPolicy.shouldUseSnowFallback(rawCoverClass, blockZ),
                desert,
                badlands,
                (int)Math.round(blockX),
@@ -1004,6 +979,7 @@ public final class TerrainPreview implements AutoCloseable {
 
       int size = snapshot.size();
       double worldScale = snapshot.worldScale();
+      AntarcticSnowPolicy antarcticSnowPolicy = AntarcticSnowPolicy.forWorldScale(worldScale);
       boolean roadsPreviewEnabled = settings.enableRoads() && worldScale > 0.0 && worldScale <= 15.0;
       boolean buildingsPreviewEnabled = settings.enableBuildings() && worldScale > 0.0 && worldScale <= 15.0 && this.osmBuildingSource.available();
       boolean waterPreviewEnabled = settings.enableWater() && worldScale > 0.0 && this.osmWaterSource.available();
@@ -1087,7 +1063,7 @@ public final class TerrainPreview implements AutoCloseable {
                snapshot.oceanFallbackMask()[idx],
                !waterPreviewEnabled,
                settings.enableWater(),
-               false,
+               antarcticSnowPolicy.shouldUseSnowFallback(rawCoverClass, blockZ),
                snapshot.desertMask()[idx],
                snapshot.badlandsMask()[idx],
                (int)Math.round(blockX),
@@ -1895,6 +1871,7 @@ public final class TerrainPreview implements AutoCloseable {
          case BIRCH -> 0x67A64D;
          case SUBARCTIC_BIRCH -> 0x788E57;
          case CHERRY -> 0xE6A0C2;
+         case POPLAR -> 0xB34E20;
          case CONIFER -> 0x326C3E;
          case TALL_CONIFER -> 0x285B35;
          case PINE -> 0x3D7341;
@@ -1913,6 +1890,7 @@ public final class TerrainPreview implements AutoCloseable {
       return switch (profile) {
          case BIRCH, SUBARCTIC_BIRCH -> 0xD1C8AA;
          case CHERRY -> 0x81555B;
+         case POPLAR -> 0x4F3C2A;
          case PALE_BROADLEAF -> 0xA69D87;
          case DARK_BROADLEAF -> 0x4C3428;
          case CONIFER, TALL_CONIFER, PINE -> 0x674329;
@@ -2208,7 +2186,51 @@ public final class TerrainPreview implements AutoCloseable {
          overlayProgress.finish();
       }
 
+      this.overlayLandmarkPreview(terrainColors, detailHeights, detailColors, blockHeights, settings, minWorldX, minWorldZ, step, heightCenter);
       return !this.shouldAbortRequest(id);
+   }
+
+   /** Draws the landmarks: per preview cell the top of the landmark's tallest column there, standing on the cell's ground. */
+   private void overlayLandmarkPreview(
+      int[] terrainColors,
+      float[] detailHeights,
+      int[] detailColors,
+      double[] blockHeights,
+      EarthGeneratorSettings settings,
+      double minWorldX,
+      double minWorldZ,
+      double step,
+      float heightCenter
+   ) {
+      int size = PREVIEW_GRID_SIZE;
+      double worldScale = settings.worldScale();
+      TellusLandmarks landmarks = this.previewLandmarks;
+      if (landmarks == null || this.previewLandmarksScale != worldScale) {
+         landmarks = TellusLandmarks.create(worldScale, settings.enableBuildings(), (x, z) -> 0);
+         this.previewLandmarks = landmarks;
+         this.previewLandmarksScale = worldScale;
+      }
+      int cell = Math.max(1, (int)Math.round(step));
+      TellusLandmarks.ElevationToY elevationToY = TellusLandmarks.elevationToY(settings);
+      for (LandmarkPlacement landmark : landmarks.intersecting(
+         Mth.floor(minWorldX), Mth.floor(minWorldZ), Mth.ceil(minWorldX + step * size), Mth.ceil(minWorldZ + step * size)
+      )) {
+         for (int gridZ = 0; gridZ < size; gridZ++) {
+            int worldZ = (int)Math.round(minWorldZ + gridZ * step);
+            for (int gridX = 0; gridX < size; gridX++) {
+               int worldX = (int)Math.round(minWorldX + gridX * step);
+               int top = landmark.highestLayer(worldX - cell / 2, worldZ - cell / 2, cell);
+               if (top >= 0) {
+                  int index = gridZ * size + gridX;
+                  int base = landmark.standsOnTerrain() ? (int)Math.round(blockHeights[index]) + 1 : landmark.baseY(elevationToY);
+                  float height = previewHeightForSurfaceY(base + top, settings, heightCenter);
+                  detailHeights[index] = Math.max(detailHeights[index], height);
+                  detailColors[index] = LANDMARK_PREVIEW_COLOR;
+                  terrainColors[index] = LANDMARK_PREVIEW_COLOR;
+               }
+            }
+         }
+      }
    }
 
    private boolean overlayWaterPreviewColors(
@@ -2278,7 +2300,7 @@ public final class TerrainPreview implements AutoCloseable {
             return false;
          }
 
-         if (!WaterfallNoCarveZone.isMarker(feature) && !this.rasterizeWaterPreviewFeature(
+         if (!feature.waterfall() && !this.rasterizeWaterPreviewFeature(
             requestId,
             feature,
             sampleWorldX,
@@ -2341,7 +2363,9 @@ public final class TerrainPreview implements AutoCloseable {
          areaWaterMask,
          flowingWaterMask,
          waterfallNoCarveMask,
-         oceanWaterSurface
+         oceanWaterSurface,
+         sampleWorldX,
+         sampleWorldZ
       );
       progress.onProgress(0.82F);
 
@@ -2588,7 +2612,7 @@ public final class TerrainPreview implements AutoCloseable {
             return false;
          }
 
-         boolean groundContact = feature.kind() != OsmBuildingKind.PART || this.previewBuildingMinHeightBlocks(feature.minHeightMeters(), worldScale) <= 0;
+         boolean groundContact = feature.kind() != OsmBuildingKind.PART || TellusBuildingProfiles.minHeightBlocks(feature, worldScale) <= 0;
          TerrainPreview.PreviewRasterizedBuildingFeature rasterized = this.rasterizePreviewBuildingFeature(
             feature, resolvePreviewBuildingGroupId(feature), groundContact, minWorldX, minWorldZ, step, size, worldScale
          );
@@ -2989,6 +3013,8 @@ public final class TerrainPreview implements AutoCloseable {
       minGridZ = Mth.clamp(minGridZ, 0, size - 1);
       maxGridZ = Mth.clamp(maxGridZ, 0, size - 1);
 
+      // One pass over the polygon's edges per row, instead of one per cell.
+      boolean[] inside = new boolean[size];
       for (int gz = minGridZ; gz <= maxGridZ; gz++) {
          if (this.shouldAbortRequest(requestId)) {
             return false;
@@ -2996,9 +3022,10 @@ public final class TerrainPreview implements AutoCloseable {
 
          double lat = sampleLat[gz];
          int row = gz * size;
+         feature.containsLonLatRow(lat, sampleLon, minGridX, maxGridX, inside);
 
          for (int gx = minGridX; gx <= maxGridX; gx++) {
-            if (feature.containsLonLat(sampleLon[gx], lat)) {
+            if (inside[gx]) {
                markWaterPreviewCell(
                   waterKind,
                   lineWaterMask,
@@ -3181,8 +3208,8 @@ public final class TerrainPreview implements AutoCloseable {
    }
 
    private BuildingBlueprint previewBlueprintForFeature(OsmBuildingFeature feature, String groupId, int baseY, BuildingProfile profile, double worldScale) {
-      int floorY = baseY + this.previewBuildingMinHeightBlocks(feature.minHeightMeters(), worldScale) + 1;
-      int roofBaseY = Math.max(baseY + this.previewBuildingHeightBlocks(feature.heightMeters(), worldScale), floorY + profile.floorCount() * profile.storeyHeightBlocks());
+      int floorY = baseY + TellusBuildingProfiles.minHeightBlocks(feature, worldScale) + 1;
+      int roofBaseY = Math.max(baseY + TellusBuildingProfiles.heightBlocks(feature, worldScale), floorY + profile.floorCount() * profile.storeyHeightBlocks());
       int topY = roofBaseY + Math.max(profile.parapetHeight(), profile.roofRise());
       return TellusBuildingBlueprints.create(groupId, feature, profile, 0L, baseY, floorY, roofBaseY, topY, List.of(), worldScale);
    }
@@ -3254,14 +3281,6 @@ public final class TerrainPreview implements AutoCloseable {
          distance[index] = nextDistance;
          queue.add(index);
       }
-   }
-
-   private int previewBuildingHeightBlocks(double meters, double worldScale) {
-      return Math.max(3, (int)Math.round(meters / worldScale));
-   }
-
-   private int previewBuildingMinHeightBlocks(double meters, double worldScale) {
-      return Math.max(0, (int)Math.round(meters / worldScale));
    }
 
    private static float previewHeightForSurfaceY(int surfaceY, EarthGeneratorSettings settings, float center) {
@@ -3405,7 +3424,7 @@ public final class TerrainPreview implements AutoCloseable {
       boolean oceanWater,
       boolean fallbackInlandWaterEnabled,
       boolean flattenWaterColor,
-      boolean remaSnowTerrain,
+      boolean antarcticSnowTerrain,
       boolean desert,
       boolean badlands,
       int worldX,
@@ -3416,7 +3435,7 @@ public final class TerrainPreview implements AutoCloseable {
       if (waterDepth >= 0.0) {
          return flattenWaterColor ? PREVIEW_FLAT_WATER_COLOR : waterColorForDepth(waterDepth);
       } else {
-         boolean snowSource = MountainSurfaceRules.hasSnowSource(surfaceCoverClass, remaSnowTerrain);
+         boolean snowSource = MountainSurfaceRules.hasSnowSource(surfaceCoverClass, antarcticSnowTerrain);
          if (snowSource && SnowSlopePolicy.shouldCover(worldX, worldZ, demSlopeDegrees)) {
             return 16119285;
          }
@@ -3442,7 +3461,7 @@ public final class TerrainPreview implements AutoCloseable {
             heightAboveSea,
             slopeDiff,
             convexity,
-            remaSnowTerrain,
+            antarcticSnowTerrain,
             vegetationTransitionWeight,
             worldX,
             worldZ
@@ -5380,7 +5399,7 @@ public final class TerrainPreview implements AutoCloseable {
                   0.55F, 1.0F, upperLeaves
                );
             }
-            case CHERRY -> {
+            case CHERRY, POPLAR -> {
                addPreviewCrownBox(
                   builder, tree, centerX, centerZ, base, height, canopyHalfWidth * 1.08F, 0.0F, 0.0F,
                   Math.max(crownBase, 0.44F), 0.74F, shadedLeaves
@@ -5707,7 +5726,7 @@ public final class TerrainPreview implements AutoCloseable {
          );
       }
    }
-   private static final class TerrainPreviewRenderState implements GuiElementRenderState {
+   private static final class TerrainPreviewRenderState extends PreviewRenderCompat.TerrainState {
       private final TerrainPreview.PreviewMesh mesh;
       private final TerrainPreviewWidget.RenderMode renderMode;
       private final boolean cloudsVisible;
@@ -5737,10 +5756,6 @@ public final class TerrainPreview implements AutoCloseable {
          this.rawBounds = Objects.requireNonNull(rawBounds, "rawBounds");
          this.bounds = Objects.requireNonNull(bounds, "bounds");
          this.scissor = this.bounds;
-      }
-
-      public RenderPipeline pipeline() {
-         return PREVIEW_PIPELINE;
       }
 
       public TextureSetup textureSetup() {
