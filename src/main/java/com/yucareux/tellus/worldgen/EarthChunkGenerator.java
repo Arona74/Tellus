@@ -5471,6 +5471,34 @@ public final class EarthChunkGenerator extends TellusChunkGeneratorBridge {
       }
    }
 
+   /**
+    * The surface height of a column before it is rounded to whole blocks: the same elevation
+    * sample and height transform as {@link #sampleSurfaceHeightMemoryOnly}, plus the height offset.
+    * Its ceiling (land) or floor (sea floor) is the column's top block Y whenever that came from
+    * this sample (not from a preload package or a later surface repair). Never blocks: NaN when the
+    * elevation tile is not in memory. Used by {@code TellusLodSurfaceDecorator}.
+    */
+   public double sampleLodContinuousSurface(int blockX, int blockZ, double previewResolutionMeters) {
+      boolean oceanZoom = this.useOceanZoomMemoryOnly(blockX, blockZ, previewResolutionMeters);
+      double elevation = ELEVATION_SOURCE.samplePreviewElevationMetersMemoryOnly(
+         blockX, blockZ, this.settings.worldScale(), oceanZoom, this.settings.demSelection(), previewResolutionMeters
+      );
+      if (Double.isNaN(elevation)) {
+         return Double.NaN;
+      }
+
+      double scaled = TerrainHeightTransform.scaledElevationBlocks(
+         elevation,
+         blockZ,
+         this.settings.effectiveVerticalWorldScale(),
+         this.settings.effectiveTerrestrialHeightScale(),
+         this.settings.effectiveOceanicHeightScale(),
+         this.settings.experimentalIncreaseHeight(),
+         this.settings.automaticHeightScaling()
+      );
+      return Double.isNaN(scaled) ? Double.NaN : scaled + this.settings.effectiveHeightOffset();
+   }
+
    private int scaleElevationToHeight(double elevation, double blockZ) {
       int height = TerrainHeightTransform.blockOffset(
          elevation,

@@ -1243,6 +1243,7 @@ public final class TellusLodGenerator implements IDhApiWorldGenerator {
                      waterBlock,
                      wrappers,
                      biome,
+                     previewResolutionMeters,
                      columnDataPoints
                   );
                   columnDataPoints.clear();
@@ -1842,6 +1843,7 @@ public final class TellusLodGenerator implements IDhApiWorldGenerator {
                waterBlock,
                wrappers,
                biome,
+               previewResolutionMeters,
                columnDataPoints
             );
             for (int outputZ = outputStartZ; outputZ < outputEndZ; outputZ++) {
@@ -5686,6 +5688,110 @@ public final class TellusLodGenerator implements IDhApiWorldGenerator {
       return expectedBottom == absoluteTop ? null : "column ends at " + expectedBottom + " but expected " + absoluteTop;
    }
 
+   /**
+    * Offers the column's bare ground to the registered {@link TellusLodSurfaceDecorator}: when the
+    * top terrain block is at {@code surfaceY} with air right above it, the block the decorator
+    * returns takes the bottom block of that air. Runs before validation, so a column it breaks
+    * falls back like any other invalid column. A failing decorator is logged once and skipped.
+    */
+   private void decorateSurface(
+      List<DhApiTerrainDataPoint> column,
+      int worldX,
+      int worldZ,
+      int minY,
+      int absoluteTop,
+      int surfaceY,
+      double sampleResolutionMeters,
+      TellusLodGenerator.WrapperCache wrappers
+   ) {
+      TellusLodSurfaceDecorator decorator = TellusLodHooks.surfaceDecorator();
+      if (decorator == null) {
+         return;
+      }
+
+      int surfaceTop = toLayerTop(surfaceY, minY, absoluteTop);
+      if (surfaceTop <= 0 || surfaceTop >= absoluteTop) {
+         return;
+      }
+
+      for (int i = 0; i + 1 < column.size(); i++) {
+         DhApiTerrainDataPoint ground = column.get(i);
+         if (ground.topYBlockPos < surfaceTop) {
+            continue;
+         }
+         if (ground.topYBlockPos > surfaceTop) {
+            return;
+         }
+
+         DhApiTerrainDataPoint above = column.get(i + 1);
+         if (above.bottomYBlockPos != surfaceTop || !above.blockStateWrapper.isAir()) {
+            return;
+         }
+         if (!(ground.blockStateWrapper.getWrappedMcObject() instanceof BlockState groundState) || groundState.isAir()) {
+            return;
+         }
+         if (!(ground.biomeWrapper.getWrappedMcObject() instanceof Holder<?> biomeHolder)) {
+            return;
+         }
+
+         @SuppressWarnings("unchecked")
+         Holder<Biome> groundBiome = (Holder<Biome>)biomeHolder;
+         EarthChunkGenerator chunkGenerator = this.generator;
+         BlockState cover;
+         try {
+            cover = decorator.surfaceCover(
+               chunkGenerator,
+               worldX,
+               worldZ,
+               surfaceY,
+               groundState,
+               groundBiome,
+               sampleResolutionMeters,
+               () -> chunkGenerator.sampleLodContinuousSurface(worldX, worldZ, sampleResolutionMeters)
+            );
+         } catch (RuntimeException error) {
+            if (!surfaceDecoratorFailureLogged) {
+               surfaceDecoratorFailureLogged = true;
+               LOGGER.warn("Tellus LOD surface decorator {} failed; columns it fails on are left as they are", decorator, error);
+            }
+            return;
+         }
+         if (cover == null || cover.isAir()) {
+            return;
+         }
+
+         DhApiTerrainDataPoint coverPoint = DhApiTerrainDataPoint.create(
+            above.detailLevel,
+            above.blockLightLevel,
+            above.skyLightLevel,
+            surfaceTop,
+            surfaceTop + 1,
+            wrappers.getBlockState(cover),
+            ground.biomeWrapper
+         );
+         if (above.topYBlockPos > surfaceTop + 1) {
+            column.set(
+               i + 1,
+               DhApiTerrainDataPoint.create(
+                  above.detailLevel,
+                  above.blockLightLevel,
+                  above.skyLightLevel,
+                  surfaceTop + 1,
+                  above.topYBlockPos,
+                  above.blockStateWrapper,
+                  above.biomeWrapper
+               )
+            );
+            column.add(i + 1, coverPoint);
+         } else {
+            column.set(i + 1, coverPoint);
+         }
+         return;
+      }
+   }
+
+   private static volatile boolean surfaceDecoratorFailureLogged;
+
    private void commitValidatedColumn(
       IDhApiFullDataSource output,
       int localX,
@@ -5703,8 +5809,13 @@ public final class TellusLodGenerator implements IDhApiWorldGenerator {
       IDhApiBlockStateWrapper waterBlock,
       TellusLodGenerator.WrapperCache wrappers,
       IDhApiBiomeWrapper biome,
+      double sampleResolutionMeters,
       List<DhApiTerrainDataPoint> columnDataPoints
    ) {
+      if (!underwater) {
+         this.decorateSurface(columnDataPoints, worldX, worldZ, minY, absoluteTop, surfaceY, sampleResolutionMeters, wrappers);
+      }
+
       if (!LOD_COLUMN_VALIDATION) {
          output.setApiDataPointColumn(localX, localZ, EDhApiWorldGenerationStep.FEATURES, columnDataPoints);
          return;
